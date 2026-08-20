@@ -2,11 +2,16 @@
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
   "tasks": {
+    "generate": {
+      "cache": false,
+      "outputs": []
+    },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^generate"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "@vaqt/db#build": {
+      "dependsOn": ["generate"],
       "cache": false,
       "outputs": []
     },
@@ -14,7 +19,7 @@
       "outputs": []
     },
     "@vaqt/db#lint": {
-      "dependsOn": ["^build", "build"],
+      "dependsOn": ["generate"],
       "outputs": []
     },
     "lint:fix": {
@@ -22,11 +27,11 @@
       "cache": false
     },
     "typecheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^generate"],
       "outputs": []
     },
     "@vaqt/db#typecheck": {
-      "dependsOn": ["^build", "build"],
+      "dependsOn": ["generate"],
       "outputs": []
     },
     "test": {
@@ -34,7 +39,7 @@
       "cache": false
     },
     "@vaqt/db#test": {
-      "dependsOn": ["^build", "build"],
+      "dependsOn": ["generate"],
       "outputs": ["coverage/**"],
       "cache": false
     },
@@ -48,9 +53,6 @@
     "dev": {
       "cache": false,
       "persistent": true
-    },
-    "generate": {
-      "cache": false
     },
     "migrate": {
       "cache": false

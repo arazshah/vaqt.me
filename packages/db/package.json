@@ -5,7 +5,8 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "build": "prisma generate",
+    "postinstall": "prisma generate",
+    "build": "echo '@vaqt/db has no build step of its own — see the \"generate\" task'",
     "generate": "prisma generate",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",

@@ -7,6 +7,17 @@
         "argsIgnorePattern": "^_",
         "varsIgnorePattern": "^_"
       }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": [
+          {
+            "group": ["@vaqt/db", "@vaqt/db/*"],
+            "message": "apps/web must never talk to the database directly — go through the API instead."
+          }
+        ]
+      }
     ]
   }
 }

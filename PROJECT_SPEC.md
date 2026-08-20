@@ -70,7 +70,7 @@ vaqt/
 - **User**: `id`, `phone` (unique, `^09\d{9}$`), `phoneVerifiedAt`, `displayName`, `avatarUrl`, `bio`, `roleIntent` (SEEKER | PROVIDER | BOTH), `status` (ACTIVE | SUSPENDED), `lastSeenAt`, timestamps
 - **VerificationCode**: `id`, `phone`, `codeHash` (bcrypt — هرگز کد خام ذخیره نشود)، `purpose`, `attempts`, `expiresAt`, `consumedAt`, `ip`
 - **Category** و **Skill**: درخت دو سطحی با seed فارسی (دانشگاهی، برنامه‌نویسی، کسب‌وکار، مهاجرت، طراحی، حقوقی، سلامت، ...)
-- **Request**: `id`, `slug` (nanoid کوتاه برای URL)، `ownerId`, `title`, `description`, `categoryId`, `skills[]`, `mode` (ONLINE | IN_PERSON | HYBRID)، `city` (nullable)، `durationMinutes`, `budgetMin`, `budgetMax`, `currency` (IRT)، `deadlineAt` (مهلت دریافت پیشنهاد)، `preferredWindows` (Json — بازه‌های زمانی پیشنهادی)، `status` (DRAFT | PUBLISHED | OFFER_SELECTED | CLOSED | EXPIRED | REMOVED)، `viewCount`, `offerCount`, `isUrgent`, `isFeatured`, `bumpedAt`, `publishedAt`
+- **Request**: `id`, `slug` (nanoid کوتاه برای URL)، `ownerId`, `title`, `description`, `categoryId`, `skills[]` (در پیاده‌سازی: جدول واسط **RequestSkill**، نه آرایه‌ی خام — نگاه کنید به یادداشت زیر)، `mode` (ONLINE | IN_PERSON | HYBRID)، `city` (nullable)، `durationMinutes`, `budgetMin`, `budgetMax`, `currency` (IRT)، `deadlineAt` (مهلت دریافت پیشنهاد)، `preferredWindows` (Json — بازه‌های زمانی پیشنهادی)، `status` (DRAFT | PUBLISHED | OFFER_SELECTED | CLOSED | EXPIRED | REMOVED)، `viewCount`, `offerCount`, `isUrgent`, `isFeatured`, `bumpedAt`, `publishedAt`
 - **AiSession**: `id`, `userId`, `requestId?`, `messages` (Json[])، `extractedDraft` (Json)، `tokensUsed`, `provider`
 - **Offer**: `id`, `requestId`, `providerId`, `proposedStartAt`, `proposedDurationMinutes`, `price`, `message`, `status` (PENDING | SELECTED | REJECTED | WITHDRAWN | EXPIRED)، `createdAt` — **قید یکتایی روی (requestId, providerId)**
 - **Conversation**: `id`, `requestId`, `offerId` (unique)، `seekerId`, `providerId`, `status` (OPEN | ARCHIVED)، `lastMessageAt`
@@ -82,6 +82,8 @@ vaqt/
 - **Subscription**: `userId`, `plan`, `status`, `currentPeriodEnd`, `orderId`
 - **Notification**: `userId`, `type`, `payload` (Json)، `readAt`, `channels` (IN_APP | SMS)
 - **AuditLog** و **Report**: برای گزارش تخلف و ردگیری اقدامات حساس
+
+> **یادداشت فاز ۱ — یک مدل بیشتر از فهرست بالا:** فهرست بالا ۱۷ مدل نام می‌برد. در پیاده‌سازی فاز ۱، طبق تصمیم صریح (اجرای «جدول واسط، نه `String[]`»)، یک مدل ۱۸م به نام **RequestSkill** اضافه شد: جدول واسط چندبه‌چند بین `Request` و `Skill` با کلید ترکیبی `(requestId, skillId)`. این تنها انحراف عددی از این بخش است.
 
 مبالغ همه به‌صورت **Integer و بر حسب تومان** ذخیره شوند (تبدیل به ریال فقط در لحظه‌ی ارسال به زرین‌پال).
 

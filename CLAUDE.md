@@ -303,7 +303,7 @@
 ## یادداشت‌های فاز فعلی (فاز ۱)
 
 - منبع حقیقت enum‌ها در `packages/shared/src/constants/enums.ts` (۱۵ enum، هلپر `createEnum` مشترک برای `as const` + `z.enum`)؛ Prisma schema آینه‌ی آن با تست برابری خودکار در `packages/db/src/__tests__/enums.test.ts` (۱۶ تست، شامل تست منفی برای پوشش کامل enum‌ها)
-- اسکیمای کامل Prisma: ۱۹ مدل مطابق بند ۳ اسپک (User, VerificationCode, Category, Skill, RequestSkill, Request, AiSession, Offer, Conversation, Message, Review, Product, Order, Entitlement, Subscription, Notification, AuditLog, Report)
+- اسکیمای کامل Prisma: ۱۸ مدل — ۱۷ مدل اسپک (User, VerificationCode, Category, Skill, Request, AiSession, Offer, Conversation, Message, Review, Product, Order, Entitlement, Subscription, Notification, AuditLog, Report) + یک مدل اضافه (**RequestSkill**، جدول واسط؛ مستندسازی کامل در PROJECT_SPEC.md بند ۳ و `packages/db/README.md`)
 - migration اول (`20260820124448_init`) شامل `CREATE EXTENSION IF NOT EXISTS pg_trgm` و ایندکس `GIN … gin_trgm_ops` روی `Request.searchText` (با SQL خام)؛ روی Postgres واقعی اجرا شد
 - `packages/db` اکنون به `@vaqt/shared` و `nanoid` وابسته است؛ اسکریپت `build` پکیج db برابر `prisma generate` است تا override اختصاصی turbo (بند بالا) بتواند قبل از typecheck/lint/test خودِ پکیج آن را صدا بزند
 - vitest به‌عنوان test runner برای `packages/shared` و `packages/db` اضافه شد (apps/api همچنان jest است؛ تفاوت runner بین workspaceها بلامانع است چون هرکدام مستقل turbo run می‌شوند)

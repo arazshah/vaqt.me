@@ -29,6 +29,28 @@ export default tseslint.config(
         'error',
         { allowWithDecorator: true },
       ],
+      // @vaqt/db is the only place allowed to talk to the database driver —
+      // every other workspace must go through its re-exports instead.
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@prisma/client',
+              message:
+                'Import from "@vaqt/db" instead — @prisma/client may only be imported inside packages/db.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // packages/db is the one workspace allowed to import @prisma/client
+    // directly, since it owns the re-export boundary in src/index.ts.
+    files: ['packages/db/**/*.ts'],
+    rules: {
+      'no-restricted-imports': 'off',
     },
   },
   {
