@@ -124,27 +124,25 @@ describe('RateLimitService', () => {
       expect(other.allowed).toBe(true);
     });
 
-    it('falls back to `now` for retryAfterSeconds if the zrange lookup races an empty result', async () => {
-      // Defensive fallback for the theoretical race where the sorted set
-      // is observed empty between the zcard count and the zrange lookup
-      // (e.g. a concurrent expiry) — forced deterministically here since
-      // it can't be reproduced by timing alone.
+    it('is atomic under real concurrency: exactly `limit` of N simultaneous callers are allowed', async () => {
+      // The old four-round-trip (ZREMRANGEBYSCORE + ZADD + ZCARD + EXPIRE)
+      // implementation could let more than `limit` through when requests
+      // raced between the ZCARD read and the accept/reject decision. The
+      // Lua-script version runs the whole check as one atomic EVAL, so
+      // firing 10 concurrent requests at limit=5 must yield exactly 5
+      // allowed — this is the regression test for that fix.
       const { service, redis } = makeService();
       instances.push(redis);
       const now = Date.now();
 
-      await service.checkSlidingWindow('scope', 'id-6', 1, 60, now);
-      jest.spyOn(redis.client, 'zrange').mockResolvedValueOnce([]);
-      const result = await service.checkSlidingWindow(
-        'scope',
-        'id-6',
-        1,
-        60,
-        now + 1,
+      const results = await Promise.all(
+        Array.from({ length: 10 }, () =>
+          service.checkSlidingWindow('scope', 'concurrent-phone', 5, 60, now),
+        ),
       );
 
-      expect(result.allowed).toBe(false);
-      expect(result.retryAfterSeconds).toBeGreaterThan(0);
+      const allowedCount = results.filter((r) => r.allowed).length;
+      expect(allowedCount).toBe(5);
     });
   });
 

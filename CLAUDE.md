@@ -100,8 +100,9 @@
 - **requests** — نردبان (repeatable) و انقضای خودکار (cron هر ۱۵ دقیقه)
 - **payments** — verify تعویقی و آشتی‌سازی سفارش‌های معلق
 - **ai** — فراخوانی‌های سنگین AI
+- **session-cleanup** _(اضافه‌شده در فاز ۲ تکمیلی)_ — job روزانه (`0 3 * * *`، `upsertJobScheduler`) که نشست‌های باطل‌شده‌ی قدیمی‌تر از ۹۰ روز یا منقضی‌شده‌ی قدیمی‌تر از ۹۰ روز را حذف می‌کند؛ چون `Session` مستقیماً به احراز هویت مربوط است و منتظر ماندن تا فاز صف‌های عمومی منطقی نبود
 
-همه با `removeOnComplete: {count: 1000}` و `removeOnFail: {count: 5000}`
+همه با `removeOnComplete: {count: 1000}` و `removeOnFail: {count: 5000}` (مگر جایی که به‌صراحت override شده، مثل `session-cleanup` با سقف کوچک‌تر چون تعداد اجراهایش محدود است)
 
 برای فاز ۰ فقط ساختار و config؛ workerها در فاز مربوطه
 
@@ -328,6 +329,7 @@
 | ~~نبود `coverageThreshold` در jest اپ api~~                                  | ✅ رفع شد در فاز ۲ — آستانه‌ی global ۷۰٪ + آستانه‌ی ۱۰۰٪ برای otp/rate-limit/session/auth.service/require-verified-phone.guard اضافه شد           | —       |
 | `AppService.getHealth()` واقعاً DB/Redis را چک نمی‌کند                       | طبق اسپک («GET /health (db + redis)») باید اتصال واقعی Postgres و Redis را تست کند؛ فعلاً فقط timestamp استاتیک برمی‌گرداند (باقی‌مانده از فاز ۰) | فاز ۳   |
 | AuditLog با `actorId: null` (شکست تأیید OTP، بلاک شدن) پاک‌سازی خودکار ندارد | اجراهای مکرر تست‌های rate-limit روی Postgres واقعی این ردیف‌ها را انباشته می‌کنند؛ نیاز به مکانیزم پاک‌سازی یا نگه‌داشتن آن‌ها با TTL/job دوره‌ای | فاز ۱۰  |
+| `ts-node --transpile-only` موقتی است                                         | راه‌حل نهایی: بیلد `packages/shared` به `dist` با فیلد `exports` و بازگشت به `nest start --watch`                                                 | فاز ۱۰  |
 
 ---
 
@@ -407,3 +409,13 @@
 با `pnpm run dev` (env واقعی، `SMS_PROVIDER=mock`) روی Postgres/Redis واقعی: `POST /auth/otp/request` → کد در کنسول (`[mock-sms] OTP for +98912***4567: 41045`) → `POST /auth/otp/verify` → کوکی‌های httpOnly صحیح → `GET /auth/me` → `POST /auth/refresh` (چرخش موفق) → replay توکن قدیمی → `SESSION_REUSE_DETECTED` + **هر دو** نشست خانواده (نه فقط نشست replay‌شده) در Postgres واقعی `revokedAt` شدند + `AuditLog` با `severity: high` ثبت شد. همچنین `PATCH /auth/role`، `POST /auth/ws-ticket`، `POST /auth/logout` (پاک‌کردن کوکی + رد دسترسی بعدی) و assertion سخت `NODE_ENV=production` + `SMS_PROVIDER=mock` (شکست فوری bootstrap) به‌صورت زنده تأیید شدند.
 
 - `pnpm lint && pnpm typecheck && pnpm build && pnpm test` روی هر ۵ workspace سبز
+
+### تکمیل فاز ۲ — هفت مورد سخت‌سازی نهایی
+
+1. **rate limiter اتمیک**: منطق sliding window (`ZREMRANGEBYSCORE`+`ZADD`+`ZCARD`+`EXPIRE`+`ZRANGE`) از ۴-۵ round-trip جدا به یک اسکریپت Lua واحد (`redis.defineCommand('slidingWindow', ...)` در `RedisService`) منتقل شد تا کل چرخه در یک `EVAL` اتمیک اجرا شود. تست یکپارچگی جدید: ۱۰ درخواست همزمان (`Promise.all`) با `limit=5` روی Redis واقعی — دقیقاً ۵ تا `allowed: true` گرفتند.
+2. **اعتبارسنجی env**: `env-validation.ts` با zod، به‌عنوان اولین statement داخل `bootstrap()` (قبل از `NestFactory.create`) اجرا می‌شود. `OTP_PEPPER`/`JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET` حداقل ۳۲ کاراکتر؛ در production نباید برابر مقادیر placeholder فایل `.env.example` باشند. در صورت خطا، تمام خطاها یک‌جا چاپ و `process.exit(1)` صدا زده می‌شود.
+3. **تست فهرست روت‌ها**: `public-routes.spec.ts` با reflection (بدون بالا آوردن سرور) روی `PATH_METADATA`/`METHOD_METADATA`/`IS_PUBLIC_KEY` هر کنترلر، مجموعه‌ی روت‌های `@Public()` را با یک allowlist صریح مقایسه می‌کند.
+4. **BullMQ**: `maxRetriesPerRequest: null` و `removeOnComplete`/`removeOnFail` قبلاً درست بودند (تأیید شد)؛ `app.enableShutdownHooks()` به `main.ts` اضافه شد (لازم برای بسته‌شدن تمیز workerهای `WorkerHost`)؛ یک تست یکپارچگی جدید (`bull-prefix.spec.ts`) ثابت کرد `REDIS_PREFIX` واقعاً روی کلیدهای BullMQ در Redis واقعی اعمال می‌شود.
+5. **پاکسازی نشست**: صف/job جدید `session-cleanup` (روزانه، `0 3 * * *`، از طریق `upsertJobScheduler` ایدمپوتنت) — نشست‌های باطل‌شده‌ی قدیمی‌تر از ۹۰ روز (بر اساس `revokedAt`) یا منقضی‌شده‌ی هرگز-باطل‌نشده‌ی قدیمی‌تر از ۹۰ روز (بر اساس `expiresAt`) را حذف می‌کند؛ منطق در `SessionCleanupService.cleanupOldSessions()` جدا از processor نگه داشته شد تا مستقیماً روی Postgres واقعی تست شود.
+6. بدهی فنی ثبت شد (جدول بالا).
+7. تگ و push — به بخش انتهای فاز مراجعه شود.

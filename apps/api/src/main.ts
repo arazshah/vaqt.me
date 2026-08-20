@@ -3,9 +3,19 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
+import { validateEnvOrExit } from './env-validation';
 
 async function bootstrap() {
+  // First statement, before any DB/Redis connection or listening socket is
+  // opened by NestFactory.create() — a misconfigured secret must never
+  // reach a running server. (Import statements above are hoisted by the
+  // module system regardless of source order, so this can't be "above the
+  // imports" — it just needs to run before NestFactory.create(), which it
+  // does.)
+  validateEnvOrExit();
+
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
 
   app.use(cookieParser());
 

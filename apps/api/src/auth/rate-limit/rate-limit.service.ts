@@ -35,26 +35,19 @@ export class RateLimitService {
     now = Date.now(),
   ): Promise<SlidingWindowResult> {
     const key = this.redis.key('ratelimit', scope, identifier);
-    const windowStartMs = now - windowSeconds * 1000;
     const member = `${String(now)}:${randomUUID()}`;
-    const client = this.redis.client;
+    const windowMs = windowSeconds * 1000;
 
-    await client.zremrangebyscore(key, 0, windowStartMs);
-    await client.zadd(key, now, member);
-    const count = await client.zcard(key);
-    await client.expire(key, windowSeconds);
-
-    if (count <= limit) {
-      return { allowed: true, retryAfterSeconds: 0 };
-    }
-
-    const oldest = await client.zrange(key, 0, '0', 'WITHSCORES');
-    const oldestScore = oldest.length >= 2 ? Number(oldest[1]) : now;
-    const retryAfterSeconds = Math.max(
-      1,
-      Math.ceil((oldestScore + windowSeconds * 1000 - now) / 1000),
+    const [allowed, retryAfterSeconds] = await this.redis.client.slidingWindow(
+      key,
+      now,
+      windowMs,
+      member,
+      limit,
+      windowSeconds,
     );
-    return { allowed: false, retryAfterSeconds };
+
+    return { allowed: allowed === 1, retryAfterSeconds };
   }
 
   async checkResendCooldown(
