@@ -6,7 +6,15 @@
       "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
+    "@vaqt/db#build": {
+      "cache": false,
+      "outputs": []
+    },
     "lint": {
+      "outputs": []
+    },
+    "@vaqt/db#lint": {
+      "dependsOn": ["^build", "build"],
       "outputs": []
     },
     "lint:fix": {
@@ -17,7 +25,16 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
+    "@vaqt/db#typecheck": {
+      "dependsOn": ["^build", "build"],
+      "outputs": []
+    },
     "test": {
+      "outputs": ["coverage/**"],
+      "cache": false
+    },
+    "@vaqt/db#test": {
+      "dependsOn": ["^build", "build"],
       "outputs": ["coverage/**"],
       "cache": false
     },

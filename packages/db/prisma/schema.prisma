@@ -1,5 +1,14 @@
-// Prisma Schema for Vaqt.me
-// This is a minimal placeholder - full schema will be implemented in Phase 1
+// Prisma Schema for Vaqt.me — Phase 1
+//
+// Enum source of truth lives in packages/shared/src/constants/enums.ts.
+// This file mirrors those values exactly; packages/db has a unit test
+// (src/__tests__/enums.test.ts) asserting they never drift apart.
+//
+// Do NOT set a custom `output` in the generator block below — pnpm's
+// symlinked node_modules can't resolve a relative output path back to
+// where `@prisma/client` looks for `.prisma/client`, and the client
+// silently types as `any` with no error. Let Prisma manage the default
+// output location.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,11 +19,478 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Placeholder model to enable generation
+// ---------------------------------------------------------------------------
+// Enums (mirror of packages/shared/src/constants/enums.ts)
+// ---------------------------------------------------------------------------
+
+enum RoleIntent {
+  SEEKER
+  PROVIDER
+  BOTH
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum OtpPurpose {
+  AUTH
+}
+
+enum RequestMode {
+  ONLINE
+  IN_PERSON
+  HYBRID
+}
+
+enum RequestStatus {
+  DRAFT
+  PUBLISHED
+  OFFER_SELECTED
+  CLOSED
+  EXPIRED
+  REMOVED
+}
+
+enum Currency {
+  IRT
+}
+
+enum OfferStatus {
+  PENDING
+  SELECTED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum ConversationStatus {
+  OPEN
+  ARCHIVED
+}
+
+enum MessageType {
+  TEXT
+  SYSTEM
+}
+
+enum ProductCode {
+  URGENT_BADGE
+  BUMP
+  FEATURE
+  PRO_MONTHLY
+  TARGETED_NOTIFY
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FAILED
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  ZARINPAL
+  MOCK
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  EXPIRED
+}
+
+enum NotificationChannel {
+  IN_APP
+  SMS
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWED
+  DISMISSED
+}
+
+// ---------------------------------------------------------------------------
+// Models
+// ---------------------------------------------------------------------------
+
 model User {
-  id        String   @id @default(cuid())
+  id              String     @id @default(cuid())
+  phone           String     @unique
+  phoneVerifiedAt DateTime?
+  displayName     String
+  avatarUrl       String?
+  bio             String?
+  roleIntent      RoleIntent @default(SEEKER)
+  status          UserStatus @default(ACTIVE)
+  lastSeenAt      DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  requestsOwned      Request[]          @relation("RequestOwner")
+  offers             Offer[]            @relation("OfferProvider")
+  aiSessions         AiSession[]
+  sentMessages       Message[]          @relation("MessageSender")
+  conversationsAsSeeker   Conversation[] @relation("ConversationSeeker")
+  conversationsAsProvider Conversation[] @relation("ConversationProvider")
+  reviewsWritten     Review[]           @relation("ReviewReviewer")
+  reviewsReceived    Review[]           @relation("ReviewReviewee")
+  orders             Order[]
+  entitlements       Entitlement[]
+  subscriptions      Subscription[]
+  notifications      Notification[]
+  reportsFiled       Report[]           @relation("ReportReporter")
+  reportsAgainst     Report[]           @relation("ReportTargetUser")
+  auditLogs          AuditLog[]
+
+  @@index([status])
+  @@map("users")
+}
+
+model VerificationCode {
+  id          String     @id @default(cuid())
+  phone       String
+  codeHash    String
+  purpose     OtpPurpose @default(AUTH)
+  attempts    Int        @default(0)
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  ip          String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([phone])
+  @@index([phone, purpose, consumedAt])
+  @@map("verification_codes")
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
+  order     Int        @default(0)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  requests Request[]
+  skills   Skill[]
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+model Skill {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  requestSkills RequestSkill[]
+
+  @@index([categoryId])
+  @@map("skills")
+}
+
+model Request {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  ownerId     String
+  owner       User          @relation("RequestOwner", fields: [ownerId], references: [id])
+  title       String
+  description String
+  categoryId  String
+  category    Category      @relation(fields: [categoryId], references: [id])
+  mode        RequestMode
+  city        String?
+  durationMinutes Int
+  budgetMin   Int
+  budgetMax   Int
+  currency    Currency      @default(IRT)
+  deadlineAt  DateTime
+  preferredWindows Json
+  status      RequestStatus @default(DRAFT)
+  viewCount   Int           @default(0)
+  offerCount  Int           @default(0)
+  isUrgent    Boolean       @default(false)
+  isFeatured  Boolean       @default(false)
+  bumpedAt    DateTime?
+  publishedAt DateTime?
+
+  // Persian full-text search: normalizeFa(title + ' ' + description),
+  // written server-side only. GIN trigram index added via raw SQL in the
+  // init migration (pg_trgm extension).
+  searchText String @default("")
+
+  // Server-computed listing rank — never settable from any input DTO.
+  // ORDER BY listTier DESC, listRankAt DESC, id DESC
+  listTier   Int      @default(0)
+  listRankAt DateTime @default(now())
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("users")
+  skills        RequestSkill[]
+  offers        Offer[]
+  aiSessions    AiSession[]
+  conversations Conversation[]
+  orders        Order[]
+  entitlements  Entitlement[]
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([mode])
+  @@index([city])
+  @@index([deadlineAt])
+  @@index([ownerId])
+  @@index([listTier, listRankAt, id])
+  @@map("requests")
+}
+
+model RequestSkill {
+  requestId String
+  skillId   String
+  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([requestId, skillId])
+  @@index([skillId])
+  @@map("request_skills")
+}
+
+model AiSession {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  requestId      String?
+  request        Request? @relation(fields: [requestId], references: [id])
+  messages       Json
+  extractedDraft Json?
+  tokensUsed     Int      @default(0)
+  provider       String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([requestId])
+  @@map("ai_sessions")
+}
+
+model Offer {
+  id                      String      @id @default(cuid())
+  requestId               String
+  request                 Request     @relation(fields: [requestId], references: [id])
+  providerId              String
+  provider                User        @relation("OfferProvider", fields: [providerId], references: [id])
+  proposedStartAt         DateTime
+  proposedDurationMinutes Int
+  price                   Int
+  message                 String?
+  status                  OfferStatus @default(PENDING)
+  // Bumped on every WITHDRAWN -> PENDING re-submit of the same
+  // (requestId, providerId) pair, so the unique constraint below can stay
+  // hard while still allowing a provider to try again.
+  revisionCount           Int         @default(0)
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
+
+  conversation Conversation?
+
+  @@unique([requestId, providerId])
+  @@index([providerId])
+  @@index([status])
+  @@map("offers")
+}
+
+model Conversation {
+  id            String             @id @default(cuid())
+  requestId     String
+  request       Request            @relation(fields: [requestId], references: [id])
+  offerId       String             @unique
+  offer         Offer              @relation(fields: [offerId], references: [id])
+  seekerId      String
+  seeker        User               @relation("ConversationSeeker", fields: [seekerId], references: [id])
+  providerId    String
+  providerUser  User               @relation("ConversationProvider", fields: [providerId], references: [id])
+  status        ConversationStatus @default(OPEN)
+  lastMessageAt DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  messages Message[]
+  reviews  Review[]
+
+  @@index([seekerId])
+  @@index([providerId])
+  @@index([requestId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  senderId       String?
+  sender         User?        @relation("MessageSender", fields: [senderId], references: [id])
+  type           MessageType  @default(TEXT)
+  body           String
+  readAt         DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([conversationId])
+  @@map("messages")
+}
+
+model Review {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  reviewerId     String
+  reviewer       User         @relation("ReviewReviewer", fields: [reviewerId], references: [id])
+  revieweeId     String
+  reviewee       User         @relation("ReviewReviewee", fields: [revieweeId], references: [id])
+  rating         Int
+  comment        String?
+  isVisible      Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([conversationId, reviewerId])
+  @@index([revieweeId])
+  @@map("reviews")
+}
+
+model Product {
+  id            String      @id @default(cuid())
+  code          ProductCode @unique
+  title         String
+  description   String
+  priceIRT      Int
+  durationHours Int?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  orders Order[]
+
+  @@map("products")
+}
+
+model Order {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id])
+  productId String
+  product   Product         @relation(fields: [productId], references: [id])
+  requestId String?
+  request   Request?        @relation(fields: [requestId], references: [id])
+  amountIRT Int
+  status    OrderStatus     @default(PENDING)
+  provider  PaymentProvider @default(MOCK)
+  authority String?         @unique
+  refId     String?
+  paidAt    DateTime?
+  raw       Json?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  entitlements  Entitlement[]
+  subscriptions Subscription[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("orders")
+}
+
+model Entitlement {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  requestId String?
+  request   Request?    @relation(fields: [requestId], references: [id])
+  orderId   String?
+  order     Order?      @relation(fields: [orderId], references: [id])
+  type      ProductCode
+  startsAt  DateTime
+  expiresAt DateTime?
+  meta      Json?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([requestId])
+  @@map("entitlements")
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  userId           String
+  user             User               @relation(fields: [userId], references: [id])
+  plan             ProductCode
+  status           SubscriptionStatus @default(ACTIVE)
+  currentPeriodEnd DateTime
+  orderId          String             @unique
+  order            Order              @relation(fields: [orderId], references: [id])
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([userId])
+  @@map("subscriptions")
+}
+
+model Notification {
+  id        String                @id @default(cuid())
+  userId    String
+  user      User                  @relation(fields: [userId], references: [id])
+  type      String
+  payload   Json
+  readAt    DateTime?
+  channels  NotificationChannel[]
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  @@index([userId])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id])
+  action     String
+  entityType String?
+  entityId   String?
+  meta       Json?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model Report {
+  id              String       @id @default(cuid())
+  reporterId      String
+  reporter        User         @relation("ReportReporter", fields: [reporterId], references: [id])
+  targetUserId    String?
+  targetUser      User?        @relation("ReportTargetUser", fields: [targetUserId], references: [id])
+  targetRequestId String?
+  reason          String
+  status          ReportStatus @default(OPEN)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([reporterId])
+  @@index([status])
+  @@map("reports")
 }
