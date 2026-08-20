@@ -54,7 +54,7 @@ enum RequestStatus {
 }
 
 enum Currency {
-  IRT
+  IRR
 }
 
 enum OfferStatus {
@@ -125,8 +125,8 @@ enum SystemRole {
 // ---------------------------------------------------------------------------
 
 model User {
-  id                 String      @id @default(cuid())
-  phone              String      @unique
+  id                 String       @id @default(cuid())
+  phone              String       @unique
   phoneVerifiedAt    DateTime?
   displayName        String
   avatarUrl          String?
@@ -139,33 +139,33 @@ model User {
   city               String?
   modePreference     RequestMode?
   linkedinUrl        String?
-  timezone           String      @default("Asia/Tehran")
-  ratingAvg          Float       @default(0)
-  ratingCount        Int         @default(0)
-  roleIntent         RoleIntent  @default(SEEKER)
-  systemRole         SystemRole  @default(USER)
-  status             UserStatus  @default(ACTIVE)
+  timezone           String       @default("Asia/Tehran")
+  ratingAvg          Float        @default(0)
+  ratingCount        Int          @default(0)
+  roleIntent         RoleIntent   @default(SEEKER)
+  systemRole         SystemRole   @default(USER)
+  status             UserStatus   @default(ACTIVE)
   lastSeenAt         DateTime?
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
-  requestsOwned      Request[]          @relation("RequestOwner")
-  offers             Offer[]            @relation("OfferProvider")
-  aiSessions         AiSession[]
-  sentMessages       Message[]          @relation("MessageSender")
+  requestsOwned           Request[]      @relation("RequestOwner")
+  offers                  Offer[]        @relation("OfferProvider")
+  aiSessions              AiSession[]
+  sentMessages            Message[]      @relation("MessageSender")
   conversationsAsSeeker   Conversation[] @relation("ConversationSeeker")
   conversationsAsProvider Conversation[] @relation("ConversationProvider")
-  reviewsWritten     Review[]           @relation("ReviewReviewer")
-  reviewsReceived    Review[]           @relation("ReviewReviewee")
-  orders             Order[]
-  entitlements       Entitlement[]
-  subscriptions      Subscription[]
-  notifications      Notification[]
-  reportsFiled       Report[]           @relation("ReportReporter")
-  reportsAgainst     Report[]           @relation("ReportTargetUser")
-  auditLogs          AuditLog[]
-  sessions           Session[]
-  skills             UserSkill[]
+  reviewsWritten          Review[]       @relation("ReviewReviewer")
+  reviewsReceived         Review[]       @relation("ReviewReviewee")
+  orders                  Order[]
+  entitlements            Entitlement[]
+  subscriptions           Subscription[]
+  notifications           Notification[]
+  reportsFiled            Report[]       @relation("ReportReporter")
+  reportsAgainst          Report[]       @relation("ReportTargetUser")
+  auditLogs               AuditLog[]
+  sessions                Session[]
+  skills                  UserSkill[]
 
   @@index([status])
   @@map("users")
@@ -205,19 +205,19 @@ model Session {
 }
 
 model VerificationCode {
-  id          String     @id @default(cuid())
-  phone       String
-  codeHash    String
-  purpose     OtpPurpose @default(AUTH)
-  attempts    Int        @default(0)
+  id         String     @id @default(cuid())
+  phone      String
+  codeHash   String
+  purpose    OtpPurpose @default(AUTH)
+  attempts   Int        @default(0)
   // Number of times this exact code has been sent (original send = 1).
   // Capped at 3 by the service layer; resend never changes expiresAt.
-  sendCount   Int        @default(1)
-  expiresAt   DateTime
-  consumedAt  DateTime?
-  ip          String?
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  sendCount  Int        @default(1)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  ip         String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
   @@index([phone])
   @@index([phone, purpose, consumedAt])
@@ -247,14 +247,14 @@ model Category {
 }
 
 model Skill {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   name       String
-  slug       String   @unique
+  slug       String    @unique
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   requestSkills RequestSkill[]
   userSkills    UserSkill[]
@@ -264,29 +264,29 @@ model Skill {
 }
 
 model Request {
-  id          String        @id @default(cuid())
-  slug        String        @unique
-  ownerId     String
-  owner       User          @relation("RequestOwner", fields: [ownerId], references: [id])
-  title       String
-  description String
-  categoryId  String
-  category    Category      @relation(fields: [categoryId], references: [id])
-  mode        RequestMode
-  city        String?
-  durationMinutes Int
-  budgetMin   Int
-  budgetMax   Int
-  currency    Currency      @default(IRT)
-  deadlineAt  DateTime
+  id               String        @id @default(cuid())
+  slug             String        @unique
+  ownerId          String
+  owner            User          @relation("RequestOwner", fields: [ownerId], references: [id])
+  title            String
+  description      String
+  categoryId       String
+  category         Category      @relation(fields: [categoryId], references: [id])
+  mode             RequestMode
+  city             String?
+  durationMinutes  Int
+  budgetMinRial    Int
+  budgetMaxRial    Int
+  currency         Currency      @default(IRR)
+  deadlineAt       DateTime
   preferredWindows Json
-  status      RequestStatus @default(DRAFT)
-  viewCount   Int           @default(0)
-  offerCount  Int           @default(0)
-  isUrgent    Boolean       @default(false)
-  isFeatured  Boolean       @default(false)
-  bumpedAt    DateTime?
-  publishedAt DateTime?
+  status           RequestStatus @default(DRAFT)
+  viewCount        Int           @default(0)
+  offerCount       Int           @default(0)
+  isUrgent         Boolean       @default(false)
+  isFeatured       Boolean       @default(false)
+  bumpedAt         DateTime?
+  publishedAt      DateTime?
 
   // Persian full-text search: normalizeFa(title + ' ' + description),
   // written server-side only. GIN trigram index added via raw SQL in the
@@ -321,8 +321,8 @@ model Request {
 model RequestSkill {
   requestId String
   skillId   String
-  request   Request @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  skill     Skill   @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  request   Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 
   @@id([requestId, skillId])
@@ -356,7 +356,7 @@ model Offer {
   provider                User        @relation("OfferProvider", fields: [providerId], references: [id])
   proposedStartAt         DateTime
   proposedDurationMinutes Int
-  price                   Int
+  amountRial              Int
   message                 String?
   status                  OfferStatus @default(PENDING)
   // Bumped on every WITHDRAWN -> PENDING re-submit of the same
@@ -438,7 +438,7 @@ model Product {
   code          ProductCode @unique
   title         String
   description   String
-  priceIRT      Int
+  priceRial     Int
   durationHours Int?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -449,22 +449,22 @@ model Product {
 }
 
 model Order {
-  id        String          @id @default(cuid())
-  userId    String
-  user      User            @relation(fields: [userId], references: [id])
-  productId String
-  product   Product         @relation(fields: [productId], references: [id])
-  requestId String?
-  request   Request?        @relation(fields: [requestId], references: [id])
-  amountIRT Int
-  status    OrderStatus     @default(PENDING)
-  provider  PaymentProvider @default(MOCK)
-  authority String?         @unique
-  refId     String?
-  paidAt    DateTime?
-  raw       Json?
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  id         String          @id @default(cuid())
+  userId     String
+  user       User            @relation(fields: [userId], references: [id])
+  productId  String
+  product    Product         @relation(fields: [productId], references: [id])
+  requestId  String?
+  request    Request?        @relation(fields: [requestId], references: [id])
+  amountRial Int
+  status     OrderStatus     @default(PENDING)
+  provider   PaymentProvider @default(MOCK)
+  authority  String?         @unique
+  refId      String?
+  paidAt     DateTime?
+  raw        Json?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
   entitlements  Entitlement[]
   subscriptions Subscription[]

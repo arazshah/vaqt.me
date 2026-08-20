@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+env:
+  NODE_ENV: test
+  DATABASE_URL: postgresql://vaqt:vaqt@localhost:5432/vaqt
+  REDIS_URL: redis://localhost:6379
+  REDIS_PREFIX: 'vaqt:ci:'
+  # 32+ chars, deliberately distinct from the apps/api/.env.example
+  # placeholders so a future accidental copy-paste of the example file
+  # would not silently pass this exact check.
+  OTP_PEPPER: ci-otp-pepper-do-not-use-in-prod-0001
+  JWT_ACCESS_SECRET: ci-jwt-access-secret-do-not-use-0001
+  JWT_REFRESH_SECRET: ci-jwt-refresh-secret-do-not-use-0001
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vaqt
+          POSTGRES_PASSWORD: vaqt
+          POSTGRES_DB: vaqt
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vaqt"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read Node version
+        id: node-version
+        run: echo "version=$(cat .nvmrc)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.node-version.outputs.version }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Apply database migrations
+        run: pnpm --filter @vaqt/db migrate:deploy
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build
+
+      - name: Test
+        run: pnpm test

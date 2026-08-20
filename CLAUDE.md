@@ -276,8 +276,15 @@
 
 ### مبالغ
 
-- همه مبالغ `Int` بر حسب **تومان**
-- تبدیل به ریال فقط داخل آداپتر زرین‌پال (× ۱۰)
+> **تصمیم بازنگری‌شده:** ذخیره ریال، نمایش تومان، زرین‌پال ریال می‌گیرد.
+
+- همه مبالغ `Int` بر حسب **ریال** ذخیره می‌شوند (نه تومان — تصمیم قبلی معکوس شد)
+- نمایش به کاربر همیشه به **تومان** است (تقسیم بر ۱۰ فقط در لایه نمایش/فرمت، هرگز در محاسبه یا ذخیره‌سازی)
+- زرین‌پال خودش ریال می‌گیرد؛ چون مقدار ذخیره‌شده از قبل ریال است، آداپتر زرین‌پال دیگر نیازی به ضرب‌در-۱۰ ندارد و مقدار را مستقیم پاس می‌دهد
+- فیلدهای تغییرنام‌یافته (فاز ۳ نهایی): `Offer.price` → `Offer.amountRial`، `Product.priceIRT` → `Product.priceRial`، `Order.amountIRT` → `Order.amountRial`، `Request.budgetMin`/`budgetMax` → `Request.budgetMinRial`/`budgetMaxRial`
+- enum `Currency` مقدارش از `IRT` به `IRR` تغییر کرد (چون دیگر واحد ذخیره‌شده تومان نیست)
+- اعتبارسنجی: `moneyRialSchema` در `packages/shared/src/schemas/money.ts` — عدد صحیح، مضرب ۱۰، بین ۱٬۰۰۰ تا ۱۰٬۰۰۰٬۰۰۰٬۰۰۰ ریال
+- migration مربوطه (`rename_money_fields_to_rial`) فقط ستون‌ها را rename کرد؛ خودِ اعداد در دیتابیس دست نخورد. تبدیل واقعی مقدار (×۱۰) فقط در `packages/db/src/seed.ts` (از طریق `tomanToRial()`) انجام شد و با اجرای مجدد seed روی دیتابیس واقعی اعمال شد — مثلاً `URGENT_BADGE`: ۴۹٬۰۰۰ تومان (قدیم) → ۴۹۰٬۰۰۰ ریال (جدید، تأییدشده در Postgres)
 
 ### پورت‌ها و API
 
@@ -362,14 +369,14 @@
 
 ## بدهی فنی
 
-| مورد                                                                         | توضیح                                                                                                                                             | فاز رفع |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| ~~`--passWithNoTests` در اسکریپت‌های jest اپ api~~                           | ✅ رفع شد در فاز ۲ — حذف شد، اکنون نبود تست واقعاً fail می‌دهد                                                                                    | —       |
-| ~~نبود `coverageThreshold` در jest اپ api~~                                  | ✅ رفع شد در فاز ۲ — آستانه‌ی global ۷۰٪ + آستانه‌ی ۱۰۰٪ برای otp/rate-limit/session/auth.service/require-verified-phone.guard اضافه شد           | —       |
-| `AppService.getHealth()` واقعاً DB/Redis را چک نمی‌کند                       | طبق اسپک («GET /health (db + redis)») باید اتصال واقعی Postgres و Redis را تست کند؛ فعلاً فقط timestamp استاتیک برمی‌گرداند (باقی‌مانده از فاز ۰) | فاز ۴   |
-| AuditLog با `actorId: null` (شکست تأیید OTP، بلاک شدن) پاک‌سازی خودکار ندارد | اجراهای مکرر تست‌های rate-limit روی Postgres واقعی این ردیف‌ها را انباشته می‌کنند؛ نیاز به مکانیزم پاک‌سازی یا نگه‌داشتن آن‌ها با TTL/job دوره‌ای | فاز ۱۱  |
-| `ts-node --transpile-only` موقتی است                                         | راه‌حل نهایی: بیلد `packages/shared` به `dist` با فیلد `exports` و بازگشت به `nest start --watch`                                                 | فاز ۱۱  |
-| `packages/shared`ی completeness/pagination بدون آستانه‌ی coverage اجباری     | تست‌ها با vitest کامل نوشته شده‌اند ولی برخلاف `apps/api` (jest `coverageThreshold`)، هیچ gate اجباری‌ای برای `packages/shared` تنظیم نشده        | فاز ۱۱  |
+| مورد                                                                         | توضیح                                                                                                                                                                                                                                                                                                                                                                                                       | فاز رفع |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| ~~`--passWithNoTests` در اسکریپت‌های jest اپ api~~                           | ✅ رفع شد در فاز ۲ — حذف شد، اکنون نبود تست واقعاً fail می‌دهد                                                                                                                                                                                                                                                                                                                                              | —       |
+| ~~نبود `coverageThreshold` در jest اپ api~~                                  | ✅ رفع شد در فاز ۲ — آستانه‌ی global ۷۰٪ + آستانه‌ی ۱۰۰٪ برای otp/rate-limit/session/auth.service/require-verified-phone.guard اضافه شد                                                                                                                                                                                                                                                                     | —       |
+| `AppService.getHealth()` واقعاً DB/Redis را چک نمی‌کند                       | طبق اسپک («GET /health (db + redis)») باید اتصال واقعی Postgres و Redis را تست کند؛ فعلاً فقط timestamp استاتیک برمی‌گرداند (باقی‌مانده از فاز ۰)                                                                                                                                                                                                                                                           | فاز ۴   |
+| AuditLog با `actorId: null` (شکست تأیید OTP، بلاک شدن) پاک‌سازی خودکار ندارد | اجراهای مکرر تست‌های rate-limit روی Postgres واقعی این ردیف‌ها را انباشته می‌کنند؛ نیاز به مکانیزم پاک‌سازی یا نگه‌داشتن آن‌ها با TTL/job دوره‌ای                                                                                                                                                                                                                                                           | فاز ۱۱  |
+| ~~`ts-node --transpile-only` موقتی است~~                                     | ✅ رفع شد — `packages/shared` و `packages/db` هر دو با `tsup` به `dist` (CJS+ESM+d.ts) بیلد می‌شوند، فیلد `exports` تنظیم شد، و `apps/api` به `nest start --watch` بازگشت. تأیید زنده: پس از `git clean`-معادل + `pnpm install` + `pnpm build`، سرور واقعی بالا آمد و `POST /auth/otp/verify` پاسخ `PrivateUser` کامل (با DI سرویس‌های تزریق‌شده در constructor) برگرداند — نه فقط تعویض ابزار، اثبات زنده. | —       |
+| `packages/shared`ی completeness/pagination بدون آستانه‌ی coverage اجباری     | تست‌ها با vitest کامل نوشته شده‌اند ولی برخلاف `apps/api` (jest `coverageThreshold`)، هیچ gate اجباری‌ای برای `packages/shared` تنظیم نشده                                                                                                                                                                                                                                                                  | فاز ۱۱  |
 
 ---
 
@@ -510,3 +517,12 @@
 - **بازبینی نهایی (parent session، قبل از push):** دو شکاف واقعی نسبت به اسپک صریح فاز ۳ پیدا و رفع شد: (۱) میدل‌ور `origin-check` بدون تست بود — ۱۳ تست اضافه شد؛ (۲) الزام «یک قاعده‌ی ESLint یا تست که serialize مستقیم موجودیت User در کنترلرها را ممنوع کند» اصلاً پیاده‌سازی نشده بود — قاعده‌ی ESLint سفارشی `local/no-raw-user-return` نوشته و به‌صورت دستی (هم حالت مستقیم و هم حالت wrapper) تأیید شد. هر دو مورد در همان کامیت Batch ۲ ادغام شدند (هیچ‌چیز هنوز push نشده بود).
 
 - `pnpm lint && pnpm typecheck && pnpm build && pnpm test` روی هر ۵ workspace سبز.
+
+### تکمیل نهایی فاز ۳ (بسته‌ی کاری بعدی، پیش از merge)
+
+- **جداسازی `toPublicUser`/`toPrivateUser`:** `toPublicUser()` بدون تغییر باقی ماند (فقط `GET /users/:id`). `toPrivateUser()` جدید اضافه شد (`apps/api/src/auth/user-view.ts`) — فقط برای `GET /users/me` و `GET /auth/me` — که `maskedPhone`/`status`/`systemRole`/`completeness` را روی `PublicUser` اضافه می‌کند؛ شماره‌ی خام تلفن هرگز حتی برای صاحب حساب هم برنمی‌گردد. قاعده‌ی ESLint دوم `local/restrict-to-private-user` نوشته شد که فراخوانی `toPrivateUser()` را فقط به `users.service.ts` و `auth.service.ts` محدود می‌کند؛ با یک فایل موقت واقعاً تأیید شد که هم این قاعده و هم `no-raw-user-return` روی شکل `PrivateUser` درست عمل می‌کنند (بدون false-positive، چون `PrivateUser` هرگز `phone`/`phoneVerifiedAt` خام ندارد).
+- **CI:** `.github/workflows/ci.yml` نوشته شد — Postgres 16 + Redis 7 به‌عنوان service container، `prisma migrate deploy`، سپس lint/typecheck/build/test روی هر ۵ workspace، با کش pnpm + Turborepo محلی.
+- **تست دائمی قواعد ESLint:** `@typescript-eslint/rule-tester` اضافه شد؛ پروژه‌ی fixture مستقل (`eslint-rules/__fixtures__/tsconfig.json`) برای قاعده‌ی type-aware ساخته شد. هر دو قاعده (`no-raw-user-return`, `restrict-to-private-user`) اکنون تست دائمی RuleTester دارند (۹ تست، همگی سبز) که با اسکریپت ریشه `pnpm test:eslint-rules` (و در نتیجه از طریق `pnpm test` و CI) اجرا می‌شوند.
+- **بستن بدهی بیلد `packages/shared` (و کشف یک باگ مشابه در `packages/db`):** هر دو پکیج با `tsup` به `dist` (CJS+ESM+d.ts) بیلد می‌شوند و `apps/api` به `nest start --watch` بازگشت. در حین اثبات زنده کشف شد که `@vaqt/db` هم دقیقاً همان مشکل را داشت (`main` به `.ts` خام اشاره می‌کرد) — چون بدون decorator است، همان راه‌حل tsup روی آن هم اعمال شد. اثبات زنده: پس از حذف کامل `node_modules`/`dist`/`.turbo` و نصب/بیلد از صفر، سرور واقعی روی `nest start` بالا آمد و `POST /auth/otp/verify` پاسخ کامل `PrivateUser` برگرداند (شامل DI سرویس‌های تزریق‌شده در constructor مثل `RedisService`) — نه فقط تعویض ابزار.
+- **بازنگری واحد پول (ریال به‌جای تومان):** به بند «مبالغ» بالا مراجعه شود. migration دستی `rename_money_fields_to_rial` (نه diff خودکار Prisma، چون Prisma رنیم را DROP+ADD می‌دید و روی ستون‌های پر رد می‌کرد) فقط rename کرد؛ ایندکس trgm جدول `requests` دست‌نخورده تأیید شد. مقدار واقعی (×۱۰) فقط در `seed.ts` (با `tomanToRial()`) اعمال و با اجرای مجدد seed (دوبار، برای اثبات idempotency) روی Postgres واقعی تأیید شد — شمارش ردیف‌ها ثابت ماند (۸/۱۲/۱۲/۱۵/۲۰/۵).
+- schema zod جدید `moneyRialSchema` در `packages/shared/src/schemas/money.ts` (عدد صحیح، مضرب ۱۰، ۱٬۰۰۰ تا ۱۰٬۰۰۰٬۰۰۰٬۰۰۰ ریال) با ۸ تست.

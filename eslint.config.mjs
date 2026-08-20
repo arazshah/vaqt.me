@@ -2,6 +2,14 @@ import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
 import noRawUserReturn from './eslint-rules/no-raw-user-return.mjs';
+import restrictToPrivateUser from './eslint-rules/restrict-to-private-user.mjs';
+
+const localPlugin = {
+  rules: {
+    'no-raw-user-return': noRawUserReturn,
+    'restrict-to-private-user': restrictToPrivateUser,
+  },
+};
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -62,11 +70,22 @@ export default tseslint.config(
     // helper functions, not just a literal `return user`.
     files: ['apps/api/src/**/*.controller.ts'],
     ignores: ['**/*.spec.ts'],
-    plugins: {
-      local: { rules: { 'no-raw-user-return': noRawUserReturn } },
-    },
+    plugins: { local: localPlugin },
     rules: {
       'local/no-raw-user-return': 'error',
+    },
+  },
+  {
+    // toPrivateUser() is a self-view-only projection (see
+    // apps/api/src/auth/user-view.ts) — restrict its call sites to the two
+    // services that own the self-view endpoints. Not type-aware, so it can
+    // run over every apps/api source file cheaply; the rule itself no-ops
+    // when the current file is one of the two allowed call sites.
+    files: ['apps/api/src/**/*.ts'],
+    ignores: ['**/*.spec.ts'],
+    plugins: { local: localPlugin },
+    rules: {
+      'local/restrict-to-private-user': 'error',
     },
   },
   {
@@ -89,6 +108,10 @@ export default tseslint.config(
       '**/.turbo/**',
       'eslint.config.mjs',
       'commitlint.config.js',
+      // Build-tool config files, not part of any package's tsconfig
+      // `include` (which only covers `src/**/*`) — type-aware linting has
+      // no project to resolve them against.
+      '**/tsup.config.ts',
     ],
   },
 );

@@ -72,7 +72,8 @@ describe('UsersService (real Postgres)', () => {
       const result = await service.getMe(userId);
 
       expect(JSON.stringify(result)).not.toContain(phone);
-      expect(result.user).not.toHaveProperty('phone');
+      expect(result).not.toHaveProperty('phone');
+      expect(result.maskedPhone).not.toBe(phone);
     });
 
     it('computes completeness from the real DB state', async () => {

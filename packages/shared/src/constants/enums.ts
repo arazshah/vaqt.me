@@ -45,7 +45,9 @@ export const [RequestStatus, RequestStatusSchema] = createEnum([
 ] as const);
 export type RequestStatus = (typeof RequestStatus)[keyof typeof RequestStatus];
 
-export const [Currency, CurrencySchema] = createEnum(['IRT'] as const);
+// IRR (Iranian Rial), not IRT (Toman) — all stored money fields are Rial
+// as of the currency-unit reversal (see CLAUDE.md "مبالغ").
+export const [Currency, CurrencySchema] = createEnum(['IRR'] as const);
 export type Currency = (typeof Currency)[keyof typeof Currency];
 
 export const [OfferStatus, OfferStatusSchema] = createEnum([

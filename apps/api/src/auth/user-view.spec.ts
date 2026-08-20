@@ -1,5 +1,13 @@
 import type { User } from '@vaqt/db';
-import { toPublicUser } from './user-view';
+import type { ProfileCompleteness } from '@vaqt/shared';
+import { toPrivateUser, toPublicUser } from './user-view';
+
+const completeness: ProfileCompleteness = {
+  canPublishRequest: true,
+  canSubmitOffer: true,
+  missingForPublishRequest: [],
+  missingForSubmitOffer: [],
+};
 
 function makeUser(overrides: Partial<User> = {}): User {
   return {
@@ -116,5 +124,45 @@ describe('toPublicUser', () => {
       ratingAvg: 4.5,
       ratingCount: 12,
     });
+  });
+});
+
+describe('toPrivateUser', () => {
+  it('never includes the raw phone number, under any key', () => {
+    const result = toPrivateUser(makeUser(), completeness);
+    expect(JSON.stringify(result)).not.toContain('+989121234567');
+    expect(result).not.toHaveProperty('phone');
+  });
+
+  it('includes a masked phone derived from maskPhone()', () => {
+    const result = toPrivateUser(
+      makeUser({ phone: '+989121234567' }),
+      completeness,
+    );
+    expect(result.maskedPhone).toBe('+98912***4567');
+  });
+
+  it('never includes the raw phoneVerifiedAt timestamp', () => {
+    const result = toPrivateUser(makeUser(), completeness);
+    expect(result).not.toHaveProperty('phoneVerifiedAt');
+  });
+
+  it('includes status and systemRole (self-view only fields)', () => {
+    const result = toPrivateUser(
+      makeUser({ status: 'SUSPENDED', systemRole: 'ADMIN' }),
+      completeness,
+    );
+    expect(result.status).toBe('SUSPENDED');
+    expect(result.systemRole).toBe('ADMIN');
+  });
+
+  it('passes through the given completeness unchanged', () => {
+    const result = toPrivateUser(makeUser(), completeness);
+    expect(result.completeness).toBe(completeness);
+  });
+
+  it('includes every PublicUser field alongside the private additions', () => {
+    const result = toPrivateUser(makeUser(), completeness);
+    expect(result).toMatchObject(toPublicUser(makeUser()));
   });
 });

@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { prisma, OtpPurpose } from '@vaqt/db';
-import { normalizePhone, toPersianDigits, RoleIntent } from '@vaqt/shared';
+import {
+  computeProfileCompleteness,
+  normalizePhone,
+  toPersianDigits,
+  RoleIntent,
+} from '@vaqt/shared';
 import { AppError } from '../common/errors/app-error';
 import { ErrorCode } from '../common/errors/error-codes';
 import { RedisService } from '../common/redis/redis.service';
@@ -19,7 +24,16 @@ import {
   type IssuedTokens,
 } from './session/session.service';
 import { SmsQueueService } from './sms/sms-queue.service';
-import { toPublicUser, type PublicUser } from './user-view';
+import {
+  toPrivateUser,
+  toPublicUser,
+  type PrivateUser,
+  type PublicUser,
+} from './user-view';
+
+const userWithSkills = {
+  include: { skills: { include: { skill: true } } },
+} as const;
 
 export interface OtpRequestResult {
   ok: true;
@@ -28,7 +42,7 @@ export interface OtpRequestResult {
 }
 
 export interface VerifyOtpResult {
-  user: PublicUser;
+  user: PrivateUser;
   tokens: IssuedTokens;
 }
 
@@ -177,7 +191,14 @@ export class AuthService {
       meta: { phone: maskPhone(phone), ip: device.ip },
     });
 
-    return { user: toPublicUser(user), tokens };
+    const completeness = computeProfileCompleteness({
+      phoneVerified: user.phoneVerifiedAt !== null,
+      displayName: user.displayName,
+      bio: user.bio,
+      skillCount: user.skills.length,
+    });
+
+    return { user: toPrivateUser(user, completeness), tokens };
   }
 
   async refresh(
@@ -215,12 +236,21 @@ export class AuthService {
     await this.audit.log({ actorId: userId, action: 'auth.logout_all' });
   }
 
-  async getMe(userId: string): Promise<PublicUser> {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+  async getMe(userId: string): Promise<PrivateUser> {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      ...userWithSkills,
+    });
     if (!user) {
       throw new AppError(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
     }
-    return toPublicUser(user);
+    const completeness = computeProfileCompleteness({
+      phoneVerified: user.phoneVerifiedAt !== null,
+      displayName: user.displayName,
+      bio: user.bio,
+      skillCount: user.skills.length,
+    });
+    return toPrivateUser(user, completeness);
   }
 
   async updateRole(
@@ -349,6 +379,7 @@ export class AuthService {
           phoneVerifiedAt: now,
           lastSeenAt: now,
         },
+        ...userWithSkills,
       });
     }
     return prisma.user.update({
@@ -357,6 +388,7 @@ export class AuthService {
         phoneVerifiedAt: existing.phoneVerifiedAt ?? now,
         lastSeenAt: now,
       },
+      ...userWithSkills,
     });
   }
 }

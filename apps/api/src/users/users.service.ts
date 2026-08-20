@@ -3,25 +3,24 @@ import { prisma } from '@vaqt/db';
 import {
   computeProfileCompleteness,
   normalizeFa,
-  type ProfileCompleteness,
   type UpdateUserProfileInput,
 } from '@vaqt/shared';
 import { AppError } from '../common/errors/app-error';
 import { ErrorCode } from '../common/errors/error-codes';
-import { toPublicUser, type PublicUser } from '../auth/user-view';
+import {
+  toPrivateUser,
+  toPublicUser,
+  type PrivateUser,
+  type PublicUser,
+} from '../auth/user-view';
 
 const userWithSkills = {
   include: { skills: { include: { skill: true } } },
 } as const;
 
-export interface MeResponse {
-  user: PublicUser;
-  completeness: ProfileCompleteness;
-}
-
 @Injectable()
 export class UsersService {
-  async getMe(userId: string): Promise<MeResponse> {
+  async getMe(userId: string): Promise<PrivateUser> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       ...userWithSkills,
@@ -37,7 +36,7 @@ export class UsersService {
       skillCount: user.skills.length,
     });
 
-    return { user: toPublicUser(user), completeness };
+    return toPrivateUser(user, completeness);
   }
 
   async updateMe(

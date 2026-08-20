@@ -59,7 +59,7 @@
     "@vaqt/db#build": {
       "dependsOn": ["generate"],
       "cache": false,
-      "outputs": []
+      "outputs": ["dist/**"]
     },
     "lint": {
       "dependsOn": ["^generate"],
@@ -100,7 +100,8 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "dependsOn": ["^build", "^generate"]
     },
     "migrate": {
       "cache": false
