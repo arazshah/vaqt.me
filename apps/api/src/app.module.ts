@@ -1,13 +1,17 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
+import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { CategoriesModule } from './categories/categories.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { BullRedisModule } from './common/redis/bull-redis.module';
 import { RedisModule } from './common/redis/redis.module';
+import { SkillsModule } from './skills/skills.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -17,6 +21,10 @@ import { RedisModule } from './common/redis/redis.module';
     RedisModule,
     BullRedisModule,
     AuthModule,
+    UsersModule,
+    CategoriesModule,
+    SkillsModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [

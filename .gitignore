@@ -52,3 +52,6 @@ prisma/.env
 # Misc
 *.pem
 .cache
+
+# Local avatar storage (dev-only, LocalDiskAdapter)
+apps/api/uploads/

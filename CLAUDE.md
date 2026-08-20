@@ -2,8 +2,8 @@
 
 > این فایل شامل تمام تصمیمات نهایی معماری و پیاده‌سازی است. در هر فاز به‌روز می‌شود.
 
-**آخرین به‌روزرسانی:** فاز ۲ — احراز هویت (تکمیل‌شده)
-**وضعیت:** فاز ۲ تکمیل — آماده برای فاز ۳
+**آخرین به‌روزرسانی:** فاز ۳ — پروفایل کاربر، مهارت‌ها و دسته‌ها (تکمیل‌شده)
+**وضعیت:** فاز ۳ تکمیل — آماده برای فاز ۴
 
 ---
 
@@ -223,6 +223,45 @@
 
 همه با prefix `/api/v1`: `POST /auth/otp/request`، `POST /auth/otp/verify`، `POST /auth/refresh`، `POST /auth/logout`، `POST /auth/logout-all`، `GET /auth/me`، `PATCH /auth/role`، `POST /auth/ws-ticket` (تیکت یک‌بارمصرف، TTL ۶۰ ثانیه در Redis). `GET /health` عمداً `@Public()` است (برای health-check‌های زیرساخت بدون auth) — این هم یک باگ واقعی بود که موقع اجرای زنده کشف و رفع شد.
 
+### ۲۵. نقش‌ها — `roleIntent` در برابر `SystemRole`
+
+- `roleIntent` (`SEEKER`/`PROVIDER`، از فاز ۲) صرفاً UX است: کاربر با `PATCH /auth/role` آن را عوض می‌کند تا فرم‌ها/فیلترهای مناسب را ببیند؛ **هیچ‌جا برای authorization استفاده نمی‌شود** — کاربر با نقش `SEEKER` هم می‌تواند بعداً پیشنهاد بدهد (رفتار عمداً غیرانحصاری، تست شده)
+- `SystemRole` (`USER`/`ADMIN`، فیلد جدید روی `User`) تنها منبع authorization سطح سیستم است؛ گارد `RolesGuard` + دکوریتور `@Roles(...)` (کپی ساختاری از `RequireVerifiedPhoneGuard`: خواندن از DB با کش Redis ۳۰ ثانیه‌ای، بدون invalidation صریح، مثل بند ۲۱) — پیاده‌سازی در `apps/api/src/common/guards/roles.guard.ts` و `common/decorators/roles.decorator.ts`
+
+### ۲۶. `toPublicUser()` — تنها راه خروج داده‌ی کاربر
+
+- تابع واحد `apps/api/src/auth/user-view.ts` تنها مسیر مجاز خروج آبجکت `User` از API است؛ فیلدهای `phone`، `phoneVerifiedAt` خام، `status`، `systemRole` و `avatarStorageKey` هرگز در خروجی ظاهر نمی‌شوند (حتی برای پروفایل خودِ کاربر)
+- `phoneVerified: boolean` مشتق از `phoneVerifiedAt !== null` جایگزین timestamp خام شد
+- تست خودکار (`user-view.spec.ts` + تست‌های سرویس) ثابت می‌کند شماره‌ی هیچ کاربری، نه فقط کاربران دیگر، در JSON خروجی ظاهر نمی‌شود؛ همچنین با اجرای زنده روی سرور واقعی تأیید شد (بخش پایین)
+- قاعده‌ی ESLint سفارشی و type-aware `local/no-raw-user-return` (`eslint-rules/no-raw-user-return.mjs`، متصل در `eslint.config.mjs` فقط روی `apps/api/src/**/*.controller.ts`) به‌عنوان مکانیزم واقعی اجرای این بند اضافه شد — بررسی می‌کند که نوع مقدار `return` هر متد کنترلر (مستقیم یا یک لایه تودرتو در یک آبجکت wrapper مثل `{ user, completeness }`، الگوی واقعی این پروژه) به‌طور ساختاری شامل هر سه فیلد `phone`+`phoneVerifiedAt`+`systemRole` نباشد. با یک کنترلر آزمایشی موقت (حذف‌شده بعد از تأیید) هم حالت مستقیم و هم حالت wrapper شده به‌صورت دستی تأیید شد که خطا می‌دهند، و کنترلرهای واقعی فعلی تمیز پاس می‌شوند.
+
+### ۲۷. پروفایل کاربر و مهارت‌ها
+
+- فیلدهای پروفایل: `displayName` (۳ تا ۵۰ کاراکتر، نرمال‌شده با `normalizeFa`)، `headline`، `bio` (حداکثر ۱۰۰۰)، `city`، `modePreference`، `linkedinUrl` (اعتبارسنجی URL)، `timezone`
+- مهارت‌ها از طریق جدول واسط `UserSkill` (فاز ۱)؛ `PUT /users/me/skills` جایگزینی کامل اتمیک (transaction: حذف همه + insert جدید)، رد مهارت ناشناخته یا غیرفعال
+- پروفایل فقط برای کاربران واردشده (logged-in) قابل مشاهده است — چون `JwtAuthGuard` سراسری است و `GET /users/:id` هیچ `@Public()` ندارد، این به‌صورت ساختاری تضمین می‌شود، نه با چک دستی
+- `completeness` (`canPublishRequest`/`canSubmitOffer` + فیلدهای مفقود) از توابع خالص `packages/shared/src/domain/completeness.ts` محاسبه می‌شود تا وب هم بتواند همان قانون را دوباره‌استفاده کند؛ در `GET /users/me` برگردانده می‌شود
+
+### ۲۸. آواتار — آپلود، اعتبارسنجی و حذف EXIF/GPS
+
+- انتزاع `StoragePort` (`apps/api/src/storage/`) با دو آداپتر: `LocalDiskAdapter` (dev، سرو استاتیک از `/uploads`) و `S3Adapter` (سازگار با Arvan Cloud Object Storage، `forcePathStyle: true`)
+- حداکثر حجم ۲ مگابایت؛ فقط jpeg/png/webp، تشخیص **صرفاً از magic bytes** (نه Content-Type، نه پسوند فایل) — پیاده‌سازی در `users/image-magic-bytes.ts` (نه `file-type` npm؛ به یادداشت پایین مراجعه شود)
+- بازتولید با `sharp` به ۴۰۰×۴۰۰ (اصلی) و ۹۶×۹۶ (thumbnail)؛ چون sharp به‌صورت پیش‌فرض EXIF/ICC/IPTC/XMP منبع را در خروجی کپی نمی‌کند مگر با `.withMetadata()` صریح، بازتولید خودش استریپ می‌کند — با تست و همچنین اجرای زنده (پایین) اثبات شد
+- نام فایل تصادفی (`randomUUID()`)؛ آپلود جدید، فایل‌های قبلی (اصلی + thumbnail) را از storage حذف می‌کند
+
+### ۲۹. دسته‌ها و مهارت‌ها — فقط ادمین‌کیوریت
+
+- `GET /categories` و `GET /skills` عمومی (هر کاربر واردشده)، کش Redis ۱ ساعته با ETag دستی (نه interceptor نستجی، چون نیاز به دسترسی به بدنه‌ی پاسخ برای هش داشتیم)
+- CRUD فقط از طریق `POST|PATCH /admin/categories` و `POST|PATCH /admin/skills`، گارد شده با `@Roles(SystemRole.ADMIN)` روی کل `AdminController`
+- **بدون حذف سخت** — فقط `isActive: false`؛ دسته‌ای که هنوز حداقل یک `Request` غیرترمینال (`DRAFT`/`PUBLISHED`/`OFFER_SELECTED`) به آن اشاره دارد، هرگز نمی‌تواند غیرفعال شود (`CategoriesService.assertNoActiveRequests`)، با تست یکپارچگی روی Postgres واقعی اثبات شد
+
+### ۳۰. DTOها و زیرساخت مشترک
+
+- همه‌ی DTOهای فاز ۳ زود schema-اول هستند: تعریف zod در `packages/shared/src/schemas/**`، مصرف در Nest با `nestjs-zod`'s `createZodDto()` + `@UsePipes(new ZodValidationPipe(...))` صریح روی هر روت — نه مانی‌فست global، چون `ValidationPipe` سراسری (`whitelist`+`forbidNonWhitelisted`) با DTOهای فاقد دکوریتور class-validator تداخل می‌کند (به یادداشت پایین مراجعه شود)
+- پاکت pagination با کرسر (`{items, nextCursor, hasMore}`) در `packages/shared/src/pagination.ts`، بدون `Buffer` (با `TextEncoder`/`atob`/`btoa`) تا در باندل مرورگر `apps/web` هم قابل استفاده باشد — فعلاً فقط زیرساخت، اولین مصرف واقعی در فاز درخواست‌ها
+- میدل‌ور `origin-check` (`apps/api/src/common/middleware/origin-check.middleware.ts`) هدر `Origin`/`Referer` را روی متدهای mutating چک می‌کند، به‌عنوان لایه‌ی دفاعی دوم پشتِ `SameSite=Lax` — این میدل‌ور بدون تست کامیت شده بود؛ ۱۳ تست واحد اضافه شد (متدهای غیرmutating، تطابق/عدم‌تطابق Origin، fallback به Referer، Referer نامعتبر، اولویت Origin بر Referer)
+- `ratingAvg`/`ratingCount` روی `User` فقط با پیش‌فرض ۰ اضافه شدند؛ محاسبه‌ی واقعی به فاز بازبینی (نظرات) موکول شد
+
 ---
 
 ## تصمیمات تکمیلی
@@ -327,27 +366,31 @@
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
 | ~~`--passWithNoTests` در اسکریپت‌های jest اپ api~~                           | ✅ رفع شد در فاز ۲ — حذف شد، اکنون نبود تست واقعاً fail می‌دهد                                                                                    | —       |
 | ~~نبود `coverageThreshold` در jest اپ api~~                                  | ✅ رفع شد در فاز ۲ — آستانه‌ی global ۷۰٪ + آستانه‌ی ۱۰۰٪ برای otp/rate-limit/session/auth.service/require-verified-phone.guard اضافه شد           | —       |
-| `AppService.getHealth()` واقعاً DB/Redis را چک نمی‌کند                       | طبق اسپک («GET /health (db + redis)») باید اتصال واقعی Postgres و Redis را تست کند؛ فعلاً فقط timestamp استاتیک برمی‌گرداند (باقی‌مانده از فاز ۰) | فاز ۳   |
-| AuditLog با `actorId: null` (شکست تأیید OTP، بلاک شدن) پاک‌سازی خودکار ندارد | اجراهای مکرر تست‌های rate-limit روی Postgres واقعی این ردیف‌ها را انباشته می‌کنند؛ نیاز به مکانیزم پاک‌سازی یا نگه‌داشتن آن‌ها با TTL/job دوره‌ای | فاز ۱۰  |
-| `ts-node --transpile-only` موقتی است                                         | راه‌حل نهایی: بیلد `packages/shared` به `dist` با فیلد `exports` و بازگشت به `nest start --watch`                                                 | فاز ۱۰  |
+| `AppService.getHealth()` واقعاً DB/Redis را چک نمی‌کند                       | طبق اسپک («GET /health (db + redis)») باید اتصال واقعی Postgres و Redis را تست کند؛ فعلاً فقط timestamp استاتیک برمی‌گرداند (باقی‌مانده از فاز ۰) | فاز ۴   |
+| AuditLog با `actorId: null` (شکست تأیید OTP، بلاک شدن) پاک‌سازی خودکار ندارد | اجراهای مکرر تست‌های rate-limit روی Postgres واقعی این ردیف‌ها را انباشته می‌کنند؛ نیاز به مکانیزم پاک‌سازی یا نگه‌داشتن آن‌ها با TTL/job دوره‌ای | فاز ۱۱  |
+| `ts-node --transpile-only` موقتی است                                         | راه‌حل نهایی: بیلد `packages/shared` به `dist` با فیلد `exports` و بازگشت به `nest start --watch`                                                 | فاز ۱۱  |
+| `packages/shared`ی completeness/pagination بدون آستانه‌ی coverage اجباری     | تست‌ها با vitest کامل نوشته شده‌اند ولی برخلاف `apps/api` (jest `coverageThreshold`)، هیچ gate اجباری‌ای برای `packages/shared` تنظیم نشده        | فاز ۱۱  |
 
 ---
 
 ## وضعیت فازها
 
-| فاز                | وضعیت        | توضیحات                          |
-| ------------------ | ------------ | -------------------------------- |
-| ۰ — پایه           | ✅ تکمیل‌شده | Bootstrap monorepo               |
-| ۱ — دیتابیس        | ✅ تکمیل‌شده | Prisma + migration + seed        |
-| ۲ — احراز هویت     | ✅ تکمیل‌شده | OTP + JWT + rate limit           |
-| ۳ — سیستم طراحی    | ⏳ در انتظار | Tailwind + Vazirmatn + shadcn/ui |
-| ۴ — درخواست‌ها     | ⏳ در انتظار | CRUD + masking + pagination      |
-| ۵ — AI             | ⏳ در انتظار | AI wizard + live preview         |
-| ۶ — پیشنهادها      | ⏳ در انتظار | Offers + selection flow          |
-| ۷ — چت             | ⏳ در انتظار | Socket.IO + conversations        |
-| ۸ — پرداخت         | ⏳ در انتظار | Zarinpal + entitlements          |
-| ۹ — تکمیل تجربه    | ⏳ در انتظار | Reviews + PWA + SEO              |
-| ۱۰ — کیفیت و تحویل | ⏳ در انتظار | E2E tests + security + docker    |
+| فاز                | وضعیت        | توضیحات                               |
+| ------------------ | ------------ | ------------------------------------- |
+| ۰ — پایه           | ✅ تکمیل‌شده | Bootstrap monorepo                    |
+| ۱ — دیتابیس        | ✅ تکمیل‌شده | Prisma + migration + seed             |
+| ۲ — احراز هویت     | ✅ تکمیل‌شده | OTP + JWT + rate limit                |
+| ۳ — پروفایل کاربر  | ✅ تکمیل‌شده | پروفایل + مهارت‌ها + دسته‌ها + آواتار |
+| ۴ — سیستم طراحی    | ⏳ در انتظار | Tailwind + Vazirmatn + shadcn/ui      |
+| ۵ — درخواست‌ها     | ⏳ در انتظار | CRUD + masking + pagination           |
+| ۶ — AI             | ⏳ در انتظار | AI wizard + live preview              |
+| ۷ — پیشنهادها      | ⏳ در انتظار | Offers + selection flow               |
+| ۸ — چت             | ⏳ در انتظار | Socket.IO + conversations             |
+| ۹ — پرداخت         | ⏳ در انتظار | Zarinpal + entitlements               |
+| ۱۰ — تکمیل تجربه   | ⏳ در انتظار | Reviews + PWA + SEO                   |
+| ۱۱ — کیفیت و تحویل | ⏳ در انتظار | E2E tests + security + docker         |
+
+> **یادداشت شماره‌گذاری:** فاز «پروفایل کاربر» (که پیش‌تر در برنامه اصلی فاز ۳ = سیستم طراحی بود) بنا به تصمیم صریح کاربر جلوتر انداخته و فاز ۳ واقعی شد؛ فازهای ۳ تا ۱۰ قبلی یک واحد به عقب رانده شدند (اکنون ۴ تا ۱۱). ارجاعات قدیمی‌تر در این فایل به «فاز ۱۰» برای بدهی فنی، به فاز ۱۱ جدید اشاره دارند.
 
 ---
 
@@ -419,3 +462,51 @@
 5. **پاکسازی نشست**: صف/job جدید `session-cleanup` (روزانه، `0 3 * * *`، از طریق `upsertJobScheduler` ایدمپوتنت) — نشست‌های باطل‌شده‌ی قدیمی‌تر از ۹۰ روز (بر اساس `revokedAt`) یا منقضی‌شده‌ی هرگز-باطل‌نشده‌ی قدیمی‌تر از ۹۰ روز (بر اساس `expiresAt`) را حذف می‌کند؛ منطق در `SessionCleanupService.cleanupOldSessions()` جدا از processor نگه داشته شد تا مستقیماً روی Postgres واقعی تست شود.
 6. بدهی فنی ثبت شد (جدول بالا).
 7. تگ و push — به بخش انتهای فاز مراجعه شود.
+
+---
+
+## یادداشت‌های فاز فعلی (فاز ۳)
+
+### تصمیمات و پیاده‌سازی
+
+- ماژول‌های کامل `apps/api/src/users/**`، `categories/**`، `skills/**`، `admin/**`، `storage/**` + گارد/دکوریتور جدید `common/guards/roles.guard.ts`، `common/decorators/roles.decorator.ts`، میدل‌ور `common/middleware/origin-check.middleware.ts` — جزئیات کامل در بندهای ۲۵ تا ۳۰ بالا
+- migration جداگانه (`20260820154005_user_profile_fields_and_skills`) روی Postgres واقعی اجرا شد: enum `SystemRole`، فیلدهای جدید `User` (headline, city, modePreference, linkedinUrl, timezone, ratingAvg, ratingCount, systemRole, avatarThumbnailUrl, avatarStorageKey)، مدل جدید `UserSkill`، `isActive` روی `Category`/`Skill`
+- SQL تولیدشده توسط Prisma عمداً پیش از اجرا دستی ویرایش شد: چون ایندکس GIN تریگرام فاز ۱ (`requests_searchText_trgm_idx`) با SQL خام ساخته شده بود، Prisma آن را در نمایش داخلی خودش نمی‌شناخت و `DROP INDEX` برایش پیشنهاد داده بود؛ آن خط حذف و با کامنت توضیحی جایگزین شد — با `\d requests` روی DB واقعی تأیید شد که ایندکس باقی ماند (همان الگوی فاز ۱، اکنون به‌عنوان یک قاعده‌ی تکرارشونده برای هر migration آینده‌ای که جدول `requests` را لمس کند مستند شد)
+
+### باگ‌های واقعی که فقط با اجرای زنده کشف شدند (نه با تست واحد یا typecheck)
+
+1. **`file-type` (نسخه‌ی نصب‌شده ۱۹.۶.۰) یک پکیج ESM-only است** — `require()` مستقیم آن از یک فایل CommonJS (مسیر ts-jest/ts-node این پروژه) با `Cannot find module 'file-type'` شکست می‌خورد؛ typecheck آن را نمی‌گرفت چون تایپ‌ها مستقل از resolve زمان اجرا هستند. به‌جای پایین‌آوردن نسخه یا دست‌وپنجه نرم‌کردن با تنظیمات ESM/CJS جدید turbo/jest (که خودش دسته‌ای از مشکلات مشابه فاز ۲ را دوباره باز می‌کرد)، تشخیص magic-byte برای سه فرمت مجاز (jpeg/png/webp) مستقیم و بدون وابستگی در `users/image-magic-bytes.ts` نوشته شد — کوچک‌تر، بدون هیچ ریسک ESM، و دقیقاً همان سه امضای بایت استانداردی که `file-type` هم چک می‌کند.
+2. **`AdminModule` نمی‌توانست `RolesGuard` را resolve کند**: `@Roles(SystemRole.ADMIN)` به `AuthConfigService` (پارامتر سوم `RolesGuard`) نیاز دارد؛ `AuthConfigService` از `AuthModule` export می‌شود ولی `AdminModule` آن را import نکرده بود. تست‌های واحد (`roles.guard.spec.ts`, `admin.controller.spec.ts`) این را نمی‌گرفتند چون گاردها را مستقیم `new` می‌کنند، نه از طریق DI container نستجی. فقط بالا آوردن واقعی سرور خطای resolve را نشان داد. رفع شد با افزودن `AuthModule` به `imports` در `admin.module.ts`.
+3. **`LocalDiskAdapter.save()` امضای `StoragePort` را کامل پیاده نمی‌کرد**: اینترفیس `save(key, buffer, contentType)` سه پارامتری است (چون `S3Adapter` به `contentType` برای `ContentType` هدر نیاز دارد) ولی `LocalDiskAdapter.save()` فقط دو پارامتر داشت — یک خطای واقعی کامپایل TypeScript که پیش از اجرای زنده هم با `pnpm typecheck` گرفته شد؛ اینجا آورده شده چون در حین آماده‌سازی برای اجرای زنده کشف شد. رفع شد با اضافه‌کردن پارامتر سوم (نادیده‌گرفته‌شده با `_contentType`).
+
+### تست
+
+- ۲۵۳ تست (`apps/api`، ۳۹ suite)، پوشش global: ۹۲٫۶۱٪ statements / ۸۹٫۰۳٪ branches / ۸۷٫۹۷٪ functions / ۹۳٫۱۹٪ lines. پوشش ۱۰۰٪ کامل روی `auth/user-view.ts` و `common/guards/roles.guard.ts` (دو ناحیه‌ی حساس جدید این فاز) با `coverageThreshold` در `package.json` اجباری شد، علاوه بر پنج ناحیه‌ی حساس فاز ۲ که همچنان ۱۰۰٪ ماندند
+- تست‌های `UsersService`, `CategoriesService`, `SkillsService`, `AvatarService` روی Postgres/Redis **واقعی** اجرا می‌شوند (نه mock)، با همان الگوی namespace/شماره تصادفی و پاک‌سازی در `afterEach`/`afterAll`
+- ماتریس صریح authorization: مالک/کاربر دیگر/ادمین همگی همان شکل عمومی و بدون‌نشتی را از `GET /users/:id` می‌گیرند (تست شده که سه پاسخ دقیقاً برابرند)؛ نقش `ADMIN`/`USER` روی `AdminController` با تست metadata (`@Roles`) + `roles.guard.spec.ts` (که خودش ماتریس کامل allow/deny/no-auth/status-gate/cache-hit/cache-invalidation را پوشش می‌دهد)
+- اثبات EXIF/GPS: یک fixture واقعی با `sharp(...).withExif({IFD3: {GPSLatitude...}})` ساخته می‌شود؛ یک TIFF/IFD0-walker کوچک (فقط برای تست) تگ 0x8825 (GPS IFD pointer) را در ورودی پیدا می‌کند تا اثبات کند fixture واقعاً GPS دارد، سپس خروجی سرویس با `sharp(...).metadata().exif` بررسی می‌شود که کاملاً `undefined` است
+- اثبات رد فایل تقلبی: بافر متنی معمولی (نه بایت‌های واقعی تصویر) رد می‌شود، حتی بدون اتکا به نام فایل یا Content-Type
+- اثبات کش‌شدن `categories`/`skills` در Redis با ETag پایدار بین دو فراخوانی، و invalidation بعد از `create`/`update`
+- اثبات مسدودشدن deactivate یک دسته با درخواست فعال (`PUBLISHED`/`DRAFT`/`OFFER_SELECTED`) و مجازبودن آن با درخواست ترمینال (`CLOSED`) — روی Postgres واقعی
+- `packages/shared`: توابع `completeness` (۱۱ تست) و `pagination` (۵ تست) با vitest — بدون آستانه‌ی coverage اجباری (به بدهی فنی مراجعه شود)
+
+### اجرای کامل زنده (E2E) روی سرور واقعی
+
+با `pnpm dev` (env واقعی inline، بدون `.env` کامیت‌شده، `SMS_PROVIDER=mock`, `STORAGE_PROVIDER=local`) روی Postgres/Redis واقعی:
+
+1. **کشف باگ DI بالا** (`AdminModule` → `AuthModule`) فقط در همین مرحله، قبل از هر درخواست HTTP.
+2. کاربر A: `POST /auth/otp/request` (+9899011122**33**) → `[mock-sms] OTP ...: 55751` در کنسول → `POST /auth/otp/verify` → کوکی‌های httpOnly صحیح؛ پاسخ verify خودش هم عاری از شماره بود.
+3. یک تصویر ۸۰۰×۶۰۰ با `sharp` ساخته شد که `IFD3` واقعی (`GPSLatitudeRef/GPSLatitude/GPSLongitudeRef/GPSLongitude`) دارد؛ `sharp(...).metadata().exif` روی این فایل ۳۳۰ بایت EXIF واقعی نشان داد.
+4. `POST /users/me/avatar` (multipart) با این فایل → پاسخ `{avatarUrl, avatarThumbnailUrl}` روی `http://localhost:3001/uploads/avatars/<uuid>.jpg` و `<uuid>-thumb.jpg`.
+5. هر دو فایل خروجی واقعی از دیسک (سرو شده از همان مسیر استاتیک) با `sharp(...).metadata()` بررسی شدند: اندازه‌ی اصلی دقیقاً ۴۰۰×۴۰۰، thumbnail دقیقاً ۹۶×۹۶، و `exif`/`icc`/`iptc`/`xmp` هر چهار روی هر دو فایل کاملاً `false` (نبود) — اثبات کامل حذف EXIF/GPS روی خروجی واقعی سرور، نه فقط تست واحد.
+6. کاربر B (شماره‌ی دیگر) لاگین شد و `GET /users/{id-of-A}` را زد؛ بدنه‌ی کامل پاسخ گرفته و با `grep` برای رشته‌ی شماره‌ی کاربر A (هم فرمت محلی و هم +98) جست‌وجو شد — **هیچ نتیجه‌ای پیدا نشد**، یعنی شماره در هیچ بخشی از JSON خروجی وجود نداشت.
+7. پاک‌سازی: هر دو کاربر تست (و session/verification-code/audit-log مرتبط) از Postgres واقعی حذف شدند، پوشه‌ی `apps/api/uploads/` (فایل‌های آواتار آپلودشده) پاک شد، سرور متوقف شد. شمارش نهایی seed فاز ۱ روی DB واقعی تأیید شد بدون تغییر باقی ماند: ۸ کاربر، ۱۵ درخواست، ۱۲ دسته، ۱۲ مهارت.
+
+### تصمیمات فراتر از اسپک اولیه (judgment calls)
+
+- عدم استفاده از `file-type` و نوشتن magic-byte detector اختصاصی (به باگ‌های واقعی بالا مراجعه شود) — یک وابستگی کمتر، بدون ریسک ESM.
+- نبود آستانه‌ی coverage اجباری روی `packages/shared` صراحتاً به‌عنوان بدهی فنی ثبت شد به‌جای نادیده‌گرفتن سکوت‌آمیز.
+- شماره‌گذاری فاز «سیستم طراحی» یک واحد به عقب رانده شد تا فاز ۳ واقعی (پروفایل کاربر) با آنچه ساخته شد مطابق باشد — به یادداشت بالای جدول «وضعیت فازها» مراجعه شود.
+- **بازبینی نهایی (parent session، قبل از push):** دو شکاف واقعی نسبت به اسپک صریح فاز ۳ پیدا و رفع شد: (۱) میدل‌ور `origin-check` بدون تست بود — ۱۳ تست اضافه شد؛ (۲) الزام «یک قاعده‌ی ESLint یا تست که serialize مستقیم موجودیت User در کنترلرها را ممنوع کند» اصلاً پیاده‌سازی نشده بود — قاعده‌ی ESLint سفارشی `local/no-raw-user-return` نوشته و به‌صورت دستی (هم حالت مستقیم و هم حالت wrapper) تأیید شد. هر دو مورد در همان کامیت Batch ۲ ادغام شدند (هیچ‌چیز هنوز push نشده بود).
+
+- `pnpm lint && pnpm typecheck && pnpm build && pnpm test` روی هر ۵ workspace سبز.

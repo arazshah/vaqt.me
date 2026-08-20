@@ -113,22 +113,41 @@ enum ReportStatus {
   DISMISSED
 }
 
+// Permission level — distinct from RoleIntent (SEEKER/PROVIDER/BOTH is
+// product intent a user can freely change, never a permission grant).
+enum SystemRole {
+  USER
+  ADMIN
+}
+
 // ---------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------
 
 model User {
-  id              String     @id @default(cuid())
-  phone           String     @unique
-  phoneVerifiedAt DateTime?
-  displayName     String
-  avatarUrl       String?
-  bio             String?
-  roleIntent      RoleIntent @default(SEEKER)
-  status          UserStatus @default(ACTIVE)
-  lastSeenAt      DateTime?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  id                 String      @id @default(cuid())
+  phone              String      @unique
+  phoneVerifiedAt    DateTime?
+  displayName        String
+  avatarUrl          String?
+  avatarThumbnailUrl String?
+  // Storage adapter key for the current avatar (e.g. local disk path or S3
+  // object key) — internal only, never serialized via toPublicUser().
+  avatarStorageKey   String?
+  bio                String?
+  headline           String?
+  city               String?
+  modePreference     RequestMode?
+  linkedinUrl        String?
+  timezone           String      @default("Asia/Tehran")
+  ratingAvg          Float       @default(0)
+  ratingCount        Int         @default(0)
+  roleIntent         RoleIntent  @default(SEEKER)
+  systemRole         SystemRole  @default(USER)
+  status             UserStatus  @default(ACTIVE)
+  lastSeenAt         DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
 
   requestsOwned      Request[]          @relation("RequestOwner")
   offers             Offer[]            @relation("OfferProvider")
@@ -146,9 +165,22 @@ model User {
   reportsAgainst     Report[]           @relation("ReportTargetUser")
   auditLogs          AuditLog[]
   sessions           Session[]
+  skills             UserSkill[]
 
   @@index([status])
   @@map("users")
+}
+
+model UserSkill {
+  userId    String
+  skillId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, skillId])
+  @@index([skillId])
+  @@map("user_skills")
 }
 
 model Session {
@@ -200,6 +232,10 @@ model Category {
   parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryTree")
   order     Int        @default(0)
+  // Soft-deactivate only — never hard-deleted. A category with any
+  // non-terminal Request still pointing at it may not be deactivated (see
+  // CategoriesAdminService).
+  isActive  Boolean    @default(true)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
@@ -216,10 +252,12 @@ model Skill {
   slug       String   @unique
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
+  isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   requestSkills RequestSkill[]
+  userSkills    UserSkill[]
 
   @@index([categoryId])
   @@map("skills")

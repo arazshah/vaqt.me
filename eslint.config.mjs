@@ -1,6 +1,7 @@
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
+import noRawUserReturn from './eslint-rules/no-raw-user-return.mjs';
 
 export default tseslint.config(
   eslint.configs.recommended,
@@ -51,6 +52,21 @@ export default tseslint.config(
     files: ['packages/db/**/*.ts'],
     rules: {
       'no-restricted-imports': 'off',
+    },
+  },
+  {
+    // Route handlers must always exit through toPublicUser() — never the
+    // raw Prisma User entity (see apps/api/src/auth/user-view.ts). This is
+    // the "ESLint rule or test" enforcement decided in the Phase 3 notes
+    // in CLAUDE.md; type-aware, so it catches the shape even through
+    // helper functions, not just a literal `return user`.
+    files: ['apps/api/src/**/*.controller.ts'],
+    ignores: ['**/*.spec.ts'],
+    plugins: {
+      local: { rules: { 'no-raw-user-return': noRawUserReturn } },
+    },
+    rules: {
+      'local/no-raw-user-return': 'error',
     },
   },
   {

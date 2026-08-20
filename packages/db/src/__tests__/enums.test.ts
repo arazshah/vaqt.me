@@ -22,6 +22,7 @@ const ENUM_NAMES = [
   'SubscriptionStatus',
   'NotificationChannel',
   'ReportStatus',
+  'SystemRole',
 ] as const;
 
 describe('enum parity between @vaqt/shared and Prisma schema', () => {

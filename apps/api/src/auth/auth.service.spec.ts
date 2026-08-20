@@ -472,8 +472,8 @@ describe('AuthService', () => {
 
       const result = await service.verifyOtp(phone, code, DEVICE);
 
-      expect(result.user.phone).toBe(phone);
-      expect(result.user.phoneVerifiedAt).not.toBeNull();
+      expect(result.user.phoneVerified).toBe(true);
+      expect(JSON.stringify(result.user)).not.toContain(phone);
       expect(result.tokens.accessToken).toEqual(expect.any(String));
       expect(result.tokens.refreshToken).toEqual(expect.any(String));
       createdUserIds.push(result.user.id);
@@ -501,10 +501,11 @@ describe('AuthService', () => {
         'expected a pending OTP code in redis',
       );
 
-      const result = await service.verifyOtp(user.phone, code, DEVICE);
-      expect(result.user.phoneVerifiedAt?.getTime()).toBe(
-        originalVerifiedAt.getTime(),
-      );
+      await service.verifyOtp(user.phone, code, DEVICE);
+      const row = await prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
+      });
+      expect(row.phoneVerifiedAt?.getTime()).toBe(originalVerifiedAt.getTime());
     });
 
     it('verifying for a pre-existing but never-verified user sets phoneVerifiedAt to now', async () => {
@@ -520,10 +521,11 @@ describe('AuthService', () => {
         'expected a pending OTP code in redis',
       );
 
-      const result = await service.verifyOtp(user.phone, code, DEVICE);
-      expect(result.user.phoneVerifiedAt?.getTime()).toBeGreaterThanOrEqual(
-        before,
-      );
+      await service.verifyOtp(user.phone, code, DEVICE);
+      const row = await prisma.user.findUniqueOrThrow({
+        where: { id: user.id },
+      });
+      expect(row.phoneVerifiedAt?.getTime()).toBeGreaterThanOrEqual(before);
     });
 
     it('clears the invalidated-code streak on a successful verification', async () => {
@@ -713,7 +715,7 @@ describe('AuthService', () => {
 
       const result = await service.getMe(user.id);
       expect(result.id).toBe(user.id);
-      expect(result.phone).toBe(user.phone);
+      expect(JSON.stringify(result)).not.toContain(user.phone);
     });
 
     it('getMe throws UNAUTHORIZED for a user id that no longer exists', async () => {

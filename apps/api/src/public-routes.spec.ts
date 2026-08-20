@@ -2,8 +2,12 @@ import 'reflect-metadata';
 import { RequestMethod } from '@nestjs/common';
 import { PATH_METADATA, METHOD_METADATA } from '@nestjs/common/constants';
 import { IS_PUBLIC_KEY } from './common/decorators/public.decorator';
+import { AdminController } from './admin/admin.controller';
 import { AppController } from './app.controller';
 import { AuthController } from './auth/auth.controller';
+import { CategoriesController } from './categories/categories.controller';
+import { SkillsController } from './skills/skills.controller';
+import { UsersController } from './users/users.controller';
 
 // Every controller registered in the app — kept in sync manually so a new
 // controller can't slip in unreviewed. If you add a controller, add it
@@ -11,6 +15,10 @@ import { AuthController } from './auth/auth.controller';
 const CONTROLLERS: (new (...args: never[]) => unknown)[] = [
   AppController,
   AuthController,
+  UsersController,
+  CategoriesController,
+  SkillsController,
+  AdminController,
 ];
 
 const METHOD_NAMES: Record<number, string> = {

@@ -64,6 +64,18 @@
         "functions": 100,
         "lines": 100,
         "statements": 100
+      },
+      "src/auth/user-view.ts": {
+        "branches": 100,
+        "functions": 100,
+        "lines": 100,
+        "statements": 100
+      },
+      "src/common/guards/roles.guard.ts": {
+        "branches": 100,
+        "functions": 100,
+        "lines": 100,
+        "statements": 100
       }
     }
   },
@@ -82,7 +94,6 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "cookie-parser": "^1.4.7",
-    "file-type": "^19.6.0",
     "ioredis": "^6.0.0",
     "multer": "^1.4.5-lts.1",
     "nestjs-zod": "^4.3.1",

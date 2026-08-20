@@ -116,3 +116,11 @@ export const [ReportStatus, ReportStatusSchema] = createEnum([
   'DISMISSED',
 ] as const);
 export type ReportStatus = (typeof ReportStatus)[keyof typeof ReportStatus];
+
+// Permission level — distinct from RoleIntent (SEEKER/PROVIDER/BOTH is
+// product intent a user can freely change, never a permission grant).
+export const [SystemRole, SystemRoleSchema] = createEnum([
+  'USER',
+  'ADMIN',
+] as const);
+export type SystemRole = (typeof SystemRole)[keyof typeof SystemRole];
