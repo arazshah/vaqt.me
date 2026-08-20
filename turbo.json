@@ -62,11 +62,11 @@
       "outputs": ["dist/**"]
     },
     "lint": {
-      "dependsOn": ["^generate"],
+      "dependsOn": ["^build", "^generate"],
       "outputs": []
     },
     "@vaqt/db#lint": {
-      "dependsOn": ["generate"],
+      "dependsOn": ["generate", "^build"],
       "outputs": []
     },
     "lint:fix": {
@@ -82,12 +82,12 @@
       "outputs": []
     },
     "test": {
-      "dependsOn": ["^generate"],
+      "dependsOn": ["^build", "^generate"],
       "outputs": ["coverage/**"],
       "cache": false
     },
     "@vaqt/db#test": {
-      "dependsOn": ["generate"],
+      "dependsOn": ["generate", "^build"],
       "outputs": ["coverage/**"],
       "cache": false
     },
