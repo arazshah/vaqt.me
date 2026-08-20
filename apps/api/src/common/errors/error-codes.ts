@@ -1,0 +1,21 @@
+// Machine-readable error codes returned in every API error body as
+// { code, message, details? } (see PROJECT_SPEC.md section 5). Persian
+// messages for each code live in common/messages/fa.ts — never hardcode a
+// Persian string next to a throw site.
+export const ErrorCode = {
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  PHONE_INVALID: 'PHONE_INVALID',
+  OTP_RATE_LIMITED: 'OTP_RATE_LIMITED',
+  OTP_EXPIRED: 'OTP_EXPIRED',
+  OTP_INVALID: 'OTP_INVALID',
+  PHONE_BLOCKED: 'PHONE_BLOCKED',
+  UNAUTHORIZED: 'UNAUTHORIZED',
+  SESSION_INVALID: 'SESSION_INVALID',
+  SESSION_REUSE_DETECTED: 'SESSION_REUSE_DETECTED',
+  PHONE_NOT_VERIFIED: 'PHONE_NOT_VERIFIED',
+  FORBIDDEN: 'FORBIDDEN',
+  NOT_FOUND: 'NOT_FOUND',
+  INTERNAL_ERROR: 'INTERNAL_ERROR',
+} as const;
+
+export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

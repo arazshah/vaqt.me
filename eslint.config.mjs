@@ -54,6 +54,17 @@ export default tseslint.config(
     },
   },
   {
+    // Test files routinely reference a class method (a jest.fn() mock, or
+    // a dummy method used only as a Reflector metadata target) without
+    // calling it — the exact pattern unbound-method exists to catch
+    // elsewhere, but here it's never invoked in a detached `this` context,
+    // so the rule has no real signal in spec files and is pure noise.
+    files: ['**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
+    },
+  },
+  {
     ignores: [
       '**/node_modules/**',
       '**/dist/**',

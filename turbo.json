@@ -1,6 +1,43 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
+  "globalPassThroughEnv": [
+    "NODE_ENV",
+    "PORT",
+    "WEB_ORIGIN",
+    "DATABASE_URL",
+    "REDIS_URL",
+    "REDIS_PREFIX",
+    "JWT_ACCESS_SECRET",
+    "JWT_REFRESH_SECRET",
+    "JWT_ACCESS_TTL_SECONDS",
+    "JWT_REFRESH_TTL_SECONDS",
+    "OTP_PEPPER",
+    "OTP_TTL_SECONDS",
+    "DEV_FIXED_OTP",
+    "RATE_LIMIT_RESEND_COOLDOWN_SECONDS",
+    "RATE_LIMIT_MAX_RESEND_PER_CODE",
+    "RATE_LIMIT_MAX_VERIFY_ATTEMPTS",
+    "RATE_LIMIT_PHONE_HOURLY",
+    "RATE_LIMIT_PHONE_DAILY",
+    "RATE_LIMIT_IP_HOURLY",
+    "RATE_LIMIT_IP_DAILY",
+    "RATE_LIMIT_INVALIDATED_STREAK_THRESHOLD",
+    "RATE_LIMIT_BLOCK_SECONDS",
+    "VERIFIED_PHONE_CACHE_TTL_SECONDS",
+    "WS_TICKET_TTL_SECONDS",
+    "SMS_PROVIDER",
+    "SMSIR_API_KEY",
+    "SMSIR_VERIFY_TEMPLATE_ID",
+    "PAYMENT_PROVIDER",
+    "ZARINPAL_MERCHANT_ID",
+    "ZARINPAL_SANDBOX",
+    "ZARINPAL_CALLBACK_URL",
+    "AI_PROVIDER",
+    "AI_API_KEY",
+    "AI_MODEL",
+    "NEXT_PUBLIC_API_URL"
+  ],
   "tasks": {
     "generate": {
       "cache": false,
@@ -16,6 +53,7 @@
       "outputs": []
     },
     "lint": {
+      "dependsOn": ["^generate"],
       "outputs": []
     },
     "@vaqt/db#lint": {
@@ -35,6 +73,7 @@
       "outputs": []
     },
     "test": {
+      "dependsOn": ["^generate"],
       "outputs": ["coverage/**"],
       "cache": false
     },

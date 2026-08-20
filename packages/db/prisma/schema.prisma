@@ -145,9 +145,31 @@ model User {
   reportsFiled       Report[]           @relation("ReportReporter")
   reportsAgainst     Report[]           @relation("ReportTargetUser")
   auditLogs          AuditLog[]
+  sessions           Session[]
 
   @@index([status])
   @@map("users")
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id])
+  familyId         String
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ip               String?
+  createdAt        DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  // Id of the session that superseded this one on rotation. Not a formal FK
+  // (the replacement row is created before this row is updated), just an
+  // audit trail for reuse-detection investigations.
+  replacedById     String?
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("sessions")
 }
 
 model VerificationCode {
@@ -156,6 +178,9 @@ model VerificationCode {
   codeHash    String
   purpose     OtpPurpose @default(AUTH)
   attempts    Int        @default(0)
+  // Number of times this exact code has been sent (original send = 1).
+  // Capped at 3 by the service layer; resend never changes expiresAt.
+  sendCount   Int        @default(1)
   expiresAt   DateTime
   consumedAt  DateTime?
   ip          String?
