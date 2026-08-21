@@ -49,8 +49,8 @@
   ],
   "tasks": {
     "generate": {
-      "cache": false,
-      "outputs": []
+      "inputs": ["prisma/schema.prisma"],
+      "outputs": ["generated/prisma/**"]
     },
     "build": {
       "dependsOn": ["^build", "^generate"],

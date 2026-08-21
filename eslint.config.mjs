@@ -120,6 +120,10 @@ export default tseslint.config(
       '**/.next/**',
       '**/coverage/**',
       '**/.turbo/**',
+      // Prisma's generated client (packages/db/generated/prisma) — vendor
+      // output, not hand-written code, and not part of any tsconfig
+      // `include`.
+      '**/generated/**',
       'eslint.config.mjs',
       'commitlint.config.js',
       // Build-tool config files, not part of any package's tsconfig

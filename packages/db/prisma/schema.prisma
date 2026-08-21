@@ -4,14 +4,27 @@
 // This file mirrors those values exactly; packages/db has a unit test
 // (src/__tests__/enums.test.ts) asserting they never drift apart.
 //
-// Do NOT set a custom `output` in the generator block below — pnpm's
-// symlinked node_modules can't resolve a relative output path back to
-// where `@prisma/client` looks for `.prisma/client`, and the client
-// silently types as `any` with no error. Let Prisma manage the default
-// output location.
+// `output` is set to a package-local path (see generator block below).
+// Without it, Prisma 6 writes the client into pnpm's content-addressed
+// store (node_modules/.pnpm/@prisma+client@<hash>/...), a path outside
+// this package's directory and outside turbo's default input/output
+// scanning root — turbo has no way to know the client exists, is fresh,
+// or is even present, so it can restore a "successful" typecheck/test
+// cache hit from a run where the client existed even after a fresh
+// `pnpm install --ignore-scripts` left no client on disk at all. A
+// package-local output makes the generated client a trackable file this
+// package owns, so turbo.json can declare it as the `generate` task's
+// real `outputs` and downstream tasks pick up its hash. Verified live
+// with Prisma 6.19.3 + pnpm 9.15.4 (2026-08-21): the generated client
+// types correctly (not `any`) — a deliberately invalid field on
+// `prisma.user.findUnique` fails `tsc` exactly as it should. Also
+// verified: `packages/db/tsup.config.ts` externalizes this path and
+// declarations are emitted by plain `tsc`, not tsup's `dts` bundler —
+// see the comment there for why.
 
 generator client {
   provider = "prisma-client-js"
+  output   = "../generated/prisma"
 }
 
 datasource db {

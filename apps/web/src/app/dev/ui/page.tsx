@@ -1,3 +1,4 @@
+import { notFound } from 'next/navigation';
 import type { RequestStatus } from '@vaqt/shared';
 import { Button } from '@vaqt/ui/components/ui/button';
 import { Badge } from '@vaqt/ui/components/ui/badge';
@@ -131,7 +132,14 @@ function Section({
   );
 }
 
+// Component gallery for internal design-system review only — never a real
+// product surface. Gated on NODE_ENV, not a public flag, so a production
+// build always 404s here regardless of misconfigured env vars.
 export default function DevUiGalleryPage() {
+  if (process.env.NODE_ENV === 'production') {
+    notFound();
+  }
+
   return (
     <AppShell>
       <div className="flex flex-col gap-10">

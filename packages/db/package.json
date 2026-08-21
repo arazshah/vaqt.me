@@ -15,7 +15,7 @@
   "scripts": {
     "postinstall": "prisma generate",
     "dev": "tsup --watch",
-    "build": "tsup",
+    "build": "tsup && tsc --declaration --emitDeclarationOnly",
     "generate": "prisma generate",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
