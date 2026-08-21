@@ -131,6 +131,16 @@ export default tseslint.config(
       // no project to resolve them against.
       '**/tsup.config.ts',
       '**/vitest.config.ts',
+      // tsup writes a transient bundled copy of tsup.config.ts into the
+      // package root while building, then deletes it — any package
+      // running `eslint .` concurrently with its own `tsup` build (lint
+      // and build have no ordering between them; nothing requires one) can
+      // have ESLint's file walker enqueue this file the instant it exists,
+      // then hit ENOENT reading it once tsup cleans up. Reproduced live
+      // (2026-08-21): `packages/db/tsup.config.bundled_lhv2blfbgq.mjs`, 5
+      // failures out of 13 back-to-back clean `pnpm lint` runs before this
+      // ignore was added.
+      '**/tsup.config.bundled_*.mjs',
     ],
   },
 );

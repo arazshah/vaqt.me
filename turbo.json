@@ -57,7 +57,7 @@
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "@vaqt/db#build": {
-      "dependsOn": ["generate"],
+      "dependsOn": ["generate", "^build"],
       "cache": false,
       "outputs": ["dist/**"]
     },
