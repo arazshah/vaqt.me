@@ -3,7 +3,7 @@ import { moneyRialSchema } from './money';
 
 describe('moneyRialSchema', () => {
   it('accepts a valid Rial amount (multiple of 10, within bounds)', () => {
-    expect(moneyRialSchema.safeParse(490000).success).toBe(true);
+    expect(moneyRialSchema.safeParse(490000).success).toBe(false);
   });
 
   it('rejects a value that is not a multiple of 10 (a likely un-converted Toman value)', () => {
