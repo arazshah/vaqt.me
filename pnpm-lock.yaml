@@ -275,6 +275,9 @@ importers:
       '@radix-ui/react-direction':
         specifier: ^1.1.1
         version: 1.1.4(@types/react@18.3.31)(react@18.3.1)
+      '@vaqt/shared':
+        specifier: workspace:*
+        version: link:../shared
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
