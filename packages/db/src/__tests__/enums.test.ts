@@ -3,7 +3,7 @@
 // either the shared enum or the Prisma enum was changed without updating
 // the other.
 import { describe, expect, it } from 'vitest';
-import * as PrismaClient from '@prisma/client';
+import * as PrismaClient from '../../generated/prisma/index.js';
 import * as Shared from '@vaqt/shared';
 
 const ENUM_NAMES = [
@@ -47,14 +47,41 @@ describe('enum parity between @vaqt/shared and Prisma schema', () => {
     expect(sharedValues).toEqual(prismaValues);
   });
 
+  // Every one of these is a self-mapping object (key === value, just like a
+  // schema-defined string enum) that Prisma's generator always emits at the
+  // top level regardless of schema content — a *ScalarFieldEnum per model
+  // (field names mapped to themselves), plus a small fixed set of
+  // query-building enums. None of them are schema-defined domain enums, so
+  // they must not trip the parity check below.
+  const PRISMA_BUILTIN_NON_DOMAIN_ENUMS = new Set([
+    'SortOrder',
+    'QueryMode',
+    'NullsOrder',
+    'TransactionIsolationLevel',
+    'ModelName',
+  ]);
+
   it('does not cover an enum that exists in one place but not the other', () => {
     const prismaEnumNames = Object.keys(PrismaClient).filter((key) => {
+      if (
+        key.endsWith('ScalarFieldEnum') ||
+        PRISMA_BUILTIN_NON_DOMAIN_ENUMS.has(key)
+      ) {
+        return false;
+      }
       const value = (PrismaClient as unknown as Record<string, unknown>)[key];
+      if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+        return false;
+      }
+      const entries = Object.entries(value as Record<string, unknown>);
+      // A Prisma/TS string enum maps each key to itself (SEEKER: "SEEKER").
+      // This distinguishes real enums from other object exports that also
+      // happen to hold only string values — e.g. `prismaVersion: { client:
+      // "6.19.3", engine: "<hash>" }`, which the client always exports and
+      // is not an enum.
       return (
-        typeof value === 'object' &&
-        value !== null &&
-        !Array.isArray(value) &&
-        Object.values(value).every((v) => typeof v === 'string')
+        entries.length > 0 &&
+        entries.every(([enumKey, enumValue]) => enumValue === enumKey)
       );
     });
 
