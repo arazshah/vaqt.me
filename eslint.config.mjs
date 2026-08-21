@@ -130,6 +130,7 @@ export default tseslint.config(
       // `include` (which only covers `src/**/*`) — type-aware linting has
       // no project to resolve them against.
       '**/tsup.config.ts',
+      '**/vitest.config.ts',
     ],
   },
 );
