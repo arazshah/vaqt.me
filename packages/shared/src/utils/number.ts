@@ -6,19 +6,23 @@ export function toPersianDigits(num: number | string): string {
   return String(num).replace(/\d/g, (digit) => persianDigits[parseInt(digit)]);
 }
 
+const persianNumberFormatter = new Intl.NumberFormat('fa-IR');
+
 /**
- * فرمت کردن عدد با جداکننده هزارگان فارسی
+ * فرمت کردن عدد با ارقام و جداکننده‌های هزارگان/اعشار فارسی (fa-IR بومی،
+ * نه جایگزینی دستی ارقام روی جداکننده‌ی انگلیسی)
  */
 export function formatNumber(num: number): string {
-  const formatted = num.toLocaleString('en-US');
-  return toPersianDigits(formatted);
+  return persianNumberFormatter.format(num);
 }
 
 /**
- * فرمت کردن مبلغ به تومان
+ * تبدیل مبلغ ریال (واحد ذخیره‌شده در دیتابیس) به تومان و فرمت کردن با پسوند
+ * «تومان» — تنها نقطه‌ی تبدیل ریال→تومان مجاز در لایه‌ی نمایش؛ ورودی همیشه
+ * ریال است، نه تومان (به بند «مبالغ» در CLAUDE.md مراجعه شود)
  */
-export function formatToman(amount: number): string {
-  return `${formatNumber(amount)} تومان`;
+export function formatToman(rial: number): string {
+  return `${formatNumber(rialToToman(rial))} تومان`;
 }
 
 /**
