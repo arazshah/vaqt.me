@@ -139,8 +139,16 @@ export default tseslint.config(
       // then hit ENOENT reading it once tsup cleans up. Reproduced live
       // (2026-08-21): `packages/db/tsup.config.bundled_lhv2blfbgq.mjs`, 5
       // failures out of 13 back-to-back clean `pnpm lint` runs before this
-      // ignore was added.
-      '**/tsup.config.bundled_*.mjs',
+      // ignore was added. Both extensions covered defensively: today
+      // bundle-require's guessFormat() always picks "esm" (.mjs) for a
+      // `.ts` config file regardless of package.json `type` — checked its
+      // source (node_modules/.../bundle-require/dist/index.js) — so `.cjs`
+      // is unreachable while every tsup config here is `tsup.config.ts`.
+      // It flips to package.json `type` only for a plain `.js` config, and
+      // none of this repo's packages set `"type": "module"`, so a future
+      // `tsup.config.js` would produce `.cjs`. Ignoring both now avoids
+      // silently reopening this race if that ever changes.
+      '**/tsup.config.bundled_*.{mjs,cjs}',
     ],
   },
 );
