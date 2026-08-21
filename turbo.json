@@ -70,6 +70,12 @@
       "outputs": []
     },
     "lint:fix": {
+      "dependsOn": ["^build", "^generate"],
+      "outputs": [],
+      "cache": false
+    },
+    "@vaqt/db#lint:fix": {
+      "dependsOn": ["generate", "^build"],
       "outputs": [],
       "cache": false
     },
@@ -78,7 +84,7 @@
       "outputs": []
     },
     "@vaqt/db#typecheck": {
-      "dependsOn": ["generate"],
+      "dependsOn": ["generate", "^build"],
       "outputs": []
     },
     "test": {
@@ -107,6 +113,7 @@
       "cache": false
     },
     "seed": {
+      "dependsOn": ["^build"],
       "cache": false
     },
     "studio": {
