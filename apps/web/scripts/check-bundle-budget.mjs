@@ -27,8 +27,15 @@ const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
  * Routes to budget, in KB of gzipped first-load JS+CSS. Calibrated with
  * ~15% headroom above the measured baseline at the time these budgets
  * were set (2026-08-21): /page 201.6 KB, /dev/ui/page 209.7 KB. Tighten
- * these once real product pages replace the placeholder / and the
- * kitchen-sink /dev/ui gallery.
+ * '/page' once a real product page replaces the placeholder /.
+ *
+ * '/dev/ui/page' is the internal component gallery, gated to 404 in any
+ * production runtime (see apps/web/src/app/dev/ui/page.tsx) — it is never
+ * a real product surface. Its budget is measured and reported completely
+ * independently of '/page' (each route key sums only its own manifest
+ * files below), kept here only so the dev-only gallery can't silently
+ * balloon in local development; it carries no weight on what ships to a
+ * real visitor.
  */
 const BUDGETS_KB = {
   '/page': 230,
