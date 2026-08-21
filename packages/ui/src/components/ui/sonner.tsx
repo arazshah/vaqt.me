@@ -1,6 +1,5 @@
 'use client';
 
-import { useTheme } from 'next-themes';
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
 import {
   CircleCheckIcon,
@@ -11,11 +10,14 @@ import {
 } from 'lucide-react';
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = 'system' } = useTheme();
+  // No dark mode toggle exists yet (tracked as tech debt in CLAUDE.md),
+  // so this always renders the "system" theme rather than depending on
+  // next-themes' useTheme(), which was removed.
+  const theme: ToasterProps['theme'] = 'system';
 
   return (
     <Sonner
-      theme={theme as ToasterProps['theme']}
+      theme={theme}
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,
