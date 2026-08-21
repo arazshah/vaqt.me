@@ -1,5 +1,9 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { DirectionProvider } from '@vaqt/ui';
+import { TooltipProvider } from '@vaqt/ui/components/ui/tooltip';
+import { Toaster } from '@vaqt/ui/components/ui/sonner';
+import { vazirmatn } from '@/lib/fonts';
 
 export const metadata: Metadata = {
   title: 'Vaqt.me — چند دقیقه از وقت یک آدمِ درست',
@@ -12,8 +16,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fa" dir="rtl">
-      <body>{children}</body>
+    <html lang="fa" dir="rtl" className={vazirmatn.variable}>
+      <body>
+        <DirectionProvider dir="rtl">
+          <TooltipProvider>
+            {children}
+            <Toaster />
+          </TooltipProvider>
+        </DirectionProvider>
+      </body>
     </html>
   );
 }

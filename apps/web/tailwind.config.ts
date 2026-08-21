@@ -24,7 +24,9 @@ const config: Config = {
           DEFAULT: '#FFFFFF',
           soft: '#F7F5F2',
         },
-        border: '#E7E3DD',
+        // named brandBorder, not border: shadcn's semantic `--color-border`
+        // token already owns the `border-border` utility name.
+        brandBorder: '#E7E3DD',
         text: {
           DEFAULT: '#1C1A22',
           muted: '#6E6A78',

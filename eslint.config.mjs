@@ -3,11 +3,13 @@ import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
 import noRawUserReturn from './eslint-rules/no-raw-user-return.mjs';
 import restrictToPrivateUser from './eslint-rules/restrict-to-private-user.mjs';
+import noPhysicalTailwindClasses from './eslint-rules/no-physical-tailwind-classes.mjs';
 
 const localPlugin = {
   rules: {
     'no-raw-user-return': noRawUserReturn,
     'restrict-to-private-user': restrictToPrivateUser,
+    'no-physical-tailwind-classes': noPhysicalTailwindClasses,
   },
 };
 
@@ -86,6 +88,18 @@ export default tseslint.config(
     plugins: { local: localPlugin },
     rules: {
       'local/restrict-to-private-user': 'error',
+    },
+  },
+  {
+    // Bend #1 in CLAUDE.md: logical Tailwind utilities only. Excludes
+    // components/ui/** — those files are vendored in verbatim by
+    // `shadcn add` (packages/ui/components.json), not hand-authored, and
+    // are already verified to use logical utilities upstream.
+    files: ['packages/ui/src/**/*.tsx'],
+    ignores: ['packages/ui/src/components/ui/**'],
+    plugins: { local: localPlugin },
+    rules: {
+      'local/no-physical-tailwind-classes': 'error',
     },
   },
   {
