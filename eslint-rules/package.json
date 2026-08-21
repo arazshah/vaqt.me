@@ -1,0 +1,9 @@
+{
+  "name": "eslint-rules",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  }
+}
