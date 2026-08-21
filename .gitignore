@@ -55,3 +55,6 @@ prisma/.env
 
 # Local avatar storage (dev-only, LocalDiskAdapter)
 apps/api/uploads/
+
+# Claude Code local/per-user permissions (not shared tooling config)
+.claude/settings.local.json
