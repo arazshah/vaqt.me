@@ -9,7 +9,6 @@ import {
   Put,
   UploadedFile,
   UseInterceptors,
-  UsePipes,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ZodValidationPipe } from 'nestjs-zod';
@@ -34,19 +33,30 @@ export class UsersController {
   }
 
   @Patch('me')
-  @UsePipes(new ZodValidationPipe(UpdateUserProfileDto))
   updateMe(
     @CurrentUser() user: AccessTokenPayload,
-    @Body() body: UpdateUserProfileInput,
+    // A method-scoped @UsePipes() runs its pipe against every resolved
+    // parameter, not just @Body() — nestjs-zod's ZodValidationPipe.transform()
+    // has no check on ArgumentMetadata.type, so it validated the
+    // @CurrentUser() payload too, against this same schema. Every field in
+    // updateUserProfileSchema is optional, so validating {sub, sid} against
+    // it silently succeeded and produced {} (zod strips unrecognized keys
+    // by default) — user.sub became undefined, and every write silently
+    // targeted no row. Scoping the pipe to just this parameter fixes it.
+    @Body(new ZodValidationPipe(UpdateUserProfileDto))
+    body: UpdateUserProfileInput,
   ) {
     return this.users.updateMe(user.sub, body);
   }
 
   @Put('me/skills')
-  @UsePipes(new ZodValidationPipe(PutUserSkillsDto))
   putMySkills(
     @CurrentUser() user: AccessTokenPayload,
-    @Body() body: PutUserSkillsInput,
+    // Same bug as updateMe() above, but putUserSkillsSchema has a required
+    // field (skillIds), so validating the @CurrentUser() payload against it
+    // threw immediately instead of silently corrupting user.sub — this
+    // route 400'd on every call, valid input or not.
+    @Body(new ZodValidationPipe(PutUserSkillsDto)) body: PutUserSkillsInput,
   ) {
     return this.users.putSkills(user.sub, body.skillIds);
   }
