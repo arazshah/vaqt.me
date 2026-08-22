@@ -17,6 +17,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               {fa.appShell.nav.home}
             </Link>
+            <Link
+              href="/requests"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              {fa.appShell.nav.requests}
+            </Link>
           </nav>
         </div>
       </header>

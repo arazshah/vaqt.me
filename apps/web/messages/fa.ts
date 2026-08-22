@@ -29,6 +29,13 @@ export const fa = {
     offerCount: (count: string) => `${count} پیشنهاد`,
     budgetHidden: 'بودجه پنهان',
   },
+  requestsPage: {
+    title: 'درخواست‌های منتشرشده',
+    emptyTitle: 'هنوز درخواستی منتشر نشده',
+    emptyDescription: 'به‌زودی درخواست‌های تازه اینجا نمایش داده می‌شوند.',
+    errorTitle: 'مشکلی در دریافت فهرست پیش آمد',
+    errorDescription: 'اتصال به سرور برقرار نشد. کمی بعد دوباره تلاش کنید.',
+  },
   devUi: {
     title: 'گالری سیستم طراحی',
     description:
