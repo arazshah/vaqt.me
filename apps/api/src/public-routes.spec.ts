@@ -6,6 +6,7 @@ import { AdminController } from './admin/admin.controller';
 import { AppController } from './app.controller';
 import { AuthController } from './auth/auth.controller';
 import { CategoriesController } from './categories/categories.controller';
+import { RequestsController } from './requests/requests.controller';
 import { SkillsController } from './skills/skills.controller';
 import { UsersController } from './users/users.controller';
 
@@ -19,6 +20,7 @@ const CONTROLLERS: (new (...args: never[]) => unknown)[] = [
   CategoriesController,
   SkillsController,
   AdminController,
+  RequestsController,
 ];
 
 const METHOD_NAMES: Record<number, string> = {
@@ -97,6 +99,7 @@ const PUBLIC_ROUTE_ALLOWLIST: { method: string; path: string }[] = [
   { method: 'POST', path: '/auth/otp/request' },
   { method: 'POST', path: '/auth/otp/verify' },
   { method: 'POST', path: '/auth/refresh' },
+  { method: 'POST', path: '/requests/list' },
 ];
 
 describe('public route allowlist', () => {

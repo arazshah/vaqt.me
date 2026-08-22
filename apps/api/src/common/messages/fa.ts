@@ -16,5 +16,6 @@ export const errorMessagesFa: Record<ErrorCode, string> = {
   PHONE_NOT_VERIFIED: 'برای این عملیات باید شماره موبایل خود را تأیید کنید.',
   FORBIDDEN: 'اجازه‌ی دسترسی به این بخش را ندارید.',
   NOT_FOUND: 'مورد درخواستی یافت نشد.',
+  REQUEST_NOT_DRAFT: 'فقط درخواست‌های پیش‌نویس را می‌توان منتشر کرد.',
   INTERNAL_ERROR: 'خطایی پیش‌آمد. لطفاً بعداً دوباره تلاش کنید.',
 };
