@@ -1,7 +1,6 @@
 import { join } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
@@ -35,14 +34,20 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api/v1');
 
-  // Global validation pipe
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+  // No global ValidationPipe here — every route validates explicitly.
+  // AuthController is the one holdout still using class-validator DTOs
+  // (from before the phase-3 move to zod), so it carries its own
+  // controller-scoped ValidationPipe (see auth.controller.ts). Every other
+  // controller uses nestjs-zod's createZodDto() + an explicit per-route
+  // @UsePipes(new ZodValidationPipe(...)) (see CLAUDE.md bond 30). A
+  // class-validator ValidationPipe applied globally would run against
+  // those zod DTOs too — with whitelist+forbidNonWhitelisted, it strips
+  // every property that has no class-validator decorator (which is all of
+  // them, by design) and rejects the request. That's only reachable by
+  // actually booting the app and hitting a zod-DTO route over real HTTP;
+  // every existing controller test calls the controller method directly
+  // and never exercises this pipe at all, which is how it went unnoticed
+  // until the phase-5 requests endpoints were curl-tested live.
 
   // CORS
   app.enableCors({
