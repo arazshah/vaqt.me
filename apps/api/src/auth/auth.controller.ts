@@ -10,6 +10,8 @@ import {
   Req,
   Res,
   UnauthorizedException,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { Public } from '../common/decorators/public.decorator';
@@ -27,6 +29,20 @@ function deviceContext(req: Request): DeviceContext {
   return { userAgent: req.headers['user-agent'], ip: req.ip };
 }
 
+// The only controller still using class-validator DTOs (RequestOtpDto,
+// VerifyOtpDto, UpdateRoleDto) — every other controller uses nestjs-zod
+// instead and applies its own per-route ZodValidationPipe. This used to be
+// a global app.useGlobalPipes() in main.ts, which broke every zod DTO
+// route (whitelist+forbidNonWhitelisted strips undecorated properties);
+// scoping it here keeps identical behavior for these three DTOs without
+// touching the rest of the app.
+@UsePipes(
+  new ValidationPipe({
+    whitelist: true,
+    forbidNonWhitelisted: true,
+    transform: true,
+  }),
+)
 @Controller('auth')
 export class AuthController {
   constructor(
