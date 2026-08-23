@@ -1,4 +1,4 @@
-import type { RequestMode, RequestStatus } from '@vaqt/shared';
+import type { OfferStatus, RequestMode, RequestStatus } from '@vaqt/shared';
 
 /**
  * Every user-facing Persian string in apps/web lives here — no hardcoded
@@ -28,6 +28,13 @@ export const fa = {
     IN_PERSON: 'حضوری',
     HYBRID: 'ترکیبی',
   } satisfies Record<RequestMode, string>,
+  offerStatus: {
+    PENDING: 'در انتظار بررسی',
+    SELECTED: 'انتخاب‌شده',
+    REJECTED: 'ردشده',
+    WITHDRAWN: 'پس‌گرفته‌شده',
+    EXPIRED: 'منقضی‌شده',
+  } satisfies Record<OfferStatus, string>,
   requestCard: {
     offerCount: (count: string) => `${count} پیشنهاد`,
     budgetHidden: 'بودجه پنهان',
@@ -94,6 +101,47 @@ export const fa = {
       publishing: 'در حال انتشار…',
       editButton: 'ویرایش',
       publishError: 'مشکلی در انتشار درخواست پیش آمد. دوباره تلاش کنید.',
+    },
+  },
+  requestDetailPage: {
+    backLink: 'بازگشت به فهرست',
+    loading: 'در حال بارگذاری…',
+    notFoundTitle: 'درخواست پیدا نشد',
+    notFoundDescription: 'این درخواست وجود ندارد یا حذف شده است.',
+    errorTitle: 'مشکلی در دریافت اطلاعات پیش آمد',
+    errorDescription: 'اتصال به سرور برقرار نشد. کمی بعد دوباره تلاش کنید.',
+    labels: {
+      durationMinutes: (minutes: string) => `${minutes} دقیقه`,
+      deadline: 'مهلت',
+      budget: 'بودجه',
+      owner: 'درخواست‌دهنده',
+    },
+    offers: {
+      sectionTitleOwner: 'پیشنهادهای دریافتی',
+      sectionTitleMine: 'پیشنهاد شما',
+      sectionTitleSubmit: 'ثبت پیشنهاد',
+      emptyOwner: 'هنوز پیشنهادی دریافت نشده است.',
+      selectButton: 'انتخاب این پیشنهاد',
+      selecting: 'در حال انتخاب…',
+      selectError: 'مشکلی در انتخاب پیشنهاد پیش آمد. دوباره تلاش کنید.',
+      withdrawButton: 'پس‌گرفتن پیشنهاد',
+      withdrawing: 'در حال پس‌گرفتن…',
+      withdrawError: 'مشکلی در پس‌گرفتن پیشنهاد پیش آمد. دوباره تلاش کنید.',
+      notPublishedNotice: 'این درخواست دیگر پیشنهاد جدید نمی‌پذیرد.',
+      submitForm: {
+        proposedStartAt: 'زمان پیشنهادی شروع',
+        proposedDurationMinutes: 'مدت زمان پیشنهادی (دقیقه)',
+        amountToman: 'مبلغ پیشنهادی (تومان)',
+        message: 'پیام (اختیاری)',
+        submitButton: 'ارسال پیشنهاد',
+        submitting: 'در حال ارسال…',
+        genericError: 'مشکلی در ثبت پیشنهاد پیش آمد. دوباره تلاش کنید.',
+      },
+      incompleteProfile: {
+        title: 'برای ثبت پیشنهاد، پروفایل خود را کامل کنید',
+        description:
+          'برای ارسال پیشنهاد به بیوگرافی و حداقل یک مهارت در پروفایل خود نیاز دارید.',
+      },
     },
   },
   devUi: {

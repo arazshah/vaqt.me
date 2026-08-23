@@ -35,8 +35,8 @@ export interface RequestListItem {
   offerCount: number;
   ownerDisplayName: string;
   // Always null from this endpoint. The budget range never appears in the
-  // public list — only on the request detail page (not built in this
-  // slice), and only for phone-verified viewers. See CLAUDE.md bond 6.
+  // public list — only on the request detail page (RequestsService.getById),
+  // and only for phone-verified viewers. See CLAUDE.md bond 6.
   budgetMinRial: null;
   budgetMaxRial: null;
 }
@@ -45,6 +45,34 @@ export interface RequestListResult {
   items: RequestListItem[];
   nextCursor: string | null;
   hasMore: boolean;
+}
+
+export interface RequestDetail {
+  id: string;
+  title: string;
+  description: string;
+  categoryId: string;
+  categoryName: string;
+  mode: string;
+  city: string | null;
+  durationMinutes: number;
+  deadlineAt: Date;
+  status: string;
+  offerCount: number;
+  ownerId: string;
+  ownerDisplayName: string;
+  isOwner: boolean;
+  // Rial. Both null and budgetMasked: true unless the viewer is
+  // phone-verified — see CLAUDE.md bond 6. Never masked for the owner
+  // themselves (their own budget is never a secret from them).
+  budgetMinRial: number | null;
+  budgetMaxRial: number | null;
+  budgetMasked: boolean;
+  // The viewer's own offer on this request, if any (always null for the
+  // owner — an owner can't offer on their own request, see
+  // OWN_REQUEST_OFFER_FORBIDDEN).
+  myOfferId: string | null;
+  myOfferStatus: string | null;
 }
 
 @Injectable()
@@ -188,5 +216,75 @@ export class RequestsService {
         : null;
 
     return { items, nextCursor, hasMore };
+  }
+
+  async getById(id: string, viewerId: string): Promise<RequestDetail> {
+    const request = await prisma.request.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        categoryId: true,
+        mode: true,
+        city: true,
+        durationMinutes: true,
+        deadlineAt: true,
+        status: true,
+        offerCount: true,
+        ownerId: true,
+        budgetMinRial: true,
+        budgetMaxRial: true,
+        category: { select: { name: true } },
+        owner: { select: { displayName: true } },
+      },
+    });
+    // A DRAFT is only visible to its own owner — everyone else gets the
+    // same NOT_FOUND as a genuinely missing id, so a guess-the-id probe
+    // can't distinguish "doesn't exist" from "still a draft".
+    if (
+      !request ||
+      (request.status === RequestStatus.DRAFT && request.ownerId !== viewerId)
+    ) {
+      throw new AppError(ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND);
+    }
+
+    const isOwner = request.ownerId === viewerId;
+    const viewer = await prisma.user.findUnique({
+      where: { id: viewerId },
+      select: { phoneVerifiedAt: true },
+    });
+    const canSeeBudget = isOwner || viewer?.phoneVerifiedAt != null;
+
+    const myOffer = isOwner
+      ? null
+      : await prisma.offer.findUnique({
+          where: {
+            requestId_providerId: { requestId: id, providerId: viewerId },
+          },
+          select: { id: true, status: true },
+        });
+
+    return {
+      id: request.id,
+      title: request.title,
+      description: request.description,
+      categoryId: request.categoryId,
+      categoryName: request.category.name,
+      mode: request.mode,
+      city: request.city,
+      durationMinutes: request.durationMinutes,
+      deadlineAt: request.deadlineAt,
+      status: request.status,
+      offerCount: request.offerCount,
+      ownerId: request.ownerId,
+      ownerDisplayName: request.owner.displayName,
+      isOwner,
+      budgetMinRial: canSeeBudget ? request.budgetMinRial : null,
+      budgetMaxRial: canSeeBudget ? request.budgetMaxRial : null,
+      budgetMasked: !canSeeBudget,
+      myOfferId: myOffer?.id ?? null,
+      myOfferStatus: myOffer?.status ?? null,
+    };
   }
 }

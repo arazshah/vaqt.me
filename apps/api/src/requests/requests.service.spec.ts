@@ -4,6 +4,7 @@ import { ErrorCode } from '../common/errors/error-codes';
 import { RequestsService } from './requests.service';
 
 describe('RequestsService (real Postgres)', () => {
+  const createdOfferIds: string[] = [];
   const createdRequestIds: string[] = [];
   const createdCategoryIds: string[] = [];
   const createdUserIds: string[] = [];
@@ -14,6 +15,9 @@ describe('RequestsService (real Postgres)', () => {
   });
 
   afterAll(async () => {
+    for (const id of createdOfferIds.splice(0)) {
+      await prisma.offer.deleteMany({ where: { id } });
+    }
     for (const id of createdRequestIds.splice(0)) {
       await prisma.request.deleteMany({ where: { id } });
     }
@@ -257,6 +261,148 @@ describe('RequestsService (real Postgres)', () => {
       expect(item?.ownerDisplayName).toBe('نمایشی‌ترین کاربر');
       expect(item?.budgetMinRial).toBeNull();
       expect(item?.budgetMaxRial).toBeNull();
+    });
+  });
+
+  describe('getById()', () => {
+    it('shows the real budget to the owner even when the owner is not phone-verified', async () => {
+      const categoryId = await makeCategory();
+      const ownerId = await makeUser();
+      const created = await service.create(
+        ownerId,
+        validCreateInput(categoryId, {
+          budgetMinRial: 1_000_000,
+          budgetMaxRial: 2_000_000,
+        }),
+      );
+      createdRequestIds.push(created.id);
+      await service.publish(created.id);
+
+      const detail = await service.getById(created.id, ownerId);
+      expect(detail.isOwner).toBe(true);
+      expect(detail.budgetMasked).toBe(false);
+      expect(detail.budgetMinRial).toBe(1_000_000);
+      expect(detail.budgetMaxRial).toBe(2_000_000);
+    });
+
+    it('masks the budget for a phone-unverified non-owner viewer', async () => {
+      const categoryId = await makeCategory();
+      const ownerId = await makeUser();
+      const created = await service.create(
+        ownerId,
+        validCreateInput(categoryId, {
+          budgetMinRial: 1_000_000,
+          budgetMaxRial: 2_000_000,
+        }),
+      );
+      createdRequestIds.push(created.id);
+      await service.publish(created.id);
+      const viewerId = await makeUser('بازدیدکننده تأییدنشده');
+
+      const detail = await service.getById(created.id, viewerId);
+      expect(detail.isOwner).toBe(false);
+      expect(detail.budgetMasked).toBe(true);
+      expect(detail.budgetMinRial).toBeNull();
+      expect(detail.budgetMaxRial).toBeNull();
+    });
+
+    it('shows the real budget to a phone-verified non-owner viewer', async () => {
+      const categoryId = await makeCategory();
+      const ownerId = await makeUser();
+      const created = await service.create(
+        ownerId,
+        validCreateInput(categoryId, {
+          budgetMinRial: 1_000_000,
+          budgetMaxRial: 2_000_000,
+        }),
+      );
+      createdRequestIds.push(created.id);
+      await service.publish(created.id);
+      const viewerId = await makeUser('بازدیدکننده تأییدشده');
+      await prisma.user.update({
+        where: { id: viewerId },
+        data: { phoneVerifiedAt: new Date() },
+      });
+
+      const detail = await service.getById(created.id, viewerId);
+      expect(detail.budgetMasked).toBe(false);
+      expect(detail.budgetMinRial).toBe(1_000_000);
+      expect(detail.budgetMaxRial).toBe(2_000_000);
+    });
+
+    it('rejects a non-owner viewing a DRAFT with NOT_FOUND (no existence leak)', async () => {
+      const categoryId = await makeCategory();
+      const ownerId = await makeUser();
+      const draft = await service.create(ownerId, validCreateInput(categoryId));
+      createdRequestIds.push(draft.id);
+      const viewerId = await makeUser('بازدیدکننده دیگر');
+
+      await expect(service.getById(draft.id, viewerId)).rejects.toMatchObject({
+        code: ErrorCode.NOT_FOUND,
+      });
+    });
+
+    it('allows the owner to view their own DRAFT', async () => {
+      const categoryId = await makeCategory();
+      const ownerId = await makeUser();
+      const draft = await service.create(ownerId, validCreateInput(categoryId));
+      createdRequestIds.push(draft.id);
+
+      const detail = await service.getById(draft.id, ownerId);
+      expect(detail.status).toBe(RequestStatus.DRAFT);
+    });
+
+    it('rejects an id that does not exist', async () => {
+      const viewerId = await makeUser();
+      await expect(
+        service.getById('does-not-exist', viewerId),
+      ).rejects.toMatchObject({ code: ErrorCode.NOT_FOUND });
+    });
+
+    it('returns myOfferId/myOfferStatus null for the owner, and null for a non-owner with no offer yet', async () => {
+      const categoryId = await makeCategory();
+      const ownerId = await makeUser();
+      const created = await service.create(
+        ownerId,
+        validCreateInput(categoryId),
+      );
+      createdRequestIds.push(created.id);
+      await service.publish(created.id);
+      const viewerId = await makeUser('بازدیدکننده بدون پیشنهاد');
+
+      const ownerView = await service.getById(created.id, ownerId);
+      expect(ownerView.myOfferId).toBeNull();
+      expect(ownerView.myOfferStatus).toBeNull();
+
+      const viewerView = await service.getById(created.id, viewerId);
+      expect(viewerView.myOfferId).toBeNull();
+      expect(viewerView.myOfferStatus).toBeNull();
+    });
+
+    it("resolves the viewer's own offer id/status when one exists", async () => {
+      const categoryId = await makeCategory();
+      const ownerId = await makeUser();
+      const created = await service.create(
+        ownerId,
+        validCreateInput(categoryId),
+      );
+      createdRequestIds.push(created.id);
+      await service.publish(created.id);
+      const providerId = await makeUser('ارائه‌دهنده تست جزئیات');
+      const offer = await prisma.offer.create({
+        data: {
+          requestId: created.id,
+          providerId,
+          proposedStartAt: new Date(Date.now() + 86_400_000),
+          proposedDurationMinutes: 60,
+          amountRial: 1_500_000,
+        },
+      });
+      createdOfferIds.push(offer.id);
+
+      const viewerView = await service.getById(created.id, providerId);
+      expect(viewerView.myOfferId).toBe(offer.id);
+      expect(viewerView.myOfferStatus).toBe('PENDING');
     });
   });
 });
