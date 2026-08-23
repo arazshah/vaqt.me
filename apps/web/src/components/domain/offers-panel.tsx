@@ -197,6 +197,14 @@ export function OffersPanel({
     return null;
   }
 
+  // A withdrawn offer can be re-submitted (it reactivates the same row —
+  // see CLAUDE.md bond 14), so it isn't a dead end like every other
+  // non-PENDING status: the same eligibility gates as a fresh submission
+  // (request still PUBLISHED, profile still complete) decide whether the
+  // form reappears below the status card.
+  const canOfferNow =
+    detail.status === 'PUBLISHED' && user.completeness.canSubmitOffer;
+
   if (detail.myOfferId && detail.myOfferStatus) {
     return (
       <div className="flex flex-col gap-4">
@@ -232,6 +240,14 @@ export function OffersPanel({
             </CardFooter>
           ) : null}
         </Card>
+        {detail.myOfferStatus === 'WITHDRAWN' && canOfferNow ? (
+          <div className="flex flex-col gap-4">
+            <h3 className="font-semibold">
+              {fa.requestDetailPage.offers.resubmitTitle}
+            </h3>
+            <OfferSubmitForm requestId={detail.id} onSubmitted={onChanged} />
+          </div>
+        ) : null}
       </div>
     );
   }
