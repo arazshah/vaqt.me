@@ -10,6 +10,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { BullRedisModule } from './common/redis/bull-redis.module';
 import { RedisModule } from './common/redis/redis.module';
+import { OffersModule } from './offers/offers.module';
 import { RequestsModule } from './requests/requests.module';
 import { SkillsModule } from './skills/skills.module';
 import { UsersModule } from './users/users.module';
@@ -27,6 +28,7 @@ import { UsersModule } from './users/users.module';
     SkillsModule,
     AdminModule,
     RequestsModule,
+    OffersModule,
   ],
   controllers: [AppController],
   providers: [
