@@ -120,6 +120,7 @@ export const fa = {
       sectionTitleOwner: 'پیشنهادهای دریافتی',
       sectionTitleMine: 'پیشنهاد شما',
       sectionTitleSubmit: 'ثبت پیشنهاد',
+      resubmitTitle: 'ارسال دوباره‌ی پیشنهاد',
       emptyOwner: 'هنوز پیشنهادی دریافت نشده است.',
       selectButton: 'انتخاب این پیشنهاد',
       selecting: 'در حال انتخاب…',
