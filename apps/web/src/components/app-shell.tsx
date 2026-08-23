@@ -1,8 +1,15 @@
+'use client';
+
 import Link from 'next/link';
 
+import { Button } from '@vaqt/ui/components/ui/button';
+
+import { useAuth } from '@/lib/auth-context';
 import { fa } from '@/messages/fa';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const { user, loading, logout } = useAuth();
+
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="border-b border-border">
@@ -23,6 +30,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               {fa.appShell.nav.requests}
             </Link>
+            {loading ? null : user ? (
+              <>
+                <Link
+                  href="/requests/new"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {fa.appShell.nav.newRequest}
+                </Link>
+                <span className="text-muted-foreground">
+                  {user.displayName}
+                </span>
+                <Button variant="ghost" size="sm" onClick={() => void logout()}>
+                  {fa.appShell.nav.logout}
+                </Button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                {fa.appShell.nav.login}
+              </Link>
+            )}
           </nav>
         </div>
       </header>
