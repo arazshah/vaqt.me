@@ -4,6 +4,7 @@ import { DirectionProvider } from '@vaqt/ui';
 import { TooltipProvider } from '@vaqt/ui/components/ui/tooltip';
 import { Toaster } from '@vaqt/ui/components/ui/sonner';
 import { vazirmatn } from '@/lib/fonts';
+import { AuthProvider } from '@/lib/auth-context';
 
 export const metadata: Metadata = {
   title: 'Vaqt.me — چند دقیقه از وقت یک آدمِ درست',
@@ -20,8 +21,10 @@ export default function RootLayout({
       <body>
         <DirectionProvider dir="rtl">
           <TooltipProvider>
-            {children}
-            <Toaster />
+            <AuthProvider>
+              {children}
+              <Toaster />
+            </AuthProvider>
           </TooltipProvider>
         </DirectionProvider>
       </body>
