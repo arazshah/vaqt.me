@@ -6,6 +6,7 @@ import { AdminController } from './admin/admin.controller';
 import { AppController } from './app.controller';
 import { AuthController } from './auth/auth.controller';
 import { CategoriesController } from './categories/categories.controller';
+import { OffersController } from './offers/offers.controller';
 import { RequestsController } from './requests/requests.controller';
 import { SkillsController } from './skills/skills.controller';
 import { UsersController } from './users/users.controller';
@@ -21,6 +22,7 @@ const CONTROLLERS: (new (...args: never[]) => unknown)[] = [
   SkillsController,
   AdminController,
   RequestsController,
+  OffersController,
 ];
 
 const METHOD_NAMES: Record<number, string> = {
