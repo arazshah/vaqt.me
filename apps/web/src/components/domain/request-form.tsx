@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
   createRequestSchema,
@@ -65,6 +65,19 @@ const rawFormSchema = z.object({
   budgetMinToman: z.string().min(1, 'حداقل بودجه الزامی است'),
   budgetMaxToman: z.string().min(1, 'حداکثر بودجه الزامی است'),
   deadlineAt: z.string().min(1, 'مهلت الزامی است'),
+  // Structurally permissive on purpose (plain strings, no HH:mm regex, no
+  // length bounds) — the authoritative shape/format checks are
+  // preferredWindowSchema inside createRequestSchema, applied on submit
+  // below. A row left fully blank is treated as "not added" (filtered out
+  // in toCreateRequestInput), so users can add a row and only fill part of
+  // it to see the real per-field error from the shared schema.
+  preferredWindows: z.array(
+    z.object({
+      day: z.string(),
+      start: z.string(),
+      end: z.string(),
+    }),
+  ),
 });
 type RawFormValues = z.infer<typeof rawFormSchema>;
 
@@ -84,6 +97,26 @@ const SCHEMA_TO_FORM_FIELD: Partial<Record<string, keyof RawFormValues>> = {
   deadlineAt: 'deadlineAt',
 };
 
+// react-hook-form's FieldPath type for a preferredWindows row is a template
+// literal keyed on `number` (`preferredWindows.${number}.day`), so the path
+// has to be built from an actual number, not a stringified one — but
+// interpolating a number into a template literal is exactly what
+// @typescript-eslint/restrict-template-expressions forbids by default.
+// Centralizing the (safe) cast here means the `as` only needs to be
+// justified once instead of at every call site.
+type PreferredWindowField = 'day' | 'start' | 'end';
+// Narrower than FieldPath<RawFormValues> on purpose: keeping this as the
+// exact leaf-path shape (not the full field-path union) is what lets
+// FormField's generic narrow `field.value` down to `string` at each call
+// site below, instead of widening it to every possible field's value type.
+type PreferredWindowPath = `preferredWindows.${number}.${PreferredWindowField}`;
+function preferredWindowFieldPath(
+  index: number,
+  field: PreferredWindowField,
+): PreferredWindowPath {
+  return `preferredWindows.${String(index)}.${field}` as PreferredWindowPath;
+}
+
 function toCreateRequestInput(values: RawFormValues): unknown {
   return {
     title: values.title,
@@ -95,7 +128,19 @@ function toCreateRequestInput(values: RawFormValues): unknown {
     budgetMinRial: tomanToRial(Number(values.budgetMinToman)),
     budgetMaxRial: tomanToRial(Number(values.budgetMaxToman)),
     deadlineAt: values.deadlineAt,
-    preferredWindows: [],
+    // Rows the user never touched (all three fields still blank) are
+    // dropped rather than sent as empty strings — they weren't an intended
+    // window, just an unused row.
+    preferredWindows: values.preferredWindows
+      .filter(
+        (w) =>
+          w.day.trim() !== '' || w.start.trim() !== '' || w.end.trim() !== '',
+      )
+      .map((w) => ({
+        day: w.day.trim(),
+        start: w.start.trim(),
+        end: w.end.trim(),
+      })),
   };
 }
 
@@ -134,7 +179,13 @@ export function RequestForm() {
       budgetMinToman: '',
       budgetMaxToman: '',
       deadlineAt: '',
+      preferredWindows: [],
     },
+  });
+
+  const preferredWindows = useFieldArray({
+    control: form.control,
+    name: 'preferredWindows',
   });
 
   async function handleCreate(values: RawFormValues) {
@@ -147,7 +198,21 @@ export function RequestForm() {
     const result = createRequestSchema.safeParse(candidate);
     if (!result.success) {
       for (const issue of result.error.issues) {
-        const schemaField = String(issue.path[0]);
+        const [first, second, third] = issue.path;
+        if (
+          first === 'preferredWindows' &&
+          typeof second === 'number' &&
+          (third === 'day' || third === 'start' || third === 'end')
+        ) {
+          // Per-row error (e.g. a bad HH:mm value) — map straight to the
+          // matching row/field, since preferredWindows entries have the
+          // same shape and names on both the raw form and the schema.
+          form.setError(preferredWindowFieldPath(second, third), {
+            message: issue.message,
+          });
+          continue;
+        }
+        const schemaField = String(first);
         const formField = SCHEMA_TO_FORM_FIELD[schemaField];
         if (formField) {
           form.setError(formField, { message: issue.message });
@@ -409,6 +474,106 @@ export function RequestForm() {
             </FormItem>
           )}
         />
+        <div className="flex flex-col gap-2">
+          <Label>{fa.newRequestPage.fields.preferredWindows.label}</Label>
+          <p className="text-sm text-muted-foreground">
+            {fa.newRequestPage.fields.preferredWindows.hint}
+          </p>
+          {preferredWindows.fields.map((field, index) => (
+            <div key={field.id} className="flex items-end gap-2">
+              <FormField
+                control={form.control}
+                name={preferredWindowFieldPath(index, 'day')}
+                render={({ field: dayField }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>
+                      {fa.newRequestPage.fields.preferredWindows.day}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...dayField}
+                        placeholder={
+                          fa.newRequestPage.fields.preferredWindows
+                            .dayPlaceholder
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={preferredWindowFieldPath(index, 'start')}
+                render={({ field: startField }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>
+                      {fa.newRequestPage.fields.preferredWindows.start}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...startField}
+                        placeholder={
+                          fa.newRequestPage.fields.preferredWindows
+                            .timePlaceholder
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name={preferredWindowFieldPath(index, 'end')}
+                render={({ field: endField }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>
+                      {fa.newRequestPage.fields.preferredWindows.end}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        {...endField}
+                        placeholder={
+                          fa.newRequestPage.fields.preferredWindows
+                            .timePlaceholder
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  preferredWindows.remove(index);
+                }}
+                aria-label={
+                  fa.newRequestPage.fields.preferredWindows.removeButton
+                }
+              >
+                {fa.newRequestPage.fields.preferredWindows.removeButton}
+              </Button>
+            </div>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            disabled={preferredWindows.fields.length >= 20}
+            onClick={() => {
+              preferredWindows.append({ day: '', start: '', end: '' });
+            }}
+          >
+            {fa.newRequestPage.fields.preferredWindows.addButton}
+          </Button>
+          {preferredWindows.fields.length >= 20 ? (
+            <p className="text-sm text-muted-foreground">
+              {fa.newRequestPage.fields.preferredWindows.maxReached}
+            </p>
+          ) : null}
+        </div>
         {serverError ? (
           <p className="text-sm text-destructive">{serverError}</p>
         ) : null}
