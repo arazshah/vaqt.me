@@ -1,4 +1,4 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ZodValidationPipe } from 'nestjs-zod';
 import { prisma } from '@vaqt/db';
 import type {
@@ -63,5 +63,15 @@ export class RequestsController {
   @Public()
   list(@Body(new ZodValidationPipe(ListRequestsDto)) body: ListRequestsInput) {
     return this.requests.list(body);
+  }
+
+  // Not @Public(), unlike list() — matches the existing GET /users/:id
+  // precedent (browse without an account, but details need one). This also
+  // means the budget-masking check below always has a real viewer to check
+  // against, since @Public() routes never populate CurrentUser() at all
+  // (see JwtAuthGuard).
+  @Get(':id')
+  getById(@Param('id') id: string, @CurrentUser() user: AccessTokenPayload) {
+    return this.requests.getById(id, user.sub);
   }
 }

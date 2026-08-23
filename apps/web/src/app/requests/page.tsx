@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import type { CursorPage } from '@vaqt/shared';
 import {
   Empty,
@@ -114,7 +115,9 @@ export default function RequestsPage() {
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((item) => (
-              <RequestCard key={item.id} data={item} />
+              <Link key={item.id} href={`/requests/${item.id}`}>
+                <RequestCard data={item} />
+              </Link>
             ))}
           </div>
           {hasMore ? (
