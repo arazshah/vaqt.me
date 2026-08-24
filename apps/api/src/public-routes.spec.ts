@@ -3,6 +3,7 @@ import { RequestMethod } from '@nestjs/common';
 import { PATH_METADATA, METHOD_METADATA } from '@nestjs/common/constants';
 import { IS_PUBLIC_KEY } from './common/decorators/public.decorator';
 import { AdminController } from './admin/admin.controller';
+import { AiController } from './ai/ai.controller';
 import { AppController } from './app.controller';
 import { AuthController } from './auth/auth.controller';
 import { CategoriesController } from './categories/categories.controller';
@@ -25,6 +26,7 @@ const CONTROLLERS: (new (...args: never[]) => unknown)[] = [
   RequestsController,
   OffersController,
   ConversationsController,
+  AiController,
 ];
 
 const METHOD_NAMES: Record<number, string> = {
