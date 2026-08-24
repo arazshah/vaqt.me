@@ -3,6 +3,7 @@ import { ConversationStatus, MessageType, Prisma, prisma } from '@vaqt/db';
 import { decodeCursor, encodeCursor, type CursorPage } from '@vaqt/shared';
 import { AppError } from '../common/errors/app-error';
 import { ErrorCode } from '../common/errors/error-codes';
+import { ConversationsGateway } from './conversations.gateway';
 
 export interface ConversationSummary {
   id: string;
@@ -77,6 +78,12 @@ function toSummary(
 
 @Injectable()
 export class ConversationsService {
+  // Optional (not @Inject'd as required) so existing tests can keep doing
+  // `new ConversationsService()` without a gateway — real callers always
+  // get one through Nest DI, since ConversationsGateway is a provider in
+  // the same module.
+  constructor(private readonly gateway?: ConversationsGateway) {}
+
   // Participant membership (seeker or provider) is already enforced by
   // RequireOwnershipGuard before this runs.
   async getById(id: string, viewerId: string): Promise<ConversationSummary> {
@@ -245,6 +252,20 @@ export class ConversationsService {
         data: { lastMessageAt: new Date() },
       }),
     ]);
+
+    // The broadcast payload deliberately omits isMine: that field is
+    // relative to whoever is asking (see toSummary/listMessages above), but
+    // this same event reaches every participant in the room, sender
+    // included. Each client computes it locally against its own user id.
+    this.gateway?.broadcastMessage(conversationId, {
+      id: message.id,
+      conversationId: message.conversationId,
+      senderId: message.senderId,
+      type: message.type,
+      body: message.body,
+      readAt: message.readAt,
+      createdAt: message.createdAt,
+    });
 
     return {
       id: message.id,

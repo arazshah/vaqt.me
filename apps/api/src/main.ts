@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
@@ -18,6 +19,12 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.enableShutdownHooks();
+
+  // Explicit, not relying on Nest's default — ConversationsGateway
+  // (conversations.gateway.ts) needs Socket.IO attached to this same HTTP
+  // server so the WS upgrade shares the port the REST API already listens
+  // on, rather than assuming an implicit default that could change.
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   app.use(cookieParser());
 
