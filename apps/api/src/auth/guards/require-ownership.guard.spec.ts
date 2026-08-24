@@ -81,6 +81,34 @@ describe('RequireOwnershipGuard', () => {
     await expect(guard.canActivate(context)).resolves.toBe(true);
   });
 
+  it('allows when the authenticated user is one of several resolved owners', async () => {
+    const resolver: OwnershipResolver = jest
+      .fn()
+      .mockResolvedValue(['owner-a', 'user-1', 'owner-b']);
+    const { guard, context } = setup(
+      { user: { sub: 'user-1', sid: 's' } },
+      resolver,
+    );
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+  });
+
+  it('throws FORBIDDEN when the authenticated user is in none of the resolved owners', async () => {
+    const resolver: OwnershipResolver = jest
+      .fn()
+      .mockResolvedValue(['owner-a', 'owner-b']);
+    const { guard, context } = setup(
+      { user: { sub: 'user-1', sid: 's' } },
+      resolver,
+    );
+    try {
+      await guard.canActivate(context);
+      throw new Error('expected canActivate to reject');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppError);
+      expect((error as AppError).code).toBe(ErrorCode.FORBIDDEN);
+    }
+  });
+
   it('OWNERSHIP_RESOLVER_KEY is a stable, importable metadata key', () => {
     expect(typeof OWNERSHIP_RESOLVER_KEY).toBe('string');
   });

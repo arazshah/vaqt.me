@@ -217,12 +217,17 @@ export class OffersService {
         where: { id: offer.requestId },
         data: { status: RequestStatus.OFFER_SELECTED },
       });
+      // lastMessageAt is set at creation time (not left null) so the new
+      // conversation immediately sorts correctly in ConversationsService's
+      // listMine() ORDER BY lastMessageAt DESC — see conversations.service.ts.
+      const now = new Date();
       const conversation = await tx.conversation.create({
         data: {
           requestId: offer.requestId,
           offerId: offer.id,
           seekerId: offer.request.ownerId,
           providerId: offer.providerId,
+          lastMessageAt: now,
         },
         select: { id: true },
       });
@@ -232,6 +237,7 @@ export class OffersService {
           senderId: null,
           type: MessageType.SYSTEM,
           body: 'این گفتگو به‌دلیل انتخاب پیشنهاد شما آغاز شد.',
+          createdAt: now,
         },
       });
 

@@ -46,7 +46,10 @@ export class RequireOwnershipGuard implements CanActivate {
     if (ownerId === null) {
       throw new AppError(ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND);
     }
-    if (ownerId !== userId) {
+    const isOwner = Array.isArray(ownerId)
+      ? ownerId.includes(userId)
+      : ownerId === userId;
+    if (!isOwner) {
       throw new AppError(ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
     }
 
