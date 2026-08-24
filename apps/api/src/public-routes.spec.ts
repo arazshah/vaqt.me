@@ -9,6 +9,7 @@ import { AuthController } from './auth/auth.controller';
 import { CategoriesController } from './categories/categories.controller';
 import { ConversationsController } from './conversations/conversations.controller';
 import { OffersController } from './offers/offers.controller';
+import { PaymentsController } from './payments/payments.controller';
 import { RequestsController } from './requests/requests.controller';
 import { SkillsController } from './skills/skills.controller';
 import { UsersController } from './users/users.controller';
@@ -27,6 +28,7 @@ const CONTROLLERS: (new (...args: never[]) => unknown)[] = [
   OffersController,
   ConversationsController,
   AiController,
+  PaymentsController,
 ];
 
 const METHOD_NAMES: Record<number, string> = {
@@ -106,6 +108,7 @@ const PUBLIC_ROUTE_ALLOWLIST: { method: string; path: string }[] = [
   { method: 'POST', path: '/auth/otp/verify' },
   { method: 'POST', path: '/auth/refresh' },
   { method: 'POST', path: '/requests/list' },
+  { method: 'GET', path: '/payments/zarinpal/callback' },
 ];
 
 describe('public route allowlist', () => {
