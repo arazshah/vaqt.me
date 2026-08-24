@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { CategoriesModule } from './categories/categories.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { ConversationsModule } from './conversations/conversations.module';
 import { BullRedisModule } from './common/redis/bull-redis.module';
 import { RedisModule } from './common/redis/redis.module';
 import { OffersModule } from './offers/offers.module';
@@ -29,6 +30,7 @@ import { UsersModule } from './users/users.module';
     AdminModule,
     RequestsModule,
     OffersModule,
+    ConversationsModule,
   ],
   controllers: [AppController],
   providers: [

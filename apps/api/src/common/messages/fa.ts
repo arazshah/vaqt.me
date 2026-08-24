@@ -26,5 +26,6 @@ export const errorMessagesFa: Record<ErrorCode, string> = {
     'این عملیات فقط برای پیشنهادهای در انتظار بررسی امکان‌پذیر است.',
   PROFILE_INCOMPLETE_FOR_OFFER:
     'برای ثبت پیشنهاد، ابتدا بیوگرافی و حداقل یک مهارت را به پروفایل خود اضافه کنید.',
+  CONVERSATION_ARCHIVED: 'این گفتگو بایگانی شده و دیگر پیام‌پذیر نیست.',
   INTERNAL_ERROR: 'خطایی پیش‌آمد. لطفاً بعداً دوباره تلاش کنید.',
 };
