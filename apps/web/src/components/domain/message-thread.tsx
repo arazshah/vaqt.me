@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { io, type Socket } from 'socket.io-client';
 import type { CursorPage } from '@vaqt/shared';
 
 import { Button } from '@vaqt/ui/components/ui/button';
@@ -8,7 +9,8 @@ import { Skeleton } from '@vaqt/ui/components/ui/skeleton';
 import { Textarea } from '@vaqt/ui/components/ui/textarea';
 import { cn } from '@vaqt/ui/lib/utils';
 
-import { apiFetch, ApiError } from '@/lib/api-client';
+import { apiFetch, ApiError, BASE_URL } from '@/lib/api-client';
+import { useAuth } from '@/lib/auth-context';
 import { fa } from '@/messages/fa';
 
 interface MessageItem {
@@ -21,6 +23,12 @@ interface MessageItem {
   readAt: string | null;
   createdAt: string;
 }
+
+// The gateway's broadcast payload (conversations.gateway.ts) is the same
+// shape minus isMine — that field is relative to whoever's asking, so it
+// can't be baked in server-side for an event that reaches every
+// participant including the sender. Computed locally instead.
+type BroadcastMessage = Omit<MessageItem, 'isMine'>;
 
 const PAGE_SIZE = 30;
 
@@ -41,6 +49,7 @@ export function MessageThread({
   // returns pages newest-first (see conversations.service.ts) — "load
   // older" fetches the next page with the last-known cursor and prepends
   // it, reversed, to the front of this array.
+  const { user } = useAuth();
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -51,6 +60,7 @@ export function MessageThread({
   const [sendError, setSendError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const hasLoadedOnce = useRef(false);
+  const userId = user?.id;
 
   const loadInitial = useCallback(async () => {
     setLoadingInitial(true);
@@ -80,6 +90,48 @@ export function MessageThread({
       bottomRef.current?.scrollIntoView({ block: 'end' });
     }
   }, [loadingInitial]);
+
+  // Live delivery: connects with the browser's own cookies
+  // (withCredentials, same access_token the REST calls use — see
+  // conversations.gateway.ts for the server side), joins this
+  // conversation's room, and merges any message:new event into state.
+  // Archived conversations skip this entirely — sendMessage() rejects
+  // writes there anyway, so nothing would ever arrive.
+  useEffect(() => {
+    if (archived) {
+      return;
+    }
+
+    const socket: Socket = io(BASE_URL, { withCredentials: true });
+
+    function join() {
+      socket.emit('conversation:join', { conversationId });
+    }
+    socket.on('connect', join);
+
+    function handleIncoming(payload: BroadcastMessage) {
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === payload.id)) {
+          // Already in state — the sender's own handleSend() appended it
+          // optimistically from the REST response before this broadcast
+          // arrived.
+          return prev;
+        }
+        return [...prev, { ...payload, isMine: payload.senderId === userId }];
+      });
+      requestAnimationFrame(() =>
+        bottomRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }),
+      );
+    }
+    socket.on('message:new', handleIncoming);
+
+    return () => {
+      socket.emit('conversation:leave', { conversationId });
+      socket.off('connect', join);
+      socket.off('message:new', handleIncoming);
+      socket.disconnect();
+    };
+  }, [archived, conversationId, userId]);
 
   async function handleLoadOlder() {
     setLoadingOlder(true);
@@ -113,7 +165,14 @@ export function MessageThread({
         method: 'POST',
         body: JSON.stringify({ conversationId, body }),
       });
-      setMessages((prev) => [...prev, message]);
+      // The gateway broadcasts to the whole room, sender included, before
+      // this REST response is even serialized (see sendMessage() in
+      // conversations.service.ts) — on low-latency connections the
+      // WebSocket event routinely beats this response back, so
+      // handleIncoming() may have already appended it.
+      setMessages((prev) =>
+        prev.some((m) => m.id === message.id) ? prev : [...prev, message],
+      );
       setDraft('');
       requestAnimationFrame(() =>
         bottomRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }),
