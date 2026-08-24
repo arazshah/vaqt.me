@@ -37,6 +37,6 @@ import { RequireOwnershipGuard } from './guards/require-ownership.guard';
     RequireVerifiedPhoneGuard,
     RequireOwnershipGuard,
   ],
-  exports: [JwtAuthGuard, AuthConfigService, TokenService],
+  exports: [JwtAuthGuard, AuthConfigService, TokenService, AuditService],
 })
 export class AuthModule {}

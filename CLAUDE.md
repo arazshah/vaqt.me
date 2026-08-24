@@ -2,10 +2,12 @@
 
 > این فایل شامل تمام تصمیمات نهایی معماری و پیاده‌سازی است. در هر فاز به‌روز می‌شود.
 
-**آخرین به‌روزرسانی:** فاز ۷ — AI (ویزارد ساخت درخواست با کمک هوش مصنوعی) کاملاً تکمیل شد
+**آخرین به‌روزرسانی:** فاز ۹ — پرداخت (Zarinpal) — PR ۱ (بک‌اند) merge شد
 **وضعیت:** فاز ۵ (درخواست‌ها) عملاً کامل؛ فاز ۶ (پیشنهادها) کامل؛ فاز ۷ (AI)
 کامل (بک‌اند + ویزارد UI + پیش‌نمایش زنده)؛ فاز ۸ (چت) کامل (بک‌اند + UI +
-Socket.IO برای تحویل بی‌درنگ)؛ فاز ۹ (پرداخت) بعدی
+Socket.IO برای تحویل بی‌درنگ)؛ فاز ۹ (پرداخت) در حال انجام — بک‌اند
+(checkout + callback ایدمپوتنت + آشتی‌سازی + آداپتر mock/Zarinpal) merge
+شد، صفحه‌ی نتیجه/دکمه‌های خرید در UI باقی‌مانده
 
 ---
 
@@ -612,7 +614,7 @@ src/styles/globals.contrast.test.ts` در `packages/ui`). این یک ادعای
 | ۶ — پیشنهادها      | ✅ تکمیل‌شده    | بک‌اند + UI کامل: ثبت/لیست/انتخاب/پس‌گیری/ارسال دوباره + شروع خودکار Conversation                                   |
 | ۷ — AI             | ✅ تکمیل‌شده    | بک‌اند + ویزارد UI کامل: نشست AI، استخراج ساختاریافته با retry/fallback، پیش‌نمایش زنده، دست‌گیری به فرم دستی فاز ۵ |
 | ۸ — چت             | ✅ تکمیل‌شده    | بک‌اند + UI + Socket.IO: فهرست گفتگوها، thread، ارسال پیام، خواندن خودکار، تحویل بی‌درنگ                            |
-| ۹ — پرداخت         | ⏳ در انتظار    | Zarinpal + entitlements                                                                                             |
+| ۹ — پرداخت         | 🔄 در حال انجام | بک‌اند کامل (checkout، callback ایدمپوتنت، آشتی‌سازی، اثر ۴ از ۵ محصول)؛ صفحه‌ی نتیجه/دکمه‌های خرید UI باقی‌مانده   |
 | ۱۰ — تکمیل تجربه   | ⏳ در انتظار    | Reviews + PWA + SEO                                                                                                 |
 | ۱۱ — کیفیت و تحویل | ⏳ در انتظار    | E2E tests + security + docker                                                                                       |
 
@@ -1838,3 +1840,155 @@ not a function`، خطای React Client Manifest). رفع با همان روش �
 و UI (ویزارد + پیش‌نمایش زنده + دست‌گیری کامل به فرم دستی فاز ۵)، هر دو
 merge شده‌اند. تنها محدودیت باقی‌مانده (صادقانه ثبت‌شده در PR ۱): آداپتر
 واقعی Anthropic هرگز با یک کلید واقعی زنده تست نشد.
+
+---
+
+## فاز ۹ — پرداخت (Zarinpal + Entitlements)
+
+**چیستی:** ۵ محصول ارتقا (`URGENT_BADGE`, `BUMP`, `FEATURE`, `PRO_MONTHLY`,
+`TARGETED_NOTIFY`) از فاز ۱ در seed آماده بودند ولی هیچ راهی برای خریدشان
+وجود نداشت. این فاز خط لوله‌ی کامل پرداخت را می‌سازد: `checkout` → درگاه
+(mock یا Zarinpal واقعی) → callback ایدمپوتنت → اعمال اثر محصول
+(Entitlement + جهش‌های خاص هر محصول روی `Request`/`Subscription`) →
+آشتی‌سازی سفارش‌های معلق.
+
+### تصمیم‌های طراحی گرفته‌شده پیش از شروع کد
+
+- **الگوی `PaymentPort` دقیقاً هم‌شکل `SmsPort`/`AiPort`:** آداپتر mock
+  (بدون هیچ فراخوانی شبکه) + آداپتر Zarinpal واقعی (با `fetch` خام، بدون
+  افزودن SDK جدید — هم‌راستا با `SmsIrAdapter`/`AnthropicAiAdapter`)،
+  انتخاب‌شده با فکتوری در `PaymentsModule` بر اساس `PAYMENT_PROVIDER`، با
+  همان گارد production که `SmsModule` دارد: `PAYMENT_PROVIDER=mock` با
+  `NODE_ENV=production` باعث throw در بوت می‌شود — حتی سخت‌گیرانه‌تر از
+  SMS توجیه دارد چون اینجا پول واقعی درمیان است.
+- **آداپتر mock به‌جای شبیه‌سازی یک درگاه واسط، `redirectUrl` را مستقیم
+  به همان callback endpoint خودمان با `Status=OK` از پیش ضمیمه‌شده
+  برمی‌گرداند** — یعنی «درگاه» فوراً و بدون هیچ سرویس دومی موفقیت را
+  تأیید می‌کند. این کل خط لوله‌ی checkout→callback→verify→اعمال‌اثر را
+  به‌صورت محلی و بدون کلید API واقعی کاملاً قابل‌تست می‌کند (شکست هم با
+  زدن مستقیم callback با `Status=NOK` قابل شبیه‌سازی است، مستقل از
+  آداپتر).
+- **مقایسه‌ی مبلغ (بند ۱۱) از طریق خودِ پارامتر `amount` که به
+  `verifyPayment` پاس داده می‌شود انجام می‌شود، نه یک چک جداگانه در
+  سرویس.** چون Zarinpal مبلغ پرداخت‌شده‌ی واقعی را در پاسخ verify
+  برنمی‌گرداند — فقط تأیید می‌کند که مبلغی که شما در verify فرستادید با
+  چیزی که در سمت آن‌ها برای همان authority ثبت شده مطابقت دارد یا نه
+  (کد غیر از ۱۰۰/۱۰۱ یعنی عدم تطابق). چون همیشه `order.amountRial`ی
+  ذخیره‌شده‌ی خودمان (نه هر عددی که کاربر ادعا کند) به verify پاس داده
+  می‌شود، این دقیقاً همان محافظت مطرح‌شده در بند ۱۱ است، فقط توکار در
+  شکل فراخوانی به‌جای یک `if` جداگانه.
+- **قفل ردیف با `SELECT ... FOR UPDATE` خام (`$queryRaw` داخل
+  `prisma.$transaction`)** — اولین استفاده از قفل بدبینانه (pessimistic
+  locking) در این کدبیس؛ الگوهای تراکنشی قبلی (`offers.service.ts`) فقط
+  به شرط `WHERE` در `update` تکیه می‌کردند که برای race روی همان authority
+  کافی نبود (بین خواندن وضعیت و نوشتن آن، یک callback همزمان دیگر برای
+  همان authority می‌توانست جا خوش کند). ستون‌ها با نام camelCase و
+  double-quote دقیق نوشته شدند چون این پروژه هرگز از `@map` روی فیلدهای
+  تکی استفاده نکرده — نام ستون واقعی در Postgres همان camelCase کوتیشن‌دار
+  است، نه snake_case.
+- **اثر هر محصول (`applyProductEffect`) برای چهار محصول اول واقعی
+  پیاده‌سازی شد، نه یک placeholder:** `URGENT_BADGE`→`isUrgent=true` +
+  `listTier=max(فعلی,۱)`؛ `FEATURE`→`isFeatured=true` +
+  `listTier=max(فعلی,۲)` (هرگز کاهش نمی‌یابد — خرید بج فوری بعد از
+  برجسته‌سازی، برجستگی را پایین نمی‌آورد)؛ `BUMP`→`listRankAt`/`bumpedAt`
+  به همین لحظه؛ `PRO_MONTHLY`→ساخت ردیف واقعی `Subscription`
+  (`currentPeriodEnd = now + durationHours`). فقط `TARGETED_NOTIFY`
+  عمداً محدود ماند: چون هیچ زیرساخت ارسال اعلان (`Notification`) در این
+  پروژه هنوز وجود ندارد، فقط ردیف عمومی `Entitlement` برایش ساخته
+  می‌شود، بدون هیچ اعلانی که واقعاً ارسال شود — این یک تصمیم scope، نه
+  یک باگ فراموش‌شده.
+- **job آشتی‌سازی (`payments` queue BullMQ، هر ۱۵ دقیقه،
+  `upsertJobScheduler` — دقیقاً هم‌الگو با `session-cleanup` فاز ۲)
+  منطق «verify+اعمال‌اثر» را با خودِ مسیر callback به اشتراک می‌گذارد**
+  (متد خصوصی مشترک `verifyAndFinalize`) — سفارش‌های `PENDING` قدیمی‌تر
+  از ۳۰ دقیقه (بند ۱۱) که authority دارند دوباره verify می‌شوند (شاید
+  کاربر واقعاً پرداخت کرد ولی مرورگرش هرگز به callback برنگشت)؛
+  سفارش‌های بدون authority (خودِ فراخوانی `requestPayment` در لحظه‌ی
+  checkout شکست خورده بود) مستقیم FAILED می‌شوند، بدون تلاش برای verify
+  چیزی که هرگز به درگاه نرسیده.
+- **`AuditService` از `AuthModule` اکسپورت شد** (قبلاً فقط داخلی بود) —
+  یک تغییر یک‌خطی تا `PaymentsModule` بتواند همان سرویس audit موجود
+  (بدون تکرار کد) را برای ثبت شکست verify با `severity:high` تزریق کند.
+- **`GET /payments/order` با query param (`?id=`)، نه path param** —
+  برخلاف دو استثنای مستندشده‌ی قبلی (`GET /requests/:id`,
+  `GET /conversations/:id`) که به‌خاطر پیشینه‌ی کدبیس توجیه شده بودند،
+  این یک endpoint کاملاً تازه است؛ برای endpointهای تازه، قاعده‌ی ایدئال
+  «بدون path param» رعایت می‌شود، نه اضافه‌کردن یک استثنای سوم.
+
+### PR ۱ — بک‌اند پرداخت (تکمیل‌شده)
+
+`apps/api/src/payments/**` (کنترلر + سرویس + کانفیگ + یک DTO + دو آداپتر
+
+- job آشتی‌سازی) + schema مشترک جدید (`packages/shared/src/schemas/payment.ts`).
+  هیچ env var جدیدی لازم نبود — `PAYMENT_PROVIDER`, `ZARINPAL_MERCHANT_ID`,
+  `ZARINPAL_SANDBOX`, `ZARINPAL_CALLBACK_URL`, `WEB_ORIGIN` همه از فاز ۰/۱
+  در `.env.example` آماده بودند.
+
+* `POST /payments/checkout` — بدنه `{productCode, requestId?}`؛ اگر
+  `requestId` داده شود، مالکیت آن با کاربر واردشده چک می‌شود (۴۰۴ بدون
+  افشا در صورت عدم تطابق، هم‌الگو با فازهای قبل)
+* `GET /payments/zarinpal/callback` — `@Public()` (Zarinpal کوکی ما را
+  ندارد)، هرگز چیزی رندر نمی‌کند، همیشه `302` به
+  `${WEB_ORIGIN}/payment/result?status=...&order=...`
+* `GET /payments/order?id=...` — برای صفحه‌ی نتیجه‌ی فرانت‌اند، مالکیت
+  چک‌شده (۴۰۴ برای کاربر دیگر یا سفارش ناموجود)
+
+**تست:** ۱۹ تست جدید در `payments.service.spec.ts` روی Postgres واقعی
+(بدون mock در سطح DB؛ فقط `PaymentPort` با یک `FakePaymentPort` تست
+کنترل‌شده — قابل‌تنظیم برای شبیه‌سازی شکست `requestPayment`/`verifyPayment`)
+پوشش‌دهنده‌ی هر تصمیم بالا: قیمت‌گذاری از محصول، رد مالکیت نامعتبر
+`requestId`، خطای provider بدون ساخت سفارش یتیم، اثر هر چهار محصول
+(شامل عدم کاهش `listTier` وقتی `FEATURE` قبلاً خریداری شده)، شکست
+`Status=NOK`، شکست verify + audit log با severity بالا، **ایدمپوتنسی
+واقعی** (فراخوانی دوم callback برای سفارش از قبل `PAID`، verify را
+دوباره صدا نمی‌زند — تأیید با شمارش فراخوانی‌های mock — و Entitlement
+تکراری نمی‌سازد)، redirect صحیح برای authority ناموجود، و سه سناریوی
+آشتی‌سازی (سفارش معلق قدیمی finalize می‌شود، سفارش بدون authority مستقیم
+FAILED می‌شود بدون verify، سفارش تازه دست‌نخورده می‌ماند). ۹ تست schema
+در `packages/shared/src/schemas/payment.test.ts`.
+`public-routes.spec.ts` به‌روز شد (`PaymentsController` + مسیر عمومی
+جدید `GET /payments/zarinpal/callback` به allowlist اضافه شد).
+
+**اثبات زنده (E2E کامل، Postgres/Redis واقعی، آداپتر mock، دو کاربر
+واقعی با OTP واقعی):** `POST /payments/checkout` با `URGENT_BADGE`
+(بدون `requestId`) → سفارش `PENDING` با `amountRial:490000` (دقیقاً
+قیمت seed) + `redirectUrl` واقعی به callback خودمان. دنبال‌کردن آن URL
+→ `302` با `Location` صحیح؛ `GET /payments/order` بلافاصله
+`status:PAID`، `refId` واقعی، `paidAt` پرشده را نشان داد. تکرار همان
+callback (idempotent replay) → همان `302 success` بدون خطا. یک درخواست
+واقعی ساخته و منتشر شد، `checkout` این‌بار **با** `requestId` صدا زده
+شد، callback دنبال شد → مستقیماً از Postgres تأیید شد:
+`isUrgent:true, listTier:1` روی همان ردیف `requests`. تلاش کاربر دوم
+برای خواندن سفارش کاربر اول → `404 NOT_FOUND` (بدون افشا). تمام داده‌ی
+تستی (۲ کاربر، ۱ درخواست، ۲ سفارش، Entitlementهای متناظر) پاک شد؛
+شمارش پایه‌ی seed تأیید شد بدون تغییر ماند: ۸ کاربر، ۱۵ درخواست، ۰
+سفارش، ۰ Entitlement.
+
+**آداپتر Zarinpal واقعی هرگز زنده تست نشد** (همان محدودیت مستندشده در
+فاز ۷ برای Anthropic) — این محیط نه `ZARINPAL_MERCHANT_ID` واقعی دارد و
+نه دسترسی به sandbox آن‌ها. شکل دقیق درخواست/پاسخ v4 (کدهای ۱۰۰/۱۰۱،
+ساختار `data`/`errors`) بر پایه‌ی مستندات عمومی Zarinpal نوشته شده،
+**نه** تأییدشده با یک تماس واقعی. پیش از تکیه‌ی production روی این
+آداپتر، حتماً باید یک‌بار با merchant id واقعی (یا sandbox) زنده تست
+شود.
+
+**باگ محیطی کشف‌شده حین این کار (نه در کد این PR):** فرآیند
+`nest start --watch` طولانی‌مدت (از ساعت ۱۶:۰۰ همان روز، فاز ۵ تا اینجا
+بدون ری‌استارت) با خطای واقعی TypeScript متوقف شد:
+`Could not find a declaration file for module '@vaqt/db'`، با اینکه
+`packages/db/dist/index.d.ts` واقعاً روی دیسک وجود داشت — یک incremental
+compile cache خراب‌شده‌ی داخلی همان فرآیند طولانی‌مدت، هم‌خانواده با
+مشکلات مشابه cache وبپک مستندشده در فازهای ۸/۷ برای `next dev`. رفع با
+kill کامل پروسه (نه فقط pattern-based pkill که فرآیند اصلی nest.js را
+از دست داد چون cmdline کامل با الگوی ساده مطابقت نداشت) + `rm -rf dist`
+
+- ری‌استارت تمیز، بدون تغییر کد.
+
+`pnpm lint`/`typecheck`/`test` کامل مونوریپو سبز (۸/۸/۸ تسک، ۳۶۲ تست
+apps/api، +۹ تست `packages/shared`).
+
+**باقی‌مانده برای فاز ۹:** صفحه‌ی نتیجه‌ی پرداخت در `apps/web`
+(`/payment/result`) + دکمه‌های خرید محصول در UI (صفحه‌ی جزئیات درخواست
+برای `URGENT_BADGE`/`BUMP`/`FEATURE`، جایی مناسب برای `PRO_MONTHLY`) —
+یک PR جدا، مطابق الگوی فازهای قبل. تا آن زمان، پرداخت فقط از طریق API
+مستقیم قابل استفاده است، نه از UI.

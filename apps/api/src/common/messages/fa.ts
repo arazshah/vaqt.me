@@ -27,5 +27,8 @@ export const errorMessagesFa: Record<ErrorCode, string> = {
   PROFILE_INCOMPLETE_FOR_OFFER:
     'برای ثبت پیشنهاد، ابتدا بیوگرافی و حداقل یک مهارت را به پروفایل خود اضافه کنید.',
   CONVERSATION_ARCHIVED: 'این گفتگو بایگانی شده و دیگر پیام‌پذیر نیست.',
+  PRODUCT_NOT_FOUND: 'محصول موردنظر یافت نشد.',
+  PAYMENT_PROVIDER_ERROR:
+    'اتصال به درگاه پرداخت برقرار نشد. کمی بعد دوباره تلاش کنید.',
   INTERNAL_ERROR: 'خطایی پیش‌آمد. لطفاً بعداً دوباره تلاش کنید.',
 };

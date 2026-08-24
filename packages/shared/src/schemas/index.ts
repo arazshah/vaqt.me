@@ -6,3 +6,4 @@ export * from './request';
 export * from './offer';
 export * from './message';
 export * from './ai';
+export * from './payment';

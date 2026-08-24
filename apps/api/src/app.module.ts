@@ -13,6 +13,7 @@ import { ConversationsModule } from './conversations/conversations.module';
 import { BullRedisModule } from './common/redis/bull-redis.module';
 import { RedisModule } from './common/redis/redis.module';
 import { OffersModule } from './offers/offers.module';
+import { PaymentsModule } from './payments/payments.module';
 import { RequestsModule } from './requests/requests.module';
 import { SkillsModule } from './skills/skills.module';
 import { UsersModule } from './users/users.module';
@@ -33,6 +34,7 @@ import { UsersModule } from './users/users.module';
     OffersModule,
     ConversationsModule,
     AiModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [
