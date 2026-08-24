@@ -7,11 +7,11 @@ import { useRouter } from 'next/navigation';
 import { Skeleton } from '@vaqt/ui/components/ui/skeleton';
 
 import { AppShell } from '@/components/app-shell';
-import { RequestForm } from '@/components/domain/request-form';
+import { AiWizard } from '@/components/domain/ai-wizard';
 import { useAuth } from '@/lib/auth-context';
 import { fa } from '@/messages/fa';
 
-export default function NewRequestPage() {
+export default function NewRequestAiPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -33,15 +33,15 @@ export default function NewRequestPage() {
     <AppShell>
       <div className="mx-auto max-w-lg">
         <div className="mb-6 flex items-center justify-between gap-2">
-          <h1 className="text-2xl font-semibold">{fa.newRequestPage.title}</h1>
+          <h1 className="text-2xl font-semibold">{fa.aiWizardPage.title}</h1>
           <Link
-            href="/requests/new/ai"
+            href="/requests/new"
             className="text-sm text-primary hover:underline"
           >
-            {fa.newRequestPage.aiWizardLink}
+            {fa.newRequestPage.manualLink}
           </Link>
         </div>
-        <RequestForm />
+        <AiWizard />
       </div>
     </AppShell>
   );

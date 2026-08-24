@@ -112,6 +112,23 @@ export const fa = {
       editButton: 'ویرایش',
       publishError: 'مشکلی در انتشار درخواست پیش آمد. دوباره تلاش کنید.',
     },
+    aiWizardLink: 'امتحان با کمک هوش مصنوعی',
+    manualLink: 'پر کردن دستی فرم',
+  },
+  aiWizardPage: {
+    title: 'ساخت درخواست با کمک هوش مصنوعی',
+    intro:
+      'کارتان را به فارسی و با کلمات خودتان توضیح دهید — کمک می‌کنم جزئیات لازم را جمع کنیم.',
+    inputPlaceholder: 'مثلاً: یک برنامه‌نویس برای ساخت یک وب‌سایت می‌خواهم…',
+    sendButton: 'ارسال',
+    sending: 'در حال ارسال…',
+    sendError: 'مشکلی در ارتباط با دستیار پیش آمد. دوباره تلاش کنید.',
+    draftPreviewTitle: 'پیش‌نمایش زنده',
+    draftEmptyField: '—',
+    readyNotice: 'همه‌چیز آماده است! می‌توانید پیش‌نویس را بررسی کنید.',
+    reviewButton: 'بررسی و انتشار',
+    fallbackNotice: 'برای ادامه، فرم زیر را دستی تکمیل کنید.',
+    manualFormButton: 'پرکردن دستی فرم',
   },
   requestDetailPage: {
     backLink: 'بازگشت به فهرست',

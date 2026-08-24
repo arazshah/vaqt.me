@@ -146,7 +146,30 @@ function toCreateRequestInput(values: RawFormValues): unknown {
 
 type Draft = { id: string; status: string } & RawFormValues;
 
-export function RequestForm() {
+// What the AI wizard (Phase 7) can hand off to prefill this form —
+// deadlineAt and preferredWindows are deliberately excluded, since
+// extracting a concrete deadline/schedule from free-form conversation is
+// out of scope for the AI draft; the user fills those in manually either
+// way.
+export type RequestFormPrefill = Partial<
+  Pick<
+    RawFormValues,
+    | 'title'
+    | 'description'
+    | 'categoryId'
+    | 'mode'
+    | 'city'
+    | 'durationMinutes'
+    | 'budgetMinToman'
+    | 'budgetMaxToman'
+  >
+>;
+
+export function RequestForm({
+  initialValues,
+}: {
+  initialValues?: RequestFormPrefill;
+} = {}) {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -180,6 +203,7 @@ export function RequestForm() {
       budgetMaxToman: '',
       deadlineAt: '',
       preferredWindows: [],
+      ...initialValues,
     },
   });
 
