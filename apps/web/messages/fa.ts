@@ -1,4 +1,9 @@
-import type { OfferStatus, RequestMode, RequestStatus } from '@vaqt/shared';
+import type {
+  ConversationStatus,
+  OfferStatus,
+  RequestMode,
+  RequestStatus,
+} from '@vaqt/shared';
 
 /**
  * Every user-facing Persian string in apps/web lives here — no hardcoded
@@ -11,6 +16,7 @@ export const fa = {
       home: 'خانه',
       requests: 'درخواست‌ها',
       newRequest: 'درخواست جدید',
+      conversations: 'گفتگوها',
       login: 'ورود',
       logout: 'خروج',
     },
@@ -35,6 +41,10 @@ export const fa = {
     WITHDRAWN: 'پس‌گرفته‌شده',
     EXPIRED: 'منقضی‌شده',
   } satisfies Record<OfferStatus, string>,
+  conversationStatus: {
+    OPEN: 'باز',
+    ARCHIVED: 'بایگانی‌شده',
+  } satisfies Record<ConversationStatus, string>,
   requestCard: {
     offerCount: (count: string) => `${count} پیشنهاد`,
     budgetHidden: 'بودجه پنهان',
@@ -144,6 +154,31 @@ export const fa = {
           'برای ارسال پیشنهاد به بیوگرافی و حداقل یک مهارت در پروفایل خود نیاز دارید.',
       },
     },
+  },
+  conversationsPage: {
+    title: 'گفتگوهای من',
+    loading: 'در حال بارگذاری…',
+    emptyTitle: 'هنوز گفتگویی ندارید',
+    emptyDescription:
+      'وقتی پیشنهادی برای درخواستی انتخاب شود، گفتگو اینجا نمایش داده می‌شود.',
+    errorTitle: 'مشکلی در دریافت گفتگوها پیش آمد',
+    errorDescription: 'اتصال به سرور برقرار نشد. کمی بعد دوباره تلاش کنید.',
+    noMessagesYet: 'هنوز پیامی ارسال نشده',
+  },
+  conversationDetailPage: {
+    backLink: 'بازگشت به گفتگوها',
+    loading: 'در حال بارگذاری…',
+    notFoundTitle: 'گفتگو پیدا نشد',
+    notFoundDescription: 'این گفتگو وجود ندارد یا به آن دسترسی ندارید.',
+    errorTitle: 'مشکلی در دریافت گفتگو پیش آمد',
+    errorDescription: 'اتصال به سرور برقرار نشد. کمی بعد دوباره تلاش کنید.',
+    loadOlder: 'بارگذاری پیام‌های قدیمی‌تر',
+    loadingOlder: 'در حال بارگذاری…',
+    messagePlaceholder: 'پیام خود را بنویسید…',
+    sendButton: 'ارسال',
+    sending: 'در حال ارسال…',
+    sendError: 'مشکلی در ارسال پیام پیش آمد. دوباره تلاش کنید.',
+    archivedNotice: 'این گفتگو بایگانی شده و دیگر پیام‌پذیر نیست.',
   },
   devUi: {
     title: 'گالری سیستم طراحی',

@@ -38,6 +38,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   {fa.appShell.nav.newRequest}
                 </Link>
+                <Link
+                  href="/conversations"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {fa.appShell.nav.conversations}
+                </Link>
                 <span className="text-muted-foreground">
                   {user.displayName}
                 </span>
