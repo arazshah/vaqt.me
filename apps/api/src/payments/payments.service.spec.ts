@@ -54,6 +54,60 @@ class FakePaymentPort implements PaymentPort {
   }
 }
 
+// Prices/durations match packages/db/src/seed.ts exactly. Upserted (not
+// created) by code, and never deleted: these are catalog/reference data,
+// the same role Category rows play in offers.service.spec.ts, except
+// seed.ts isn't guaranteed to have run — CI only runs `migrate deploy`,
+// never `db:seed` — so a test that assumed ProductCode.URGENT_BADGE
+// already existed passed locally (this dev DB has been seeded since
+// Phase 1 and never wiped) but failed on every fresh CI checkout.
+const PRODUCT_FIXTURES: {
+  code: ProductCode;
+  title: string;
+  description: string;
+  priceRial: number;
+  durationHours: number | null;
+}[] = [
+  {
+    code: ProductCode.URGENT_BADGE,
+    title: 'نشان فوری',
+    description: 'درخواست شما با بج نارنجی «فوری» در فهرست برجسته می‌شود.',
+    priceRial: 490_000,
+    durationHours: 72,
+  },
+  {
+    code: ProductCode.BUMP,
+    title: 'نردبان',
+    description: 'درخواست شما به‌صورت دوره‌ای به بالای فهرست بازمی‌گردد.',
+    priceRial: 390_000,
+    durationHours: 48,
+  },
+  {
+    code: ProductCode.FEATURE,
+    title: 'برجسته‌سازی',
+    description:
+      'درخواست شما با بج بنفش «ارتقایافته» و اولویت نمایش بالاتر دیده می‌شود.',
+    priceRial: 790_000,
+    durationHours: 168,
+  },
+  {
+    code: ProductCode.PRO_MONTHLY,
+    title: 'اشتراک حرفه‌ای ماهانه',
+    description:
+      'ارسال پیشنهاد نامحدود و دسترسی به امکانات ویژه ارائه‌دهندگان حرفه‌ای.',
+    priceRial: 2_990_000,
+    durationHours: 720,
+  },
+  {
+    code: ProductCode.TARGETED_NOTIFY,
+    title: 'اعلان هدفمند',
+    description:
+      'ارسال اعلان به ارائه‌دهندگان مرتبط با حوزه و شهر درخواست شما.',
+    priceRial: 590_000,
+    durationHours: null,
+  },
+];
+
 describe('PaymentsService (real Postgres)', () => {
   const createdOrderIds: string[] = [];
   const createdRequestIds: string[] = [];
@@ -61,6 +115,16 @@ describe('PaymentsService (real Postgres)', () => {
   const createdUserIds: string[] = [];
   let port: FakePaymentPort;
   let service: PaymentsService;
+
+  beforeAll(async () => {
+    for (const product of PRODUCT_FIXTURES) {
+      await prisma.product.upsert({
+        where: { code: product.code },
+        create: product,
+        update: product,
+      });
+    }
+  });
 
   beforeEach(() => {
     port = new FakePaymentPort();
