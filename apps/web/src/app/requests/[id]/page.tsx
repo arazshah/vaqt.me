@@ -22,6 +22,7 @@ import { PriceTag } from '@vaqt/ui/components/price-tag';
 
 import { AppShell } from '@/components/app-shell';
 import { OffersPanel } from '@/components/domain/offers-panel';
+import { RequestUpgrades } from '@/components/domain/request-upgrades';
 import { RequestStatusBadge } from '@/components/domain/request-status-badge';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api-client';
@@ -45,6 +46,9 @@ interface RequestDetailData {
   budgetMasked: boolean;
   myOfferId: string | null;
   myOfferStatus: OfferStatus | null;
+  isUrgent: boolean;
+  isFeatured: boolean;
+  bumpedAt: string | null;
 }
 
 export default function RequestDetailPage() {
@@ -198,6 +202,8 @@ export default function RequestDetailPage() {
             </div>
           </dl>
         </div>
+
+        <RequestUpgrades detail={detail} />
 
         <OffersPanel detail={detail} onChanged={() => void load()} />
       </div>

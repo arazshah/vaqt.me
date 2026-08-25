@@ -404,5 +404,35 @@ describe('RequestsService (real Postgres)', () => {
       expect(viewerView.myOfferId).toBe(offer.id);
       expect(viewerView.myOfferStatus).toBe('PENDING');
     });
+
+    it('defaults isUrgent/isFeatured/bumpedAt to false/false/null, and reflects them once a payment upgrade sets them', async () => {
+      const categoryId = await makeCategory();
+      const ownerId = await makeUser();
+      const created = await service.create(
+        ownerId,
+        validCreateInput(categoryId),
+      );
+      createdRequestIds.push(created.id);
+      await service.publish(created.id);
+
+      const fresh = await service.getById(created.id, ownerId);
+      expect(fresh.isUrgent).toBe(false);
+      expect(fresh.isFeatured).toBe(false);
+      expect(fresh.bumpedAt).toBeNull();
+
+      // PaymentsService.applyProductEffect() is what actually sets these
+      // (see payments.service.spec.ts) — writing directly here just proves
+      // getById() surfaces whatever the row already holds.
+      const bumpedAt = new Date();
+      await prisma.request.update({
+        where: { id: created.id },
+        data: { isUrgent: true, isFeatured: true, bumpedAt },
+      });
+
+      const upgraded = await service.getById(created.id, ownerId);
+      expect(upgraded.isUrgent).toBe(true);
+      expect(upgraded.isFeatured).toBe(true);
+      expect(upgraded.bumpedAt?.getTime()).toBe(bumpedAt.getTime());
+    });
   });
 });

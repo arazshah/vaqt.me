@@ -1,6 +1,7 @@
 import type {
   ConversationStatus,
   OfferStatus,
+  OrderStatus,
   RequestMode,
   RequestStatus,
 } from '@vaqt/shared';
@@ -17,6 +18,7 @@ export const fa = {
       requests: 'درخواست‌ها',
       newRequest: 'درخواست جدید',
       conversations: 'گفتگوها',
+      pricing: 'امکانات ویژه',
       login: 'ورود',
       logout: 'خروج',
     },
@@ -171,6 +173,14 @@ export const fa = {
           'برای ارسال پیشنهاد به بیوگرافی و حداقل یک مهارت در پروفایل خود نیاز دارید.',
       },
     },
+    upgrades: {
+      sectionTitle: 'ارتقای این درخواست',
+      loading: 'در حال بارگذاری…',
+      alreadyUrgent: 'این درخواست نشان فوری دارد.',
+      alreadyFeatured: 'این درخواست برجسته شده است.',
+      bumpLastAt: (date: string) => `آخرین نردبان: ${date}`,
+      bumpNeverYet: 'هنوز نردبان نشده است.',
+    },
   },
   conversationsPage: {
     title: 'گفتگوهای من',
@@ -196,6 +206,49 @@ export const fa = {
     sending: 'در حال ارسال…',
     sendError: 'مشکلی در ارسال پیام پیش آمد. دوباره تلاش کنید.',
     archivedNotice: 'این گفتگو بایگانی شده و دیگر پیام‌پذیر نیست.',
+  },
+  payment: {
+    buyButton: 'خرید',
+    buying: 'در حال انتقال به درگاه…',
+    buyError: 'مشکلی در شروع پرداخت پیش آمد. دوباره تلاش کنید.',
+  },
+  pricingPage: {
+    title: 'امکانات ویژه',
+    description: 'اشتراک و امکانات تکمیلی برای ارائه‌دهندگان.',
+    loading: 'در حال بارگذاری…',
+    errorTitle: 'مشکلی در دریافت فهرست پیش آمد',
+    errorDescription: 'اتصال به سرور برقرار نشد. کمی بعد دوباره تلاش کنید.',
+    durationHours: (hours: string) => `مدت اعتبار: ${hours} ساعت`,
+  },
+  paymentResultPage: {
+    backToRequests: 'بازگشت به فهرست درخواست‌ها',
+    loading: 'در حال بررسی نتیجه‌ی پرداخت…',
+    success: {
+      title: 'پرداخت با موفقیت انجام شد',
+      description: 'خرید شما ثبت شد و اعمال شد.',
+    },
+    failed: {
+      title: 'پرداخت ناموفق بود',
+      description: 'پرداخت شما تکمیل نشد. می‌توانید دوباره تلاش کنید.',
+    },
+    notFound: {
+      title: 'سفارش پیدا نشد',
+      description: 'اطلاعات این پرداخت در دسترس نیست.',
+    },
+    orderLabels: {
+      product: 'محصول',
+      amount: 'مبلغ',
+      status: 'وضعیت',
+      refId: 'کد پیگیری',
+      paidAt: 'زمان پرداخت',
+    },
+    orderStatus: {
+      PENDING: 'در انتظار پرداخت',
+      PAID: 'پرداخت‌شده',
+      FAILED: 'ناموفق',
+      CANCELED: 'لغوشده',
+      REFUNDED: 'بازگشت‌داده‌شده',
+    } satisfies Record<OrderStatus, string>,
   },
   devUi: {
     title: 'گالری سیستم طراحی',

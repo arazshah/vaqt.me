@@ -73,6 +73,13 @@ export interface RequestDetail {
   // OWN_REQUEST_OFFER_FORBIDDEN).
   myOfferId: string | null;
   myOfferStatus: string | null;
+  // Set by PaymentsService.applyProductEffect() when the owner buys the
+  // matching upgrade (see CLAUDE.md Phase 9) — visible to every viewer,
+  // not owner-only, since they're what the badges on the public list
+  // already show.
+  isUrgent: boolean;
+  isFeatured: boolean;
+  bumpedAt: Date | null;
 }
 
 @Injectable()
@@ -235,6 +242,9 @@ export class RequestsService {
         ownerId: true,
         budgetMinRial: true,
         budgetMaxRial: true,
+        isUrgent: true,
+        isFeatured: true,
+        bumpedAt: true,
         category: { select: { name: true } },
         owner: { select: { displayName: true } },
       },
@@ -285,6 +295,9 @@ export class RequestsService {
       budgetMasked: !canSeeBudget,
       myOfferId: myOffer?.id ?? null,
       myOfferStatus: myOffer?.status ?? null,
+      isUrgent: request.isUrgent,
+      isFeatured: request.isFeatured,
+      bumpedAt: request.bumpedAt,
     };
   }
 }
