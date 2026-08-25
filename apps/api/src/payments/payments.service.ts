@@ -41,6 +41,14 @@ export interface OrderView {
   createdAt: Date;
 }
 
+export interface ProductView {
+  code: string;
+  title: string;
+  description: string;
+  priceRial: number;
+  durationHours: number | null;
+}
+
 type CallbackStatus = 'success' | 'failed' | 'not_found';
 
 @Injectable()
@@ -52,6 +60,24 @@ export class PaymentsService {
     private readonly config: PaymentsConfigService,
     private readonly audit: AuditService,
   ) {}
+
+  // Ordered by price so the catalog reads cheapest-to-most-expensive on the
+  // pricing page — there are only 5 rows, seeded once and never mutated at
+  // runtime, so no caching layer (unlike categories/skills, which get
+  // created/deactivated by admins).
+  async listProducts(): Promise<ProductView[]> {
+    const products = await prisma.product.findMany({
+      orderBy: { priceRial: 'asc' },
+      select: {
+        code: true,
+        title: true,
+        description: true,
+        priceRial: true,
+        durationHours: true,
+      },
+    });
+    return products;
+  }
 
   async checkout(
     userId: string,

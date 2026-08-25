@@ -203,6 +203,31 @@ describe('PaymentsService (real Postgres)', () => {
     return request.id;
   }
 
+  describe('listProducts', () => {
+    it('returns all seeded products, cheapest first, with no internal id leaked', async () => {
+      const products = await service.listProducts();
+
+      expect(products).toHaveLength(PRODUCT_FIXTURES.length);
+      const sortedFixtures = [...PRODUCT_FIXTURES].sort(
+        (a, b) => a.priceRial - b.priceRial,
+      );
+      expect(products.map((p) => p.code)).toEqual(
+        sortedFixtures.map((f) => f.code),
+      );
+      const urgentBadge = products.find(
+        (p) => p.code === ProductCode.URGENT_BADGE,
+      );
+      expect(urgentBadge).toMatchObject({
+        title: 'نشان فوری',
+        priceRial: 490_000,
+        durationHours: 72,
+      });
+      for (const product of products) {
+        expect(product).not.toHaveProperty('id');
+      }
+    });
+  });
+
   describe('checkout', () => {
     it('creates a PENDING order priced from the product and returns the gateway redirect', async () => {
       const userId = await makeUser();

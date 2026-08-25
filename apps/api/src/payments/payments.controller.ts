@@ -12,6 +12,11 @@ import { PaymentsService } from './payments.service';
 export class PaymentsController {
   constructor(private readonly payments: PaymentsService) {}
 
+  @Get('products')
+  listProducts() {
+    return this.payments.listProducts();
+  }
+
   @Post('checkout')
   checkout(
     @CurrentUser() user: AccessTokenPayload,

@@ -44,6 +44,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   {fa.appShell.nav.conversations}
                 </Link>
+                <Link
+                  href="/pricing"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  {fa.appShell.nav.pricing}
+                </Link>
                 <span className="text-muted-foreground">
                   {user.displayName}
                 </span>
