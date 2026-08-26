@@ -11,6 +11,7 @@ import { ConversationsController } from './conversations/conversations.controlle
 import { OffersController } from './offers/offers.controller';
 import { PaymentsController } from './payments/payments.controller';
 import { RequestsController } from './requests/requests.controller';
+import { ReviewsController } from './reviews/reviews.controller';
 import { SkillsController } from './skills/skills.controller';
 import { UsersController } from './users/users.controller';
 
@@ -29,6 +30,7 @@ const CONTROLLERS: (new (...args: never[]) => unknown)[] = [
   ConversationsController,
   AiController,
   PaymentsController,
+  ReviewsController,
 ];
 
 const METHOD_NAMES: Record<number, string> = {
