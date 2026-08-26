@@ -262,6 +262,38 @@ describe('RequestsService (real Postgres)', () => {
       expect(item?.budgetMinRial).toBeNull();
       expect(item?.budgetMaxRial).toBeNull();
     });
+
+    it('filters to a single item by id, ignoring cursor pagination entirely', async () => {
+      const categoryId = await makeCategory();
+      const ownerId = await makeUser();
+      const first = await service.create(ownerId, validCreateInput(categoryId));
+      const second = await service.create(
+        ownerId,
+        validCreateInput(categoryId),
+      );
+      createdRequestIds.push(first.id, second.id);
+      await service.publish(first.id);
+      await service.publish(second.id);
+
+      const result = await service.list({ limit: 20, id: first.id });
+      expect(result.items.map((i) => i.id)).toEqual([first.id]);
+      expect(result.hasMore).toBe(false);
+    });
+
+    it('returns no items when the id filter targets a DRAFT request (no existence leak via the public endpoint)', async () => {
+      const categoryId = await makeCategory();
+      const ownerId = await makeUser();
+      const draft = await service.create(ownerId, validCreateInput(categoryId));
+      createdRequestIds.push(draft.id);
+
+      const result = await service.list({ limit: 20, id: draft.id });
+      expect(result.items).toEqual([]);
+    });
+
+    it('returns no items when the id filter targets a non-existent id', async () => {
+      const result = await service.list({ limit: 20, id: 'does-not-exist' });
+      expect(result.items).toEqual([]);
+    });
   });
 
   describe('getById()', () => {

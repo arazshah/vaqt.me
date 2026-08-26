@@ -5,8 +5,10 @@ import { TooltipProvider } from '@vaqt/ui/components/ui/tooltip';
 import { Toaster } from '@vaqt/ui/components/ui/sonner';
 import { vazirmatn } from '@/lib/fonts';
 import { AuthProvider } from '@/lib/auth-context';
+import { WEB_ORIGIN } from '@/lib/site';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(WEB_ORIGIN),
   title: 'Vaqt.me — چند دقیقه از وقت یک آدمِ درست',
   description: 'بازار دقیقه‌های انسانی، بدون واسطه در معامله',
 };

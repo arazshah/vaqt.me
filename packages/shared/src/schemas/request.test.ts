@@ -113,4 +113,21 @@ describe('listRequestsSchema', () => {
     const result = listRequestsSchema.safeParse({ cursor: 'abc' });
     expect(result.success).toBe(true);
   });
+
+  it('leaves id undefined when omitted', () => {
+    const result = listRequestsSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.id).toBeUndefined();
+    }
+  });
+
+  it('accepts a provided id string', () => {
+    const result = listRequestsSchema.safeParse({ id: 'req-123' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects an empty id string', () => {
+    expect(listRequestsSchema.safeParse({ id: '' }).success).toBe(false);
+  });
 });
