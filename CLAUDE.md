@@ -568,12 +568,42 @@ namespace‌شده برای هر کاندید حذف می‌شوند؛ چون ه
 منقضی می‌شوند (طبق TTLهای موجود در `require-verified-phone.guard.ts`/`roles.guard.ts`/
 rate-limit service)، شکست این مرحله فقط لاگ می‌شود (نه throw) — پاک‌سازی است، نه صحت.
 
-**تست:** ۲۵ تست جدید در `cleanup-qa-data.spec.ts` روی Postgres/Redis واقعی (بدون mock)،
+**تست:** ۲۴ تست جدید در `cleanup-qa-data.spec.ts` روی Postgres/Redis واقعی (بدون mock)،
 پوشش ۹۹٪ statements / ۹۵٫۴۵٪ branches / ۱۰۰٪ functions — شامل مرز مالکیت (کاندیدی که
 روی یک درخواست «واقعی» ساختگی پیشنهاد داده، فقط پیشنهادش حذف می‌شود، درخواست و
 `offerCount` آن دست‌نخورده می‌ماند)، حاشیه‌ی سن، assertion دفاعی seed-id (با یک کاربر
-ساختگی id-seed-شکل که واقعاً throw را تحریک می‌کند)، و `runCleanup` end-to-end (dry-run
-بدون حذف، `execute:true` بدون کاندید → `executed:false`، و یک اجرای کامل واقعی).
+ساختگی id-seed-شکل که واقعاً throw را تحریک می‌کند)، و بخشی امن از `runCleanup`
+end-to-end (dry-run بدون حذف، `execute:true` بدون کاندید → `executed:false`).
+
+**دو باگ واقعی که فقط با CI/اجرای موازی واقعی کشف شدند (نه با اجرای محلی تک‌فایلی):**
+
+1. **CI اصلاً seed اجرا نمی‌کند** (فقط `prisma migrate deploy`، طبق `.github/workflows/ci.yml`) —
+   تست‌های اولیه‌ی این فایل با فرض وجود `cat-programming`/محصولات seed نوشته شده بودند،
+   که محلی (با dev DB seed‌شده) پاس می‌شدند ولی روی CI با
+   `Foreign key constraint violated on the constraint: requests_categoryId_fkey` شکست
+   خوردند (اجرای واقعی: PR #۳۳، `gh run view` روی ران fail‌شده). دقیقاً همان الگوی
+   باگی که `payments.service.spec.ts` قبلاً داشت (فاز ۹). رفع: یک `Category` و دو
+   `Product` (`URGENT_BADGE`, `PRO_MONTHLY`) در `beforeAll` همین فایل ساخته/upsert
+   می‌شوند، نه فرض وجود seed — با اجرای زنده روی یک دیتابیس migrate-شده‌ی کاملاً
+   بدون seed (`CREATE DATABASE` جدا + `prisma migrate deploy` بدون `seed`) تأیید شد.
+2. **یک تست خطرناک‌تر: `runCleanup({execute:true, olderThanMinutes:0})` یک sweep واقعی و
+   بدون‌محدوده‌ی کل جدول `users` است.** چون هر فایل تست دیگری در این مونوریپو هم از
+   همان `TEST_PHONE_PREFIX` برای کاربرهای موقتش استفاده می‌کند (طبق طراحی همین قابلیت)،
+   این تست وقتی در کنار فایل‌های دیگر به‌صورت موازی (چند worker جست) اجرا می‌شد،
+   کاربرهای _فایل‌های دیگر_ را هم که هم‌زمان در حال ساخته‌شدن/استفاده بودند پاک می‌کرد —
+   بازتولید شد با اجرای کامل `pnpm test` سه‌بار پیاپی روی یک Postgres تازه‌migrate‌شده‌ی
+   بدون seed با ۸ هسته/۷ worker موازی: هر سه بار `offers.service.spec.ts` با
+   `PrismaClientKnownRequestError: ... No record was found for an update` روی یک
+   `Offer` که میلی‌ثانیه‌ای قبل توسط خودِ آن فایل ساخته شده بود شکست می‌خورد؛ همان
+   فایل به‌تنهایی همیشه ۱۰۰٪ پاس می‌شد. علت ریشه‌ای: `findCandidates` هیچ راهی برای
+   محدود شدن به «فقط کاربرهای همین تست» ندارد — این دقیقاً رفتار درستِ ابزار برای
+   استفاده‌ی واقعی (یک اپراتور که دستی روی یک dev DB آرام اجرا می‌کند) است، ولی در
+   یک suite موازی و مشترک روی همان دیتابیس، ایمن نیست. رفع: آن یک تست حذف شد (رفتار
+   واقعی حذفِ end-to-end + پاک‌سازی Redis همچنان کامل و بدون کم‌شدن پوشش، از طریق
+   `executeCleanupPlan`/`cleanupRedisForPlan` با فهرست صریح و محدودِ کاندیدها —
+   بالاتر — پوشش داده می‌شود)؛ توضیح کامل به‌عنوان کامنت بالای `describe('runCleanup', ...)`
+   در خودِ فایل هم ثبت شد. تأیید پایداری: `pnpm test` سه‌بار پیاپی روی همان DB بدون
+   seed، هر سه بار ۴۹/۴۹ suite و ۳۸۸/۳۸۸ تست سبز.
 
 **اثبات زنده (جدا از jest، از طریق خودِ CLI):** یک ردیف کاربر واقعی با
 `INSERT` مستقیم در Postgres ساخته شد (`createdAt` = ۲۰ دقیقه قبل، phone در محدوده‌ی
@@ -583,8 +613,8 @@ rate-limit service)، شکست این مرحله فقط لاگ می‌شود (ن
 (کد + تست + اثبات زنده) با `SELECT count(*)` مستقیم روی هر جدول تأیید شد بدون تغییر ماند:
 ۸ کاربر، ۱۵ درخواست، ۱۲ دسته، ۱۲ مهارت، ۲۰ پیشنهاد، ۲ گفتگو، ۰ سفارش/entitlement/subscription/ai_session.
 
-`pnpm lint`/`typecheck`/`test` کامل مونوریپو سبز (۸/۸/۸ تسک، ۳۸۹ تست apps/api،
-+۲۵ نسبت به قبل).
+`pnpm lint`/`typecheck`/`test` کامل مونوریپو سبز (۸/۸/۸ تسک، ۳۸۸ تست apps/api،
++۲۴ نسبت به قبل).
 
 ---
 

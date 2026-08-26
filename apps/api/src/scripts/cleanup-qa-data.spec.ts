@@ -17,7 +17,46 @@ import {
 } from './cleanup-qa-data';
 
 const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6380';
-const CATEGORY_ID = 'cat-programming';
+
+// Category/Product fixtures created here, not assumed from packages/db/seed —
+// CI runs `prisma migrate deploy` without seeding, so relying on seed ids
+// like 'cat-programming' fails there with a foreign key violation even
+// though it passes locally against a seeded dev database.
+let CATEGORY_ID: string;
+
+beforeAll(async () => {
+  const category = await prisma.category.create({
+    data: {
+      name: 'دسته تست پاکسازی QA',
+      slug: `test-cat-cleanup-${String(Date.now())}-${String(Math.random())}`,
+      isActive: true,
+    },
+  });
+  CATEGORY_ID = category.id;
+
+  for (const product of [
+    {
+      code: 'URGENT_BADGE' as const,
+      title: 'نشان فوری',
+      description: 'تست',
+      priceRial: 490_000,
+      durationHours: null,
+    },
+    {
+      code: 'PRO_MONTHLY' as const,
+      title: 'اشتراک حرفه‌ای ماهانه',
+      description: 'تست',
+      priceRial: 2_990_000,
+      durationHours: 720,
+    },
+  ]) {
+    await prisma.product.upsert({
+      where: { code: product.code },
+      create: product,
+      update: product,
+    });
+  }
+});
 
 describe('parseCliArgs', () => {
   it('defaults to a dry run with a 10 minute cutoff', () => {
@@ -575,6 +614,19 @@ describe('cleanupRedisForPlan', () => {
   });
 });
 
+// `runCleanup`'s execute:true path always calls the real, global
+// `findCandidates()` — there is no way to scope it to "only this test's own
+// rows". Every other spec file in this suite also creates TEST_PHONE_PREFIX
+// users concurrently (in other jest workers, against the same shared
+// Postgres), so an `execute:true` call with `olderThanMinutes: 0` here would
+// sweep up and delete *their* in-flight fixtures too — reproduced locally:
+// running the full suite with such a test caused random "record not found"
+// failures in unrelated spec files (offers.service.spec.ts) whenever the
+// scheduler happened to run them in the same window. The actual delete+Redis
+// composition this would exercise is already fully covered above via
+// `executeCleanupPlan` and `cleanupRedisForPlan` with explicit, scoped
+// candidate lists; only the dry-run and no-candidates paths (both read-only
+// or provably empty) are safe to run here.
 describe('runCleanup', () => {
   it('does not delete anything in dry-run mode', async () => {
     const user = await createTestUser({});
@@ -609,36 +661,9 @@ describe('runCleanup', () => {
       await prisma.user.delete({ where: { id: user.id } });
     }
   });
-
-  it('deletes matching rows end-to-end, including their Redis keys, when execute is true', async () => {
-    const user = await createTestUser({});
-    const redisPrefix = randomTestRedisPrefix();
-    const redis = new Redis(REDIS_URL);
-    const otpKey = `${redisPrefix}otp:pending-code:${user.phone}`;
-    const previousRedisUrl = process.env.REDIS_URL;
-    const previousRedisPrefix = process.env.REDIS_PREFIX;
-
-    try {
-      await redis.set(otpKey, '1234', 'PX', 60_000);
-      process.env.REDIS_URL = REDIS_URL;
-      process.env.REDIS_PREFIX = redisPrefix;
-
-      const result = await runCleanup({ execute: true, olderThanMinutes: 0 });
-
-      expect(result.executed).toBe(true);
-      expect(result.counts?.users).toBeGreaterThanOrEqual(1);
-      await expect(
-        prisma.user.findUnique({ where: { id: user.id } }),
-      ).resolves.toBeNull();
-      await expect(redis.get(otpKey)).resolves.toBeNull();
-    } finally {
-      process.env.REDIS_URL = previousRedisUrl;
-      process.env.REDIS_PREFIX = previousRedisPrefix;
-      await redis.quit();
-    }
-  });
 });
 
 afterAll(async () => {
+  await prisma.category.delete({ where: { id: CATEGORY_ID } });
   await prisma.$disconnect();
 });
