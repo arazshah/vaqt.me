@@ -146,12 +146,14 @@ describe('ConversationsService (real Postgres)', () => {
       expect(asSeeker.status).toBe('OPEN');
       expect(asSeeker.requestTitle).toBe('عنوان تست گفتگو الف');
       expect(asSeeker.counterpartDisplayName).toBe('ارائه‌دهنده تکمیل‌شده');
+      expect(asSeeker.counterpartId).toBe(providerId);
 
       const asProvider = await conversations.getById(
         conversationId,
         providerId,
       );
       expect(asProvider.counterpartDisplayName).toBe('درخواست‌دهنده تست گفتگو');
+      expect(asProvider.counterpartId).toBe(seekerId);
     });
 
     it('rejects a conversation that does not exist', async () => {

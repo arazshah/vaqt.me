@@ -10,6 +10,7 @@ export interface ConversationSummary {
   requestId: string;
   requestTitle: string;
   status: string;
+  counterpartId: string;
   counterpartDisplayName: string;
   lastMessageAt: Date | null;
   lastMessagePreview: string | null;
@@ -68,6 +69,7 @@ function toSummary(
     requestId: row.requestId,
     requestTitle: row.request.title,
     status: row.status,
+    counterpartId: isSeeker ? row.providerId : row.seekerId,
     counterpartDisplayName: isSeeker
       ? row.providerUser.displayName
       : row.seeker.displayName,

@@ -16,6 +16,7 @@ import { Skeleton } from '@vaqt/ui/components/ui/skeleton';
 
 import { AppShell } from '@/components/app-shell';
 import { MessageThread } from '@/components/domain/message-thread';
+import { ReviewPanel } from '@/components/domain/review-panel';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api-client';
 import { fa } from '@/messages/fa';
@@ -25,6 +26,7 @@ interface ConversationDetailData {
   requestId: string;
   requestTitle: string;
   status: ConversationStatus;
+  counterpartId: string;
   counterpartDisplayName: string;
   lastMessageAt: string | null;
   lastMessagePreview: string | null;
@@ -119,9 +121,12 @@ export default function ConversationDetailPage() {
 
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-col">
-            <h1 className="text-xl font-semibold">
+            <Link
+              href={`/users/${detail.counterpartId}`}
+              className="text-xl font-semibold hover:underline"
+            >
               {detail.counterpartDisplayName}
-            </h1>
+            </Link>
             <Link
               href={`/requests/${detail.requestId}`}
               className="text-sm text-muted-foreground hover:underline"
@@ -138,6 +143,8 @@ export default function ConversationDetailPage() {
           conversationId={detail.id}
           archived={detail.status !== 'OPEN'}
         />
+
+        <ReviewPanel conversationId={detail.id} />
       </div>
     </AppShell>
   );

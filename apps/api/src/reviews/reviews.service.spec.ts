@@ -290,19 +290,28 @@ describe('ReviewsService (real Postgres)', () => {
   });
 
   describe('myReviewStatus()', () => {
-    it('reports not reviewed before submitting, then reviewed after', async () => {
+    it('reports not reviewed before submitting, then reviewed with what was rated', async () => {
       const { seekerId, conversationId } = await makeConversation();
 
       await expect(
         reviews.myReviewStatus(conversationId, seekerId),
-      ).resolves.toEqual({ reviewed: false });
+      ).resolves.toEqual({ reviewed: false, rating: null, comment: null });
 
-      const review = await reviews.submit(conversationId, seekerId, 5);
+      const review = await reviews.submit(
+        conversationId,
+        seekerId,
+        5,
+        'عالی بود',
+      );
       createdReviewIds.push(review.id);
 
       await expect(
         reviews.myReviewStatus(conversationId, seekerId),
-      ).resolves.toEqual({ reviewed: true });
+      ).resolves.toEqual({
+        reviewed: true,
+        rating: 5,
+        comment: 'عالی بود',
+      });
     });
   });
 });
