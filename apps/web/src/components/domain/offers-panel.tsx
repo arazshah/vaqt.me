@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import type { OfferStatus } from '@vaqt/shared';
 
 import { Badge } from '@vaqt/ui/components/ui/badge';
@@ -27,6 +28,7 @@ export interface OfferSummary {
   amountRial: number;
   message: string | null;
   status: OfferStatus;
+  providerId: string;
   providerDisplayName: string;
 }
 
@@ -57,7 +59,12 @@ function OfferCard({
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">
-            {offer.providerDisplayName}
+            <Link
+              href={`/users/${offer.providerId}`}
+              className="hover:underline"
+            >
+              {offer.providerDisplayName}
+            </Link>
           </CardTitle>
           <Badge variant="secondary">{fa.offerStatus[offer.status]}</Badge>
         </div>

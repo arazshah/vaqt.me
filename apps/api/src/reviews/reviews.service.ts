@@ -166,18 +166,27 @@ export class ReviewsService {
 
   // Participant membership is already enforced by RequireOwnershipGuard
   // before this runs. Lets the conversation UI know whether to show a
-  // review form or a "you already reviewed" state, without the client
-  // having to guess from a failed submit.
+  // review form or a "you already reviewed" state (with what was actually
+  // rated, not just a boolean — so a page reload doesn't lose it) without
+  // the client having to guess from a failed submit.
   async myReviewStatus(
     conversationId: string,
     viewerId: string,
-  ): Promise<{ reviewed: boolean }> {
+  ): Promise<{
+    reviewed: boolean;
+    rating: number | null;
+    comment: string | null;
+  }> {
     const existing = await prisma.review.findUnique({
       where: {
         conversationId_reviewerId: { conversationId, reviewerId: viewerId },
       },
-      select: { id: true },
+      select: { rating: true, comment: true },
     });
-    return { reviewed: existing !== null };
+    return {
+      reviewed: existing !== null,
+      rating: existing?.rating ?? null,
+      comment: existing?.comment ?? null,
+    };
   }
 }
