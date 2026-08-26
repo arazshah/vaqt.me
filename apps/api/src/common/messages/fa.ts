@@ -30,5 +30,6 @@ export const errorMessagesFa: Record<ErrorCode, string> = {
   PRODUCT_NOT_FOUND: 'محصول موردنظر یافت نشد.',
   PAYMENT_PROVIDER_ERROR:
     'اتصال به درگاه پرداخت برقرار نشد. کمی بعد دوباره تلاش کنید.',
+  REVIEW_ALREADY_EXISTS: 'شما قبلاً برای این گفتگو نظر ثبت کرده‌اید.',
   INTERNAL_ERROR: 'خطایی پیش‌آمد. لطفاً بعداً دوباره تلاش کنید.',
 };

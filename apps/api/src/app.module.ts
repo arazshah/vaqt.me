@@ -15,6 +15,7 @@ import { RedisModule } from './common/redis/redis.module';
 import { OffersModule } from './offers/offers.module';
 import { PaymentsModule } from './payments/payments.module';
 import { RequestsModule } from './requests/requests.module';
+import { ReviewsModule } from './reviews/reviews.module';
 import { SkillsModule } from './skills/skills.module';
 import { UsersModule } from './users/users.module';
 
@@ -35,6 +36,7 @@ import { UsersModule } from './users/users.module';
     ConversationsModule,
     AiModule,
     PaymentsModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [

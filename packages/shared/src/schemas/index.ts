@@ -7,3 +7,4 @@ export * from './offer';
 export * from './message';
 export * from './ai';
 export * from './payment';
+export * from './review';
