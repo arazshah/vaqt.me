@@ -529,6 +529,65 @@ callback ایدمپوتنت + آشتی‌سازی + آداپتر mock/Zarinpal) 
 
 ---
 
+## ابزار پاکسازی داده‌های QA دستی (`cleanup:qa`)
+
+هر بازبینی زنده‌ی این فایل (فازهای ۵ تا ۹) کاربران/درخواست‌ها/پیشنهادهای تستی روی
+Postgres/Redis واقعی dev می‌سازد و در پایان دستی پاک می‌کند؛ چند بار (مستندشده در
+یادداشت‌های فاز ۶/PR ۲) یک اجرای ناموفق قبل از رسیدن به مرحله‌ی پاک‌سازی کرش کرده و
+داده‌ی یتیم (از جمله یک بار روی یک ردیف seed واقعی) روی دیسک جا مانده. `apps/api/src/scripts/cleanup-qa-data.ts`
+
+- اسکریپت `pnpm --filter @vaqt/api cleanup:qa` این پاک‌سازی را خودکار و امن می‌کند.
+
+**معیار تشخیص، تصمیم صریح:** فقط کاربرانی که `phone` آن‌ها با `TEST_PHONE_PREFIX`
+(`+9899`، اکسپورت‌شده از `apps/api/src/test-support/test-db.ts` — همان محدوده‌ای که
+`randomTestPhone()` جست هم از آن استفاده می‌کند، یک منبع حقیقت مشترک) شروع شود، کاندید
+حذف‌اند؛ هیچ سیگنال دیگری (نام نمایشی، شکل داده، سن به‌تنهایی) استفاده نمی‌شود، پس هیچ
+کاربر واقعی هرگز در معرض خطر نیست. `createdAt` قدیمی‌تر از `--older-than-minutes`
+(پیش‌فرض ۱۰) فقط یک حاشیه‌ی ایمنی اضافه است، نه جایگزین آن معیار — یک session که همین
+الان با یک اسکریپت QA در حال اجراست (که خودش هم از همین prefix استفاده می‌کند) از زیر
+پایش جارو نمی‌شود.
+
+**scope حذف = مالکیت، نه تطابق مستقل:** حذف فقط ردیف‌های _متعلق به_ یک کاندید (درخواست،
+پیشنهاد، گفتگو، سفارش خودش) پاک می‌شود؛ اگر کاندید روی یک درخواست seed واقعی پیشنهاد داده
+باشد، فقط پیشنهاد/گفتگوی خودِ کاندید حذف می‌شود، درخواست واقعی و `offerCount` تجمعی‌اش
+(هرگز حتی با withdraw کم نمی‌شود، طبق `offers.service.ts`) دست‌نخورده می‌ماند.
+
+**سه لایه‌ی ایمنی:** (۱) `assertSafeToRun` قبل از هر کوئری throw می‌کند اگر
+`NODE_ENV=production` باشد یا `DATABASE_URL` غایب/نامعتبر باشد یا host آن
+`localhost`/`127.0.0.1` نباشد — این اسکریپت هرگز نباید به چیزی جز Postgres محلی
+docker-compose وصل شود؛ (۲) `SEED_ID_PATTERN` یک assertion دفاعی است: چون ردیف‌های seed
+همیشه id خوانا (`usr-`, `req-`, ...) دارند نه شکل `cuid()`، اگر یک کاندید هم‌زمان id
+seed-شکل و phone تست‌محور داشته باشد (که ساختاری باید غیرممکن باشد)، اسکریپت به‌جای ادامه
+throw می‌کند؛ (۳) ترتیب حذف در `executeCleanupPlan` (`$transaction` با چند
+`deleteMany`) فرزندان را قبل والدین حذف می‌کند چون چند رابطه‌ی این schema بدون cascade
+واقعی FK دارند (تأیید زنده: حذف یک `Order` وقتی یک `Subscription` هنوز به آن اشاره
+می‌کرد با `subscriptions_orderId_fkey` رد شد).
+
+**پاک‌سازی Redis best-effort:** کلیدهای OTP/rate-limit/verified-phone/system-role
+namespace‌شده برای هر کاندید حذف می‌شوند؛ چون همه‌ی این کلیدها خودشان ظرف ۳۰-۶۰ ثانیه
+منقضی می‌شوند (طبق TTLهای موجود در `require-verified-phone.guard.ts`/`roles.guard.ts`/
+rate-limit service)، شکست این مرحله فقط لاگ می‌شود (نه throw) — پاک‌سازی است، نه صحت.
+
+**تست:** ۲۵ تست جدید در `cleanup-qa-data.spec.ts` روی Postgres/Redis واقعی (بدون mock)،
+پوشش ۹۹٪ statements / ۹۵٫۴۵٪ branches / ۱۰۰٪ functions — شامل مرز مالکیت (کاندیدی که
+روی یک درخواست «واقعی» ساختگی پیشنهاد داده، فقط پیشنهادش حذف می‌شود، درخواست و
+`offerCount` آن دست‌نخورده می‌ماند)، حاشیه‌ی سن، assertion دفاعی seed-id (با یک کاربر
+ساختگی id-seed-شکل که واقعاً throw را تحریک می‌کند)، و `runCleanup` end-to-end (dry-run
+بدون حذف، `execute:true` بدون کاندید → `executed:false`، و یک اجرای کامل واقعی).
+
+**اثبات زنده (جدا از jest، از طریق خودِ CLI):** یک ردیف کاربر واقعی با
+`INSERT` مستقیم در Postgres ساخته شد (`createdAt` = ۲۰ دقیقه قبل، phone در محدوده‌ی
+`TEST_PHONE_PREFIX`)؛ `pnpm --filter @vaqt/api cleanup:qa` (dry run، بدون `--execute`)
+دقیقاً همان یک ردیف را به‌عنوان کاندید نشان داد بدون حذف؛ سپس با `--execute` واقعاً حذف
+شد (تأیید مستقیم با `SELECT count(*)` روی همان id → `0`). شمارش seed بعد از کل این کار
+(کد + تست + اثبات زنده) با `SELECT count(*)` مستقیم روی هر جدول تأیید شد بدون تغییر ماند:
+۸ کاربر، ۱۵ درخواست، ۱۲ دسته، ۱۲ مهارت، ۲۰ پیشنهاد، ۲ گفتگو، ۰ سفارش/entitlement/subscription/ai_session.
+
+`pnpm lint`/`typecheck`/`test` کامل مونوریپو سبز (۸/۸/۸ تسک، ۳۸۹ تست apps/api،
++۲۵ نسبت به قبل).
+
+---
+
 ## بدهی فنی
 
 | مورد                                                                                                                                                 | توضیح                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | فاز رفع  |
@@ -598,6 +657,7 @@ src/styles/globals.contrast.test.ts` در `packages/ui`). این یک ادعای
 | هشدار `MODULE_TYPELESS_PACKAGE_JSON` از خودِ Node است، نه webpack/Next.js                                                                                                                                                                                                                                                            | `NODE_OPTIONS="--trace-warnings" next build` — استک‌تریس بررسی شد                                                                                                                                                                                                                                           | ۲۰۲۶-۰۸-۲۱ | استک از `node:internal/modules/esm/get_format` → `load` → `loader` — صد‌درصد داخلی Node، هیچ فریم webpack/Next در آن نیست                                                                                                                                                                                                                                       |
 | کلاینت Prisma قدیمیِ باقی‌مانده در pnpm store می‌توانست تست محلی را کاذب سبز نگه دارد                                                                                                                                                                                                                                                | پاک‌کردن `node_modules/.pnpm/@prisma+client@*/node_modules/.prisma` + rebuild کامل                                                                                                                                                                                                                          | ۲۰۲۶-۰۸-۲۱ | بدون آن پاک‌سازی، `enums.test.ts` محلی سبز می‌ماند؛ با آن، همان شکست واقعی CI (`Cannot find module '.prisma/client/default'`) محلی هم بازتولید شد                                                                                                                                                                                                               |
 | باگ واقعی apps/web (فاز ۵ / PR ۲): صفحه‌ی `/requests` نسخه‌ی Server Component هرگز واقعاً لیست را نشان نمی‌داد — میدل‌ور `origin-check` هر `POST` بدون هدر `Origin` مطابق `WEB_ORIGIN` را ۴۰۳ می‌کند، و `fetch` سمت سرور Next.js (Node) هیچ‌وقت این هدر را نمی‌سازد؛ کامپوننت هم `!res.ok` را بی‌صدا به حالت خطای عمومی تبدیل می‌کرد | با API واقعی روی Postgres/Redis واقعی: `curl -s -i -X POST http://localhost:3001/api/v1/requests/list -H "Content-Type: application/json" -d '{"limit":5}'` (بدون Origin، دقیقاً شبیه‌سازی fetch سمت سرور) در برابر همان دستور با `-H "Origin: http://localhost:3000"` اضافه (شبیه‌سازی fetch واقعی مرورگر) | ۲۰۲۶-۰۸-۲۳ | بدون Origin: `HTTP/1.1 403 Forbidden` + `{"code":"FORBIDDEN","message":"اجازه‌ی دسترسی به این بخش را ندارید."}`؛ با Origin صحیح: `HTTP/1.1 201 Created` + آیتم‌های واقعی JSON از دیتابیس. رفع در همین PR: صفحه به Client Component تبدیل شد (fetch مرورگری واقعی، Origin به‌صورت خودکار توسط مرورگر ست می‌شود) — بدون هیچ تغییری در خودِ میدل‌ور `origin-check` |
+| `cleanup:qa` یک ردیف کاربر واقعی روی Postgres واقعی را پیدا و حذف کرد (نه فقط jest)                                                                                                                                                                                                                                                  | `INSERT` مستقیم یک کاربر تست، سپس `pnpm --filter @vaqt/api cleanup:qa` (dry run) و بعد با `--execute`، سپس `SELECT count(*)` روی همان id                                                                                                                                                                    | ۲۰۲۶-۰۸-۲۶ | dry run: `mode: DRY RUN — found 1 candidate user(s)` بدون حذف؛ execute: `[cleanup-qa-data] done: {users: 1, ...}`؛ `SELECT count(*)` بعدی روی همان id → `0`                                                                                                                                                                                                     |
 
 ---
 
