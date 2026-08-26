@@ -160,22 +160,26 @@ export class RequestsService {
     // get skipped or repeated across pages.
     const where: Prisma.RequestWhereInput = {
       status: RequestStatus.PUBLISHED,
-      ...(cursor
-        ? {
-            OR: [
-              { listTier: { lt: cursor.listTier } },
-              {
-                listTier: cursor.listTier,
-                listRankAt: { lt: new Date(cursor.listRankAt) },
-              },
-              {
-                listTier: cursor.listTier,
-                listRankAt: new Date(cursor.listRankAt),
-                id: { lt: cursor.id },
-              },
-            ],
-          }
-        : {}),
+      // Single-item lookup (public metadata rendering) — short-circuits the
+      // cursor logic entirely, since a lookup by id has no keyset to walk.
+      ...(input.id
+        ? { id: input.id }
+        : cursor
+          ? {
+              OR: [
+                { listTier: { lt: cursor.listTier } },
+                {
+                  listTier: cursor.listTier,
+                  listRankAt: { lt: new Date(cursor.listRankAt) },
+                },
+                {
+                  listTier: cursor.listTier,
+                  listRankAt: new Date(cursor.listRankAt),
+                  id: { lt: cursor.id },
+                },
+              ],
+            }
+          : {}),
     };
 
     const rows = await prisma.request.findMany({

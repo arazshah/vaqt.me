@@ -46,5 +46,10 @@ export type PublishRequestInput = z.infer<typeof publishRequestSchema>;
 export const listRequestsSchema = z.object({
   cursor: z.string().min(1).nullable().optional(),
   limit: z.number().int().min(1).max(50).optional().default(20),
+  // Single-item lookup for public metadata rendering (SEO/OG image on the
+  // request detail page) — reuses the exact same PUBLISHED-only, budget-
+  // masked shape as the rest of this endpoint instead of opening a second
+  // public surface. Ignored together with `cursor` (see RequestsService.list).
+  id: z.string().min(1).optional(),
 });
 export type ListRequestsInput = z.infer<typeof listRequestsSchema>;
