@@ -13,7 +13,8 @@
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
-    "test:e2e": "jest --config ./test/jest-e2e.json --passWithNoTests"
+    "test:e2e": "jest --config ./test/jest-e2e.json --passWithNoTests",
+    "cleanup:qa": "ts-node --transpile-only -r tsconfig-paths/register src/scripts/cleanup-qa-data.ts"
   },
   "jest": {
     "rootDir": "src",
