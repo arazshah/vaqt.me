@@ -88,3 +88,108 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+  e2e:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: vaqt
+          POSTGRES_PASSWORD: vaqt
+          POSTGRES_DB: vaqt
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vaqt"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # Deliberately its own job, not a step tacked onto `ci`: unlike the
+    # unit/integration suite, this needs the database *seeded* (categories
+    # and skills the golden path picks from — the `ci` job above never
+    # seeds, on purpose, so its tests don't depend on seed content) and a
+    # real Chromium binary, both of which are slow enough to want their own
+    # cache and their own pass/fail signal.
+    env:
+      DATABASE_URL: postgresql://vaqt:vaqt@localhost:5432/vaqt
+      REDIS_URL: redis://localhost:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read Node version
+        id: node-version
+        run: echo "version=$(cat .nvmrc)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ steps.node-version.outputs.version }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Turborepo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-e2e-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-e2e-${{ runner.os }}-
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm --filter @vaqt/web exec playwright install --with-deps chromium
+
+      - name: Install Playwright OS dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm --filter @vaqt/web exec playwright install-deps chromium
+
+      - name: Apply database migrations
+        run: pnpm --filter @vaqt/db migrate:deploy
+
+      - name: Seed database
+        run: pnpm db:seed
+
+      - name: Build workspace packages
+        # apps/api's `dev` (ts-node) imports @vaqt/shared and @vaqt/db from
+        # their built dist/ output, not source — see CLAUDE.md's build
+        # strategy notes. Scoped to just these two (not `pnpm build`, which
+        # would also build apps/web/apps/api themselves) since Playwright's
+        # webServer runs both apps in dev mode directly.
+        run: pnpm exec turbo run build --filter=@vaqt/shared --filter=@vaqt/db
+
+      - name: E2E
+        run: pnpm --filter @vaqt/web test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

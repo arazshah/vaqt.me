@@ -62,3 +62,9 @@ apps/api/uploads/
 
 # Claude Code local/per-user permissions (not shared tooling config)
 .claude/settings.local.json
+
+# Playwright (apps/web/e2e)
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+apps/web/playwright/.cache/
