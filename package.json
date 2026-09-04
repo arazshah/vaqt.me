@@ -40,5 +40,19 @@
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.19.1",
     "vitest": "^3.0.5"
+  },
+  "pnpm": {
+    "overrides": {
+      "js-yaml": "^4.3.1",
+      "qs": "^6.16.0",
+      "lodash": "^4.18.0",
+      "postcss": "^8.5.23",
+      "file-type": "^21.3.2",
+      "deepmerge-ts": "^8.0.2",
+      "body-parser": "^1.20.6",
+      "fast-uri": "^3.1.6",
+      "sharp": "^0.35.4",
+      "multer": "^2.2.0"
+    }
   }
 }
