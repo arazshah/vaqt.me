@@ -2,8 +2,9 @@
 
 > این فایل شامل تمام تصمیمات نهایی معماری و پیاده‌سازی است. در هر فاز به‌روز می‌شود.
 
-**آخرین به‌روزرسانی:** فاز ۱۰ — تکمیل تجربه — تکمیل شد. نظرات/امتیازدهی، پروفایل
-عمومی، PWA و SEO صفحه‌ی درخواست همگی merge شدند
+**آخرین به‌روزرسانی:** فاز ۱۱ — کیفیت و تحویل — در حال انجام. تست E2E مسیر
+طلایی (Playwright، در CI) و `Dockerfile` چندمرحله‌ای production برای هر دو
+اپ merge شدند؛ بازبینی امنیتی باقی‌مانده
 **وضعیت:** فاز ۵ (درخواست‌ها) عملاً کامل؛ فاز ۶ (پیشنهادها) کامل؛ فاز ۷ (AI)
 کامل (بک‌اند + ویزارد UI + پیش‌نمایش زنده)؛ فاز ۸ (چت) کامل (بک‌اند + UI +
 Socket.IO برای تحویل بی‌درنگ)؛ فاز ۹ (پرداخت) کامل — بک‌اند (checkout +
@@ -208,12 +209,15 @@ PWA (manifest + آیکون‌ها + theme-color)، و SEO صفحه‌ی درخو
 
 ### ۷. Docker
 
-- فعلاً فقط `docker-compose.yml` برای زیرساخت dev:
+- `docker-compose.yml` برای زیرساخت dev:
   - postgres:16
   - redis:7
   - یک سرویس اختیاری `adminer`
 - اپ‌ها روی هاست با `pnpm dev` اجرا می‌شوند
-- `Dockerfile` چندمرحله‌ای برای production در فاز ۱۰ ساخته می‌شود — الان نه
+- **`Dockerfile` چندمرحله‌ای production (فاز ۱۱، تکمیل‌شده):** `apps/api/Dockerfile`
+  و `apps/web/Dockerfile`، هر دو از ریشه‌ی مونوریپو build می‌شوند
+  (`docker build -f apps/api/Dockerfile -t vaqt-api .`). جزئیات کامل و اثبات زنده
+  در «یادداشت‌های فاز ۱۱» پایین.
 
 ### ۸. Commitlint
 
@@ -641,6 +645,7 @@ end-to-end (dry-run بدون حذف، `execute:true` بدون کاندید → `
 | ایندکس مرکب `(listTier, listRankAt, id)` بدون `status` پیشونددار، و کرسر مبتنی‌بر `OR` هیچ `Index Cond` واقعی نمی‌گیرد                               | اثبات‌شده با `EXPLAIN ANALYZE` روی Postgres واقعی با ۲۰۰٬۰۰۰ ردیف مصنوعی PUBLISHED (درج و پاک‌سازی کامل در همین بازبینی، seed دست‌نخورده ماند). صفحه‌ی اول (بدون cursor) کاملاً ارزان است: `Index Scan Backward using requests_listTier_listRankAt_id_idx`، `Buffers: shared hit=8`، `Execution Time: 0.057ms` — طبق قاعده‌ی تصمیم‌گیری («اگر Index Scan بود، migration نده»)، **migration اضافه نشد**. اما صفحه‌ی دوم به بعد (با cursor، همان OR-chain سه‌شاخه‌ای که `RequestsService.list()` می‌سازد) هرچند باز هم فنی «Index Scan» است، عملاً کارآمد نیست: همان Index scan با `Filter` (نه `Index Cond`) ارزیابی می‌شود، `Rows Removed by Filter: 71372`، `Buffers: shared hit=8728`، `Execution Time: 22ms` — یعنی روی مقیاس بزرگ صفحه‌های عمیق‌تر واقعاً کند می‌شوند، فقط شکل ظاهری «Index Scan» رعایت شده. علت: Postgres نمی‌تواند یک OR سه‌شاخه‌ای روی سه ستون مختلف را به یک بازه‌ی ایندکس تبدیل کند. **آزمایش مقایسه‌ای در همین بازبینی:** جایگزینی OR-chain با یک مقایسه‌ی row-wise واقعی (`("listTier","listRankAt",id) < ROW(...)`) همان صفحه را با `Index Cond` واقعی حل کرد — `Buffers: shared hit=6`، `Execution Time: 0.285ms` (حدود ۱۵۰۰ برابر کمتر buffer). این یک محدودیت query-shape در کد سرویس است، نه نبود ایندکس؛ رفع واقعی نیازمند `prisma.$queryRaw` است چون query builder پریزما از مقایسه‌ی row-wise پشتیبانی نمی‌کند — عمداً در همین PR انجام نشد چون تغییر معماری کوئری (raw SQL به‌جای type-safe builder) فراتر از یک برش عمودی است.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | فاز بعدی |
 | `AllExceptionsFilter` هر `HttpException` غیر-`AppError` را بی‌قیدوشرط `VALIDATION_ERROR` می‌گذارد و فقط `body.message` را می‌خواند، نه `body.errors` | کشف‌شده هنگام دیباگ زنده‌ی فاز ۵ (به یادداشت‌های فاز ۵ پایین مراجعه شود): خطای اعتبارسنجی `nestjs-zod` واقعاً فهرست کامل فیلدهای خراب را در `errors` برمی‌گرداند، ولی فیلتر فقط `message` («Validation failed»، بدون جزئیات) را به کلاینت پاس می‌دهد و کد را همیشه `VALIDATION_ERROR` می‌گذارد — یعنی هر `HttpException` عمومی دیگر (نه فقط خطای اعتبارسنجی) هم با همین کد و پیام نمایش داده می‌شود، که خطایابی سمت کلاینت را گمراه‌کننده می‌کند.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | فاز بعدی |
 | `nav` داخل `AppShell` بدون فاصله‌ی واقعی بین آیتم‌ها رندر می‌شود — کلاس `gap-4` روی عنصر اعمال نمی‌شود                                               | کشف‌شده در QA زنده‌ی مرورگر واقعی (Playwright headless، نه فقط بازرسی HTML) در بازبینی فاز ۶ برای UI پیشنهادها؛ **کاملاً بی‌ربط به فاز ۶ است** — با `getComputedStyle(nav).gap` روی `/requests` و `/login` (هیچ‌کدام در همین PR لمس نشدند) تأیید شد: مقدار واقعی `normal` است، نه `1rem`، با اینکه کلاس `gap-4` در `app-shell.tsx` از قبل حضور دارد. یعنی این باگ از قبل روی `main` وجود داشت، فقط تا امروز کسی از نزدیک اسکرین‌شات نگرفته بود. علت ریشه‌ای بررسی نشد (احتمال قوی: تداخل لایه‌بندی همان پل هیبرید Tailwind v3/v4 مستندشده در یادداشت‌های فاز ۴ — `@config` روی `tailwind.config.ts` قدیمی)؛ سایر جاهایی که از `gap-*` در `grid` استفاده می‌کنند (مثل `dl` جزئیات درخواست) درست رندر می‌شوند، پس مشکل به `flex`+`gap` محدود به نظر می‌رسد، نه کل یوتیلیتی `gap`. عمداً در همین PR رفع نشد چون ریشه‌یابی کامل (Tailwind hybrid config) خارج از scope برش عمودی Offers است.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | فاز بعدی |
+| ایمیج production `apps/api` حدود ۱٫۳ گیگابایت — کل pnpm workspace کپی می‌شود، نه فقط زیرمجموعه‌ی لازم                                                | برخلاف `apps/web` (که `output: 'standalone'` نسل‌جدید Next.js فقط dependency های واقعاً لازم را trace می‌کند، ۲۶۵ مگابایت)، NestJS معادلی ندارد؛ چون node_modules پروژه‌های pnpm workspace با symlink نسبی به `packages/*` هستند، کپی‌کردن فقط `apps/api/node_modules` symlink‌ها را dangling می‌کرد (به یادداشت‌های فاز ۱۱ مراجعه شود) — راه‌حل فعلی (`pnpm prune --prod` + کپی کل workspace) درست است ولی بهینه نیست. بهبود واقعی نیازمند `pnpm deploy` (که خودش یک ریسک مستند دارد: بدون `"files"` صریح در `package.json`، ممکن است `dist/` را چون در `.gitignore` است از پکیج خروجی حذف کند) یا ابزار trace دستی مشابه Next است — عمداً در همین PR بررسی نشد.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | فاز بعدی |
 
 ---
 
@@ -719,7 +724,7 @@ src/styles/globals.contrast.test.ts` در `packages/ui`). این یک ادعای
 | ۸ — چت             | ✅ تکمیل‌شده    | بک‌اند + UI + Socket.IO: فهرست گفتگوها، thread، ارسال پیام، خواندن خودکار، تحویل بی‌درنگ                                           |
 | ۹ — پرداخت         | ✅ تکمیل‌شده    | بک‌اند (checkout، callback ایدمپوتنت، آشتی‌سازی، اثر ۴ از ۵ محصول) + UI (صفحه‌ی نتیجه، دکمه‌های خرید، `/pricing`) هر دو merge شدند |
 | ۱۰ — تکمیل تجربه   | ✅ تکمیل‌شده    | نظرات/امتیازدهی + پروفایل عمومی (`/users/:id`) + PWA + SEO صفحه‌ی درخواست، همگی merge شدند                                         |
-| ۱۱ — کیفیت و تحویل | ⏳ در انتظار    | E2E tests + security + docker                                                                                                      |
+| ۱۱ — کیفیت و تحویل | 🔄 در حال انجام | E2E (golden path، در CI) و Dockerfile چندمرحله‌ای production هر دو merge شدند؛ بازبینی امنیتی باقی‌مانده                           |
 
 > **یادداشت شماره‌گذاری (۱):** فاز «پروفایل کاربر» (که پیش‌تر در برنامه اصلی فاز ۳ = سیستم طراحی بود) بنا به تصمیم صریح کاربر جلوتر انداخته و فاز ۳ واقعی شد؛ فازهای ۳ تا ۱۰ قبلی یک واحد به عقب رانده شدند (اکنون ۴ تا ۱۱). ارجاعات قدیمی‌تر در این فایل به «فاز ۱۰» برای بدهی فنی، به فاز ۱۱ جدید اشاره دارند.
 >
@@ -2392,3 +2397,164 @@ metadata سطح سایت (`layout.tsx`) از قبل فارسی و درست اس�
 یک صفحه‌ی فرود واقعی (کپی، hero، CTA) ندارد. این یک تصمیم محصولی جداست
 (محتوای بازاریابی)، نه چیزی که کار SEO/PWA این فاز باید بی‌صدا بازطراحی
 می‌کرد؛ عمداً دست‌نخورده ماند.
+
+---
+
+## فاز ۱۱ — کیفیت و تحویل (E2E + Docker، در حال انجام)
+
+**چیستی:** آخرین فاز برنامه‌ریزی‌شده — سه بخش مستقل: (۱) تست E2E مسیر طلایی
+با Playwright روی استک واقعی (نه mock)، (۲) `Dockerfile` چندمرحله‌ای
+production برای هر دو اپ، (۳) بازبینی امنیتی. دو مورد اول در همین بازبینی
+تکمیل و merge شدند؛ بازبینی امنیتی باقی مانده.
+
+### PR ۱ — Playwright E2E golden-path + wiring در CI (تکمیل‌شده)
+
+**وضعیتی که این بخش پیدا شد:** یک scaffold کامل E2E (`playwright.config.ts`،
+۵ page object، fixtures، `global-teardown.ts` که از `cleanup:qa` موجود
+استفاده می‌کند) از یک نشست قبلی به‌صورت uncommitted در `apps/web` وجود داشت،
+ولی هرگز واقعاً تا انتها اجرا نشده بود — فقط `--list` (discoverable بودن
+تست) و بوت شدن API تأیید شده بودند، نه خودِ سناریو. بازبینی حافظه (mem-search)
+این را صریحاً تأیید کرد: «هیچ observation‌ای از اجرای واقعی `playwright test`
+وجود ندارد».
+
+**دو باگ واقعی که فقط با اجرای کامل زنده (نه با `--list` یا typecheck) کشف
+شدند:**
+
+1. **`RequestsListPage.openRequestByTitle` هرگز navigate نمی‌کرد.** فرض
+   اشتباه: چون provider درست بعد از ورود (login) روی `/requests` فرود
+   می‌آید، دیگر نیازی به `goto()` دوباره نیست. ولی آن fetch اولیه _قبل_
+   از انتشار درخواست توسط seeker اتفاق می‌افتد و هیچ polling/revalidation
+   دیگری در آن صفحه نیست — یعنی provider تا ابد همان لیست قدیمی (بدون
+   درخواست تازه) را می‌بیند. اثبات زنده: بعد از افزودن دستی `page.on('response')`
+   logging، **صفر** رویداد شبکه برای گام «provider finds the request» ثبت
+   شد — یعنی هیچ navigation جدیدی اصلاً رخ نداده بود. رفع: `openRequestByTitle`
+   خودش همیشه اول `goto()` می‌زند.
+2. **`ConversationsPage.openOnlyConversation()` بدون scope، لینک ناوبری را
+   می‌زد.** `getByRole('link').filter({hasText:/./}).first()` روی کل صفحه
+   جست‌وجو می‌کرد؛ چون لینک لوگوی «وقت‌می» (`href="/"`) در `AppShell` قبل از
+   محتوای اصلی در DOM می‌آید، همیشه همان کلیک می‌خورد — کاربر seeker به
+   صفحه‌ی اصلی (هنوز placeholder فاز ۴، به یادداشت بالا مراجعه شود) پرتاب
+   می‌شد، نه به thread گفتگو. اثبات: عکس صفحه‌ی خطا دقیقاً همان هیرو/فرم
+   OTP صفحه‌ی اصلی را نشان داد. رفع: locator به `a[href^="/conversations/"]`
+   محدود شد (پیشوند با `/` انتهایی، تا لینک ناوبری خودِ «گفتگوها» که دقیقاً
+   `/conversations` است را هم رد کند).
+
+**اثبات زنده نهایی:** با سرورهای کاملاً خودکار Playwright (نه دستی)، سه
+اجرای پیاپی: ۱ passed، ۱ passed، سپس یک اجرای سوم بعد از پاک‌کردن کامل
+`packages/{shared,db}/dist` و `.turbo` (شبیه‌سازی checkout تازه) — باز هم
+passed. `global-teardown.ts` هر بار داده‌ی تستی را واقعاً پاک کرد (تأیید
+با شمارش مستقیم Postgres: ۸ کاربر/۱۵ درخواست/۲۰ پیشنهاد/۲ گفتگو/۲ نظر،
+بدون تغییر نسبت به seed پایه).
+
+**باگ جانبی کشف‌شده حین این کار (بدهی فنی dev، نه رگرسیون این PR):**
+دیتابیس dev محلی، محصول `URGENT_BADGE` را با `durationHours: NULL` داشت با
+اینکه `packages/db/src/seed.ts` مدت‌ها بود `durationHours: 72` را ست
+می‌کرد — یعنی seed از زمان افزودن آن فیلد دوباره اجرا نشده بود. دو تست
+`payments.service.spec.ts` با همین داده‌ی قدیمی fail می‌شدند. رفع با یک
+اجرای ساده‌ی `pnpm db:seed` (idempotent، طبق طراحی)؛ ربطی به کد این PR
+نداشت.
+
+**CI:** یک job جدای `e2e` به `.github/workflows/ci.yml` اضافه شد (Postgres
+۱۶ + Redis ۷ به‌عنوان service، seed واقعی — بر خلاف job اصلی `ci` که
+عمداً seed نمی‌کند، cache مرورگر Playwright). **اولین اجرای واقعی این job
+روی GitHub Actions شکست خورد** (نه محلی؛ فقط با push واقعی کشف شد): ترتیب
+step اشتباه بود — `Seed database` قبل از `Build workspace packages` اجرا
+می‌شد، در حالی که خودِ `packages/db/src/seed.ts` هم `@vaqt/shared` را از
+`dist` (نه source) import می‌کند؛ خطای واقعی از لاگ CI:
+`Error: Cannot find module '.../packages/db/node_modules/@vaqt/shared/dist/index.js'`.
+رفع: جابه‌جایی ترتیب دو step. **اجرای دوم روی GitHub Actions واقعی، هر دو
+job (`ci` و `e2e`) سبز** (`gh run view ... --json jobs` تأیید کرد). PR #40،
+merge شده روی `main`.
+
+### PR ۲ — `Dockerfile` چندمرحله‌ای production (تکمیل‌شده)
+
+طبق بند ۷ («Dockerfile چندمرحله‌ای برای production الان نه» — حالا وقتش
+بود)، دو فایل جدا: `apps/api/Dockerfile` و `apps/web/Dockerfile`، هر دو از
+ریشه‌ی مونوریپو build می‌شوند (نیاز به دیدن کل pnpm workspace).
+
+**تصمیم‌های طراحی:**
+
+- **`apps/web`: از `output: 'standalone'` نسل‌جدید Next.js استفاده شد**
+  (اضافه‌شده به `next.config.ts`) — Next خودش فقط node_modules‌ای که واقعاً
+  لازم است را trace و در `.next/standalone` بسته‌بندی می‌کند؛ راهکاری که
+  مشکل «pnpm workspace symlink در یک ایمیج نهایی» را برای این اپ به‌طور
+  خودکار حل می‌کند، بدون نیاز به prune دستی.
+- **`apps/web`: `NEXT_PUBLIC_API_URL` باید `--build-arg` باشد، نه فقط
+  `docker run -e`.** این یک gotcha واقعی Next.js است — متغیرهای
+  `NEXT_PUBLIC_*` در **زمان build** داخل باندل کلاینت inline می‌شوند، نه در
+  زمان اجرا خوانده می‌شوند. `Dockerfile` یک `ARG NEXT_PUBLIC_API_URL` با
+  مقدار پیش‌فرض `http://localhost:3001` گرفت. **اثبات زنده:** بعد از
+  build با `--build-arg NEXT_PUBLIC_API_URL=http://localhost:3001`،
+  `grep` مستقیم روی چانک‌های کامپایل‌شده‌ی واقعی داخل کانتینر
+  (`docker exec ... grep -rl 'localhost:3001' .next/static/chunks/*.js`)
+  فایل درست را پیدا کرد — یعنی مقدار واقعاً inline شده، نه فقط تئوری.
+- **`apps/api`: بدون `output: standalone` معادل (NestJS ندارد)، پس کل
+  workspace با ساختار symlink pnpm از stage بیلد به stage نهایی کپی
+  می‌شود** (نه فقط `apps/api/node_modules`) — چون
+  `apps/api/node_modules/@vaqt/db` یک symlink نسبی به `../../../packages/db`
+  است؛ کپی‌کردن فقط زیرشاخه‌ی `apps/api` آن symlink را dangling می‌کرد.
+  `pnpm prune --prod` قبل از کپی، devDependencies را سراسر workspace حذف
+  می‌کند (در همان ساختار symlink، بدون نیاز به resolve دوباره). نتیجه:
+  ایمیج API حدود ۱٫۳ گیگابایت (بزرگ‌تر از حد ایده‌آل، چون کل workspace
+  کپی می‌شود، نه فقط زیرمجموعه‌ی لازم؛ ایمیج web با `standalone` واقعی فقط
+  ۲۶۵ مگابایت) — بهینه‌سازی بیشتر (`pnpm deploy` یا manual trace) به بدهی
+  فنی زیر موکول شد، نه رفع در همین PR.
+- **باگ محیطی واقعی کشف‌شده حین build (نه مشکل Dockerfile):** شبکه‌ی
+  Docker این محیط build آدرس‌های IPv6 رجیستری npm را advertise می‌کند
+  ولی مسیر واقعی برایشان ندارد (`ENETUNREACH` روی آدرس‌های `2606:4700:...`)،
+  که هر تلاش اتصال را قبل از افتادن به IPv4 هدر می‌داد. رفع با
+  `ENV NODE_OPTIONS=--dns-result-order=ipv4first` در stage پایه‌ی هر دو
+  Dockerfile — یک بهبود واقعی و قابل‌استفاده در محیط‌های build مشابه
+  (نه صرفاً یک workaround محلی).
+
+**اثبات زنده کامل (هر دو ایمیج واقعاً build و اجرا شدند، متصل به همان
+`docker-compose` Postgres/Redis که برای توسعه استفاده می‌شود، روی شبکه‌ی
+`vaqtme_default`):**
+
+1. `docker build -f apps/web/Dockerfile -t vaqt-web --build-arg NEXT_PUBLIC_API_URL=http://localhost:3001 .` →
+   `Successfully built`، ۲۶۵ مگابایت.
+2. `docker run` با `vaqt-web` → `✓ Ready in 145ms`؛ `curl http://localhost:3100/`
+   → `200`، HTML واقعی با `dir="rtl" lang="fa"`.
+3. `docker build -f apps/api/Dockerfile -t vaqt-api .` → `Successfully built`،
+   ۱٫۳۲ گیگابایت.
+4. `docker run` با `vaqt-api` (متصل به `postgres`/`redis` واقعی کانتینرهای
+   dev، از طریق شبکه‌ی مشترک) — **ابتدا عمداً با `SMS_PROVIDER=mock` و
+   بدون override کردن `NODE_ENV` تست شد تا گارد production واقعی (بند
+   ۲۲) هم زنده بررسی شود:** اپ درست با
+   `Error: SMS_PROVIDER=mock is not allowed when NODE_ENV=production`
+   شکست خورد و بالا نیامد — دقیقاً رفتار مورد انتظار. سپس با
+   `NODE_ENV=development` (صرفاً برای دور زدن این گارد در یک smoke test
+   بدون اعتبار SMS واقعی، نه ادعای پیکربندی production واقعی) دوباره
+   اجرا شد: تمام روت‌ها map شدند، `Nest application successfully started`.
+5. `curl http://localhost:3101/api/v1/health` → `{"status":"ok",...}`.
+6. جریان کامل OTP روی همین کانتینر: `POST /auth/otp/request` →
+   `{"ok":true,...}`؛ کد از `docker logs` واقعی خوانده شد؛
+   `POST /auth/otp/verify` → پاسخ کامل `PrivateUser` با `phoneVerified:true`
+   — یعنی کانتینر واقعاً به Postgres/Redis واقعی وصل است و کل زنجیره
+   (Prisma Client تولیدشده در build، اتصال Redis، JWT، HMAC OTP) کار
+   می‌کند.
+7. پاک‌سازی: کاربر تستی و ردیف‌های مرتبط (`sessions`, `verification_codes`,
+   `audit_logs`) مستقیماً از Postgres حذف شدند؛ کلیدهای Redis با پیشوند
+   `vaqt:docker-smoke:` حذف شدند؛ هر دو کانتینر smoke متوقف و حذف شدند.
+   شمارش نهایی کاربران Postgres تأیید شد بدون تغییر ماند: ۸.
+
+**`.dockerignore` جدید** در ریشه (مشترک بین هر دو Dockerfile): حذف
+`node_modules`/`.turbo`/`dist`/`.next`/`coverage`/`generated` (همه چیز که
+باید _داخل_ کانتینر از نو ساخته شود، نه از هاست کپی شود) به‌علاوه‌ی
+uploads/test-results/git/docs.
+
+`pnpm lint`/`typecheck`/`build`/`test` کامل مونوریپو سبز (بدون رگرسیون —
+`next.config.ts` فقط یک فیلد جدید گرفت، هیچ کد دیگری تغییر نکرد).
+
+### self-audit — فاز ۱۱ (تا این لحظه)
+
+| بند                                       | فایل/تست پیاده‌کننده                                                      | وضعیت                                        |
+| ----------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------- |
+| تست E2E مسیر طلایی روی استک واقعی         | `apps/web/e2e/**`, `apps/web/playwright.config.ts`                        | ✅ تکمیل — اثبات زنده (بالا)                 |
+| E2E در CI                                 | `.github/workflows/ci.yml` (job `e2e`)                                    | ✅ تکمیل — دو اجرای واقعی GitHub Actions سبز |
+| `Dockerfile` چندمرحله‌ای production — API | `apps/api/Dockerfile`                                                     | ✅ تکمیل — build + run + OTP واقعی زنده      |
+| `Dockerfile` چندمرحله‌ای production — Web | `apps/web/Dockerfile`, `apps/web/next.config.ts` (`output: 'standalone'`) | ✅ تکمیل — build + run زنده                  |
+| بازبینی امنیتی                            | —                                                                         | ⏳ باقی‌مانده                                |
+
+**باقی‌مانده برای فاز ۱۱:** بازبینی امنیتی (skill `security-checklist` یا
+معادل)؛ بهینه‌سازی اندازه‌ی ایمیج API (ثبت‌شده به بدهی فنی زیر).

@@ -1,0 +1,27 @@
+# Reused across apps/api/Dockerfile and apps/web/Dockerfile — both build
+# from the monorepo root so pnpm/turbo can see the whole workspace.
+
+**/node_modules
+**/.turbo
+**/dist
+**/.next
+**/coverage
+**/generated
+apps/api/uploads
+apps/web/test-results
+apps/web/playwright-report
+apps/web/blob-report
+apps/web/playwright/.cache
+
+.git
+.github
+.vscode
+.spartan
+.planning
+.handoff
+.memory
+
+**/*.md
+.env
+.env.*
+!.env.example
