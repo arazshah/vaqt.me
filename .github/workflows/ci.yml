@@ -172,16 +172,18 @@ jobs:
       - name: Apply database migrations
         run: pnpm --filter @vaqt/db migrate:deploy
 
-      - name: Seed database
-        run: pnpm db:seed
-
       - name: Build workspace packages
         # apps/api's `dev` (ts-node) imports @vaqt/shared and @vaqt/db from
         # their built dist/ output, not source — see CLAUDE.md's build
         # strategy notes. Scoped to just these two (not `pnpm build`, which
         # would also build apps/web/apps/api themselves) since Playwright's
-        # webServer runs both apps in dev mode directly.
+        # webServer runs both apps in dev mode directly. Must run before
+        # seeding too: packages/db/src/seed.ts itself imports @vaqt/shared
+        # from its built dist/, not source.
         run: pnpm exec turbo run build --filter=@vaqt/shared --filter=@vaqt/db
+
+      - name: Seed database
+        run: pnpm db:seed
 
       - name: E2E
         run: pnpm --filter @vaqt/web test:e2e
