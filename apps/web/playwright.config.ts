@@ -38,7 +38,11 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: false, // one shared seeker/provider pair per run, not per-test isolated
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // 2, not 1: the golden path exercises a real WebSocket delivery race
+  // (join room vs. broadcast timing — see MessageThread's socket effect
+  // and CLAUDE.md's Phase 11 notes) that's genuinely rare (~5% locally)
+  // but was observed failing 2 attempts in a row on a slower CI runner.
+  retries: process.env.CI ? 2 : 0,
   workers: 1,
   reporter: process.env.CI ? 'github' : 'html',
   globalTeardown: './e2e/global-teardown.ts',

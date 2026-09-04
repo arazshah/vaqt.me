@@ -61,6 +61,19 @@ export function MessageThread({
   const bottomRef = useRef<HTMLDivElement>(null);
   const hasLoadedOnce = useRef(false);
   const userId = user?.id;
+  // `user` resolves asynchronously after mount (see useAuth), so `userId`
+  // goes undefined -> real id shortly after the socket effect below first
+  // runs. Reading it through a ref (instead of the effect depending on it
+  // directly) means that resolution doesn't force a reconnect — the
+  // socket only reconnects for reasons that actually require a different
+  // room (archived, conversationId). Fewer connect/disconnect cycles
+  // narrows the window for the join (async DB check) vs. cleanup
+  // (disconnect) race that was the leading suspect behind an intermittent
+  // CI-only "message rendered twice" failure in the E2E suite.
+  const userIdRef = useRef(userId);
+  useEffect(() => {
+    userIdRef.current = userId;
+  }, [userId]);
 
   const loadInitial = useCallback(async () => {
     setLoadingInitial(true);
@@ -117,7 +130,10 @@ export function MessageThread({
           // arrived.
           return prev;
         }
-        return [...prev, { ...payload, isMine: payload.senderId === userId }];
+        return [
+          ...prev,
+          { ...payload, isMine: payload.senderId === userIdRef.current },
+        ];
       });
       requestAnimationFrame(() =>
         bottomRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }),
@@ -131,7 +147,7 @@ export function MessageThread({
       socket.off('message:new', handleIncoming);
       socket.disconnect();
     };
-  }, [archived, conversationId, userId]);
+  }, [archived, conversationId]);
 
   async function handleLoadOlder() {
     setLoadingOlder(true);
