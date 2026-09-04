@@ -4,6 +4,7 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { createOriginCheckMiddleware } from './common/middleware/origin-check.middleware';
 import { validateEnvOrExit } from './env-validation';
@@ -27,6 +28,19 @@ async function bootstrap() {
   app.useWebSocketAdapter(new IoAdapter(app));
 
   app.use(cookieParser());
+
+  // CSP is off — this is a JSON/WebSocket API with no server-rendered HTML
+  // of its own (Swagger UI, the one exception, is dev-only below and ships
+  // its own CSP-safe inline assets that a strict default policy would
+  // block). crossOriginResourcePolicy is relaxed to cross-origin because
+  // apps/web (a different origin/port) loads avatar images directly from
+  // this server's /uploads static route.
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
 
   const webOrigin = process.env.WEB_ORIGIN || 'http://localhost:3000';
   app.use(createOriginCheckMiddleware(webOrigin));
@@ -62,21 +76,28 @@ async function bootstrap() {
     credentials: true,
   });
 
-  // Swagger documentation
-  const config = new DocumentBuilder()
-    .setTitle('Vaqt.me API')
-    .setDescription('بازار دقیقه‌های انسانی')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('docs', app, document);
+  // Swagger documentation — dev/staging only. Exposing the full API schema
+  // (every route, DTO shape, auth requirement) at a public, unauthenticated
+  // URL in production is unnecessary information disclosure.
+  const swaggerEnabled = process.env.NODE_ENV !== 'production';
+  if (swaggerEnabled) {
+    const config = new DocumentBuilder()
+      .setTitle('Vaqt.me API')
+      .setDescription('بازار دقیقه‌های انسانی')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('docs', app, document);
+  }
 
   const port = process.env.PORT ? Number(process.env.PORT) : 3001;
   await app.listen(port);
 
   console.log(`🚀 API running on http://localhost:${String(port)}`);
-  console.log(`📚 Docs available at http://localhost:${String(port)}/docs`);
+  if (swaggerEnabled) {
+    console.log(`📚 Docs available at http://localhost:${String(port)}/docs`);
+  }
 }
 
 void bootstrap();
