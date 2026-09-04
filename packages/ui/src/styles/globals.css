@@ -78,6 +78,17 @@
 }
 
 @theme inline {
+  /* Tailwind v4's base spacing unit — every numeric-scale utility (p-*,
+     m-*, gap-*, w-*, h-*, max-w-*, inset-*, translate-*, ...) is generated
+     as a calc() multiple of this. The legacy tailwind.config.ts bridged in
+     via @config only extends the v3-style theme.spacing object; it never
+     supplies v4's own --spacing custom property, and v4's @config
+     compatibility mode does not synthesize one automatically — so without
+     this line every numeric-scale utility in the entire app silently
+     produces no CSS at all (present in the DOM, zero effect), while
+     non-scaled utilities like flex/grid/rounded-xl still work normally.
+  */
+  --spacing: 0.25rem;
   --font-sans: var(--font-sans);
   --font-heading: var(--font-heading);
   --color-background: var(--background);
