@@ -27,29 +27,15 @@ PWA (manifest + آیکون‌ها + theme-color)، و SEO صفحه‌ی درخو
 بدهی فنی قدیمی‌تر (که «باز» است ولی مسدودکننده نیست) به جدول «بدهی فنی» مراجعه شود —
 تکراری اینجا نوشته نمی‌شود.
 
-موارد کوچک کشف‌شده در همین بازبینی که عمداً باز مانده‌اند (کم‌اهمیت، بلوکر هیچ‌چیز نیستند):
-
-- `apps/web/package.json` فاقد `"type": "module"` است؛ `next build` یک هشدار
-  می‌دهد. **متن خام (بدون پارافریز، از یک اجرای واقعی، ۲۰۲۶-۰۸-۲۱):**
-
-  ```
-  (node:337829) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/araz/Projects/Career/vaqt.me/apps/web/tailwind.config.ts?id=1787322593694 is not specified and it doesn't parse as CommonJS.
-  Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
-  To eliminate this warning, add "type": "module" to /home/araz/Projects/Career/vaqt.me/apps/web/package.json.
-  ```
-
-  **منبع دقیق:** با `NODE_OPTIONS="--trace-warnings" next build` استک‌تریس گرفته
-  شد — کاملاً داخل خودِ Node.js است، نه webpack و نه Next.js:
-  `node:internal/modules/esm/get_format` → `defaultGetFormat` → `defaultLoadSync`
-  → `ModuleLoader.load` → `ModuleLoader.loadAndTranslate`. یعنی وقتی چیزی
-  (بارگذار پیکربندی Tailwind v4، برای اجرای دایرکتیو `@config` که به
-  `tailwind.config.ts` قدیمی فاز ۰ پل می‌زند) با `import()` بومی Node این فایل
-  را می‌خواند، چون نزدیک‌ترین `package.json` بالادستش (`apps/web/package.json`)
-  فیلد `type` ندارد، Node مجبور به حدس‌زدن CJS/ESM از روی syntax می‌شود و همین
-  حدس‌زدن یک هشدار عملکردی (نه خطا) تولید می‌کند. رفع آن (`"type": "module"`)
-  بی‌خطر است چون این پروژه از قبل همه‌جا ESM (`import`/`export`) است، ولی چون
-  می‌تواند روی ابزارهای CJS احتمالی این workspace هم اثر بگذارد، عمداً به یک
-  commit جدا موکول شد، نه اینجا به‌صورت جانبی انجام شد.
+~~موارد کوچک کشف‌شده در همین بازبینی که عمداً باز مانده‌اند~~ ✅ رفع شد
+(۲۰۲۶-۰۹-۰۷، PR مستقل `chore/web-package-type-module`): `"type": "module"`
+به `apps/web/package.json` اضافه شد. پیش از رفع، بررسی شد که هیچ فایل
+`.js`/`.cjs` سبک CommonJS (بدون `import`/`export`) در کل `apps/web`
+(خارج از `node_modules`/`.next`) وجود ندارد — یعنی نگرانی مستندشده‌ی
+قبلی («می‌تواند روی ابزارهای CJS احتمالی این workspace اثر بگذارد») در
+عمل مصداق نداشت. **اثبات زنده:** هشدار `MODULE_TYPELESS_PACKAGE_JSON`
+از خروجی `next build` کاملاً ناپدید شد؛ `pnpm test` کامل مونوریپو
+(هر ۸ تسک) سبز ماند، بدون هیچ رگرسیون.
 
 تصمیم‌های فرآیندی ثبت‌شده در همین بازبینی (بند ۳ و ۷ اسپک فاز ۴):
 
