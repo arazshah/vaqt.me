@@ -40,7 +40,16 @@ beforeAll(async () => {
       title: 'نشان فوری',
       description: 'تست',
       priceRial: 490_000,
-      durationHours: null,
+      // Must match payments.service.spec.ts's fixture for the same
+      // Product.code=URGENT_BADGE unique row exactly (72, not null) — both
+      // spec files upsert this row in their own beforeAll, and Jest runs
+      // spec files in parallel worker processes, so whichever beforeAll
+      // finishes last wins the race. This file's own tests never read
+      // durationHours, but payments.service.spec.ts asserts
+      // entitlement.expiresAt is non-null (derived from it), so a
+      // diverging value here was a real, intermittent CI failure —
+      // not a fixed value specific to this file's needs.
+      durationHours: 72,
     },
     {
       code: 'PRO_MONTHLY' as const,
