@@ -48,17 +48,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Read Node version
         id: node-version
         run: echo "version=$(cat .nvmrc)" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6.1.0
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: ${{ steps.node-version.outputs.version }}
           cache: pnpm
@@ -67,7 +67,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Cache Turborepo
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         with:
           path: .turbo
           key: turbo-${{ runner.os }}-${{ github.sha }}
@@ -128,17 +128,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Read Node version
         id: node-version
         run: echo "version=$(cat .nvmrc)" >> "$GITHUB_OUTPUT"
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6.1.0
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: ${{ steps.node-version.outputs.version }}
           cache: pnpm
@@ -147,7 +147,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Cache Turborepo
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         with:
           path: .turbo
           key: turbo-e2e-${{ runner.os }}-${{ github.sha }}
@@ -155,7 +155,7 @@ jobs:
             turbo-e2e-${{ runner.os }}-
 
       - name: Cache Playwright browsers
-        uses: actions/cache@v4
+        uses: actions/cache@v6.1.0
         id: playwright-cache
         with:
           path: ~/.cache/ms-playwright
