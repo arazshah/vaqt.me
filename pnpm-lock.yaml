@@ -204,6 +204,9 @@ importers:
       '@vaqt/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      lucide-react:
+        specifier: ^1.33.0
+        version: 1.33.0(react@18.3.1)
       next:
         specifier: ^15.1.4
         version: 15.5.23(@playwright/test@1.62.1)(@types/node@22.20.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
