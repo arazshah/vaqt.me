@@ -2,6 +2,7 @@ import {
   BadRequestException,
   HttpException,
   HttpStatus,
+  UnauthorizedException,
   type ArgumentsHost,
 } from '@nestjs/common';
 import type { Response } from 'express';
@@ -134,6 +135,42 @@ describe('AllExceptionsFilter', () => {
     expect(json).toHaveBeenCalledWith({
       code: ErrorCode.VALIDATION_ERROR,
       message: errorMessagesFa.VALIDATION_ERROR,
+    });
+  });
+
+  it('surfaces nestjs-zod per-field errors, not just the generic "Validation failed" message', () => {
+    const filter = new AllExceptionsFilter();
+    const { res, json } = makeResponse();
+    const zodIssues = [
+      { path: ['phone'], message: 'شماره نامعتبر است', code: 'custom' },
+    ];
+    const error = new BadRequestException({
+      statusCode: HttpStatus.BAD_REQUEST,
+      message: 'Validation failed',
+      errors: zodIssues,
+    });
+
+    filter.catch(error, makeHost(res));
+
+    expect(json).toHaveBeenCalledWith({
+      code: ErrorCode.VALIDATION_ERROR,
+      message: errorMessagesFa.VALIDATION_ERROR,
+      details: zodIssues,
+    });
+  });
+
+  it('maps a plain UnauthorizedException to the UNAUTHORIZED code, not VALIDATION_ERROR', () => {
+    const filter = new AllExceptionsFilter();
+    const { res, status, json } = makeResponse();
+    const error = new UnauthorizedException();
+
+    filter.catch(error, makeHost(res));
+
+    expect(status).toHaveBeenCalledWith(HttpStatus.UNAUTHORIZED);
+    expect(json).toHaveBeenCalledWith({
+      code: ErrorCode.UNAUTHORIZED,
+      message: errorMessagesFa.UNAUTHORIZED,
+      details: 'Unauthorized',
     });
   });
 

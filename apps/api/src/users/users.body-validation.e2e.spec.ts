@@ -59,22 +59,22 @@ describe('UsersController body validation (real HTTP, real Postgres + Redis)', (
     await app.close();
   });
 
-  it('PATCH /users/me actually persists displayName to Postgres (not just a non-error response)', async () => {
+  it('POST /users/me/update actually persists displayName to Postgres (not just a non-error response)', async () => {
     const distinctiveName = `کاربر-تست-${String(Date.now())}-${String(Math.random()).slice(2, 8)}`;
 
     const response = await request(app.getHttpServer() as Server)
-      .patch('/api/v1/users/me')
+      .post('/api/v1/users/me/update')
       .set('Authorization', `Bearer ${accessToken}`)
       .set('Origin', WEB_ORIGIN)
       .send({ displayName: distinctiveName });
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
 
     const row = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
     expect(row.displayName).toBe(distinctiveName);
   });
 
-  it('PUT /users/me/skills actually persists the UserSkill rows to Postgres (not just a non-error response)', async () => {
+  it('POST /users/me/skills/put actually persists the UserSkill rows to Postgres (not just a non-error response)', async () => {
     const skill = await prisma.skill.create({
       data: {
         name: `مهارت تست ${String(Date.now())}`,
@@ -84,12 +84,12 @@ describe('UsersController body validation (real HTTP, real Postgres + Redis)', (
     createdSkillIds.push(skill.id);
 
     const response = await request(app.getHttpServer() as Server)
-      .put('/api/v1/users/me/skills')
+      .post('/api/v1/users/me/skills/put')
       .set('Authorization', `Bearer ${accessToken}`)
       .set('Origin', WEB_ORIGIN)
       .send({ skillIds: [skill.id] });
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
 
     const linked = await prisma.userSkill.findMany({ where: { userId } });
     expect(linked.map((l) => l.skillId)).toEqual([skill.id]);
