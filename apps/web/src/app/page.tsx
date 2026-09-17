@@ -10,6 +10,7 @@ import {
   CardTitle,
   CardDescription,
 } from '@vaqt/ui/components/ui/card';
+import { Section } from '@vaqt/ui/components/section';
 
 import { AppShell } from '@/components/app-shell';
 import { useAuth } from '@/lib/auth-context';
@@ -38,38 +39,50 @@ export default function HomePage() {
 
   return (
     <AppShell>
-      <section className="flex flex-col items-center gap-6 py-12 text-center">
-        <h1 className="max-w-2xl text-4xl font-heading font-medium text-brand-900 sm:text-5xl">
-          {fa.homePage.heroTitle}
-        </h1>
-        <p className="max-w-xl text-lg text-text-muted">
-          {fa.homePage.heroSubtitle}
-        </p>
-        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-          <Button asChild size="lg">
-            <Link href="/requests">{fa.homePage.ctaBrowse}</Link>
-          </Button>
-          {!loading && (
-            <Button asChild size="lg" variant="outline">
-              <Link href={user ? '/requests/new' : '/login'}>
-                {user ? fa.homePage.ctaNewRequest : fa.homePage.ctaLoginOrStart}
-              </Link>
+      <Section
+        spacing="loose"
+        className="relative isolate -mt-8 overflow-hidden rounded-3xl bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,var(--primary)_0%,transparent_60%)] before:absolute before:inset-0 before:-z-10 before:bg-background/94"
+      >
+        <div className="flex flex-col items-center gap-6 text-center">
+          <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            {fa.homePage.heroEyebrow}
+          </span>
+          <h1 className="max-w-2xl text-4xl font-heading font-bold text-foreground sm:text-6xl">
+            {fa.homePage.heroTitle}
+          </h1>
+          <p className="max-w-xl text-lg text-muted-foreground">
+            {fa.homePage.heroSubtitle}
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <Button asChild size="lg">
+              <Link href="/requests">{fa.homePage.ctaBrowse}</Link>
             </Button>
-          )}
+            {!loading && (
+              <Button asChild size="lg" variant="outline">
+                <Link href={user ? '/requests/new' : '/login'}>
+                  {user
+                    ? fa.homePage.ctaNewRequest
+                    : fa.homePage.ctaLoginOrStart}
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
-      </section>
+      </Section>
 
-      <section className="grid gap-4 pb-12 sm:grid-cols-3">
+      <Section spacing="tight" className="grid gap-4 sm:grid-cols-3">
         {features.map(({ icon: Icon, title, description }) => (
-          <Card key={title}>
+          <Card key={title} className="transition-shadow hover:shadow-md">
             <CardHeader>
-              <Icon className="size-6 text-brand-500" aria-hidden="true" />
-              <CardTitle className="pt-2">{title}</CardTitle>
+              <span className="flex size-10 items-center justify-center rounded-full bg-primary/10">
+                <Icon className="size-5 text-primary" aria-hidden="true" />
+              </span>
+              <CardTitle className="pt-3">{title}</CardTitle>
               <CardDescription>{description}</CardDescription>
             </CardHeader>
           </Card>
         ))}
-      </section>
+      </Section>
     </AppShell>
   );
 }
