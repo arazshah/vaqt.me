@@ -1,12 +1,9 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Param,
-  Patch,
   Post,
-  Put,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -32,7 +29,11 @@ export class UsersController {
     return this.users.getMe(user.sub);
   }
 
-  @Patch('me')
+  // RPC-style (@Post only), matching the convention set from
+  // RequestsController onward — PATCH/PUT/DELETE here predate that decision
+  // (phase 3) and were converted in the phase-11 cleanup (see CLAUDE.md
+  // "بدهی فنی").
+  @Post('me/update')
   updateMe(
     @CurrentUser() user: AccessTokenPayload,
     // A method-scoped @UsePipes() runs its pipe against every resolved
@@ -49,7 +50,7 @@ export class UsersController {
     return this.users.updateMe(user.sub, body);
   }
 
-  @Put('me/skills')
+  @Post('me/skills/put')
   putMySkills(
     @CurrentUser() user: AccessTokenPayload,
     // Same bug as updateMe() above, but putUserSkillsSchema has a required
@@ -72,7 +73,7 @@ export class UsersController {
     return this.avatars.uploadAvatar(user.sub, file.buffer);
   }
 
-  @Delete('me/avatar')
+  @Post('me/avatar/delete')
   deleteAvatar(@CurrentUser() user: AccessTokenPayload) {
     return this.avatars.deleteAvatar(user.sub);
   }

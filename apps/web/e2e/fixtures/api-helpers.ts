@@ -11,12 +11,11 @@ const WEB_ORIGIN = process.env.E2E_WEB_ORIGIN ?? 'http://localhost:3000';
 // established — no separate auth needed here.
 //
 // `Origin` is required by hand: `origin-check.middleware.ts` treats every
-// PATCH/PUT/POST as mutating and rejects it without a matching Origin
-// header, and `page.request` (a Node-side HTTP client, not the browser's
-// own fetch) never sets one automatically the way `fetch()` from page JS
-// does.
+// POST as mutating and rejects it without a matching Origin header, and
+// `page.request` (a Node-side HTTP client, not the browser's own fetch)
+// never sets one automatically the way `fetch()` from page JS does.
 export async function completeProviderProfile(page: Page): Promise<void> {
-  await page.request.patch(`${API_URL}/api/v1/users/me`, {
+  await page.request.post(`${API_URL}/api/v1/users/me/update`, {
     headers: { Origin: WEB_ORIGIN },
     data: { bio: 'ارائه‌دهنده‌ی تستی برای مسیر E2E — بدون داده‌ی واقعی.' },
   });
@@ -30,7 +29,7 @@ export async function completeProviderProfile(page: Page): Promise<void> {
     );
   }
 
-  await page.request.put(`${API_URL}/api/v1/users/me/skills`, {
+  await page.request.post(`${API_URL}/api/v1/users/me/skills/put`, {
     headers: { Origin: WEB_ORIGIN },
     data: { skillIds: [skillId] },
   });
