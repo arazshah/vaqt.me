@@ -99,16 +99,40 @@
 
 @theme inline {
   /* Tailwind v4's base spacing unit — every numeric-scale utility (p-*,
-     m-*, gap-*, w-*, h-*, max-w-*, inset-*, translate-*, ...) is generated
-     as a calc() multiple of this. The legacy tailwind.config.ts bridged in
-     via @config only extends the v3-style theme.spacing object; it never
-     supplies v4's own --spacing custom property, and v4's @config
-     compatibility mode does not synthesize one automatically — so without
-     this line every numeric-scale utility in the entire app silently
-     produces no CSS at all (present in the DOM, zero effect), while
-     non-scaled utilities like flex/grid/rounded-xl still work normally.
+     m-*, gap-*, w-*, h-*, inset-*, translate-*, numeric max-w-4/96/...,
+     ...) is generated as a calc() multiple of this. The legacy
+     tailwind.config.ts bridged in via @config only extends the v3-style
+     theme.spacing object; it never supplies v4's own --spacing custom
+     property, and v4's @config compatibility mode does not synthesize one
+     automatically — so without this line every numeric-scale utility in
+     the entire app silently produces no CSS at all (present in the DOM,
+     zero effect), while non-scaled utilities like flex/grid/rounded-xl
+     still work normally.
   */
   --spacing: 0.25rem;
+  /* Same failure mode again, this time for the NAMED max-w-* / container
+     scale (sm/md/lg/xl/2xl.../7xl — as opposed to numeric max-w-4/96/...,
+     which come from --spacing above): Tailwind v4 generates these from
+     --container-*, a separate namespace the @config bridge does not
+     synthesize either. Caught by a live review on this exact PR (Codex) —
+     confirmed by grepping the compiled production CSS: zero occurrences
+     of max-w-5xl/max-w-2xl/max-w-6xl anywhere, meaning every named
+     max-width utility in the app (including the new Container primitive
+     below) rendered with no width constraint at all. Values match the
+     Tailwind v4 defaults directly. */
+  --container-3xs: 16rem;
+  --container-2xs: 18rem;
+  --container-xs: 20rem;
+  --container-sm: 24rem;
+  --container-md: 28rem;
+  --container-lg: 32rem;
+  --container-xl: 36rem;
+  --container-2xl: 42rem;
+  --container-3xl: 48rem;
+  --container-4xl: 56rem;
+  --container-5xl: 64rem;
+  --container-6xl: 72rem;
+  --container-7xl: 80rem;
   /* Same failure mode as --spacing above: the @config bridge to the legacy
      tailwind.config.ts does not synthesize Tailwind v4's own
      --breakpoint-* custom properties (it only carries over
