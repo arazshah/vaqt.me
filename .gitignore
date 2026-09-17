@@ -57,6 +57,10 @@ prisma/.env
 *.pem
 .cache
 
+# Redis persistence snapshot (created by a locally-run redis-server; never
+# part of the repo)
+dump.rdb
+
 # Local avatar storage (dev-only, LocalDiskAdapter)
 apps/api/uploads/
 
