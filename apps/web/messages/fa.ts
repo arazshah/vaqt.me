@@ -24,6 +24,7 @@ export const fa = {
     },
   },
   homePage: {
+    heroEyebrow: 'بازار دقیقه‌های انسانی',
     heroTitle: 'چند دقیقه از وقت یک آدمِ درست',
     heroSubtitle:
       'بازار دقیقه‌های انسانی — درخواستتان را بگذارید، از افراد واقعی پیشنهاد بگیرید، بدون واسطه در معامله.',
@@ -79,6 +80,7 @@ export const fa = {
   },
   loginPage: {
     title: 'ورود به وقت‌می',
+    subtitle: 'با شماره موبایل خود وارد شوید',
     phoneLabel: 'شماره موبایل',
     phonePlaceholder: '09123456789',
     phoneRequired: 'شماره موبایل الزامی است',
