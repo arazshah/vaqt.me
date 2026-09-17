@@ -19,7 +19,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <Card>
             <CardHeader className="items-center text-center">
-              <span className="mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10">
+              <span className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-primary/10">
                 <KeyRound className="size-6 text-primary" aria-hidden="true" />
               </span>
               <CardTitle className="text-xl">{fa.loginPage.title}</CardTitle>
