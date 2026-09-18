@@ -7,6 +7,7 @@ import type { ConversationStatus } from '@vaqt/shared';
 
 import { Badge } from '@vaqt/ui/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@vaqt/ui/components/ui/card';
+import { Avatar, AvatarFallback } from '@vaqt/ui/components/ui/avatar';
 import {
   Empty,
   EmptyHeader,
@@ -109,17 +110,28 @@ export default function ConversationsPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {items.map((item) => (
-            <Link key={item.id} href={`/conversations/${item.id}`}>
-              <Card className="transition-colors hover:bg-accent/50">
+            <Link
+              key={item.id}
+              href={`/conversations/${item.id}`}
+              className="group block no-underline"
+            >
+              <Card className="shadow-sm transition-shadow group-hover:shadow-md">
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
-                    <div className="flex flex-col">
-                      <span className="font-medium">
-                        {item.counterpartDisplayName}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {item.requestTitle}
-                      </span>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="size-9">
+                        <AvatarFallback>
+                          {item.counterpartDisplayName.slice(0, 1)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <span className="font-medium">
+                          {item.counterpartDisplayName}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {item.requestTitle}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
                       <Badge variant="secondary">

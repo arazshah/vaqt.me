@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { FileCheck } from 'lucide-react';
 import {
   createRequestSchema,
   tomanToRial,
@@ -295,7 +296,12 @@ export function RequestForm({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>{fa.newRequestPage.preview.title}</CardTitle>
+          <div className="flex items-center gap-3">
+            <span className="flex size-9 items-center justify-center rounded-full bg-primary/10">
+              <FileCheck className="size-4 text-primary" aria-hidden="true" />
+            </span>
+            <CardTitle>{fa.newRequestPage.preview.title}</CardTitle>
+          </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
@@ -346,267 +352,312 @@ export function RequestForm({
   }
 
   return (
-    <Form {...form}>
-      <form
-        onSubmit={(e) => void form.handleSubmit(handleCreate)(e)}
-        className="flex flex-col gap-4"
-      >
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{fa.newRequestPage.fields.title}</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{fa.newRequestPage.fields.description}</FormLabel>
-              <FormControl>
-                <Textarea rows={5} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="categoryId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{fa.newRequestPage.fields.category}</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger className="w-full">
-                    <SelectValue
-                      placeholder={fa.newRequestPage.fields.categoryPlaceholder}
+    <Card>
+      <CardContent className="pt-6">
+        <Form {...form}>
+          <form
+            onSubmit={(e) => void form.handleSubmit(handleCreate)(e)}
+            className="flex flex-col gap-6"
+          >
+            <div className="flex flex-col gap-4">
+              <h2 className="text-sm font-medium text-foreground">
+                {fa.newRequestPage.sections.basics}
+              </h2>
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{fa.newRequestPage.fields.title}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {fa.newRequestPage.fields.description}
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea rows={5} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="categoryId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{fa.newRequestPage.fields.category}</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue
+                            placeholder={
+                              fa.newRequestPage.fields.categoryPlaceholder
+                            }
+                          />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex flex-col gap-4 border-t border-border pt-6">
+              <h2 className="text-sm font-medium text-foreground">
+                {fa.newRequestPage.sections.logistics}
+              </h2>
+              <FormField
+                control={form.control}
+                name="mode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{fa.newRequestPage.fields.mode}</FormLabel>
+                    <RadioGroup
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      className="flex gap-4"
+                    >
+                      {(
+                        [
+                          [RequestMode.ONLINE, fa.requestMode.ONLINE],
+                          [RequestMode.IN_PERSON, fa.requestMode.IN_PERSON],
+                          [RequestMode.HYBRID, fa.requestMode.HYBRID],
+                        ] as const
+                      ).map(([value, label]) => (
+                        <div key={value} className="flex items-center gap-2">
+                          <RadioGroupItem value={value} id={`mode-${value}`} />
+                          <Label htmlFor={`mode-${value}`}>{label}</Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{fa.newRequestPage.fields.city}</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="durationMinutes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {fa.newRequestPage.fields.durationMinutes}
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="number" min={15} max={1440} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="flex flex-col gap-4 border-t border-border pt-6">
+              <h2 className="text-sm font-medium text-foreground">
+                {fa.newRequestPage.sections.budget}
+              </h2>
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="budgetMinToman"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {fa.newRequestPage.fields.budgetMinToman}
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="budgetMaxToman"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {fa.newRequestPage.fields.budgetMaxToman}
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4 border-t border-border pt-6">
+              <h2 className="text-sm font-medium text-foreground">
+                {fa.newRequestPage.sections.timing}
+              </h2>
+              <FormField
+                control={form.control}
+                name="deadlineAt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{fa.newRequestPage.fields.deadline}</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="flex flex-col gap-3">
+                <div>
+                  <Label>
+                    {fa.newRequestPage.fields.preferredWindows.label}
+                  </Label>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {fa.newRequestPage.fields.preferredWindows.hint}
+                  </p>
+                </div>
+                {preferredWindows.fields.map((field, index) => (
+                  <div
+                    key={field.id}
+                    className="flex items-end gap-2 rounded-lg border border-border bg-muted/40 p-3"
+                  >
+                    <FormField
+                      control={form.control}
+                      name={preferredWindowFieldPath(index, 'day')}
+                      render={({ field: dayField }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>
+                            {fa.newRequestPage.fields.preferredWindows.day}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...dayField}
+                              placeholder={
+                                fa.newRequestPage.fields.preferredWindows
+                                  .dayPlaceholder
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="mode"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{fa.newRequestPage.fields.mode}</FormLabel>
-              <RadioGroup
-                value={field.value}
-                onValueChange={field.onChange}
-                className="flex gap-4"
-              >
-                {(
-                  [
-                    [RequestMode.ONLINE, fa.requestMode.ONLINE],
-                    [RequestMode.IN_PERSON, fa.requestMode.IN_PERSON],
-                    [RequestMode.HYBRID, fa.requestMode.HYBRID],
-                  ] as const
-                ).map(([value, label]) => (
-                  <div key={value} className="flex items-center gap-2">
-                    <RadioGroupItem value={value} id={`mode-${value}`} />
-                    <Label htmlFor={`mode-${value}`}>{label}</Label>
+                    <FormField
+                      control={form.control}
+                      name={preferredWindowFieldPath(index, 'start')}
+                      render={({ field: startField }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>
+                            {fa.newRequestPage.fields.preferredWindows.start}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...startField}
+                              placeholder={
+                                fa.newRequestPage.fields.preferredWindows
+                                  .timePlaceholder
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={preferredWindowFieldPath(index, 'end')}
+                      render={({ field: endField }) => (
+                        <FormItem className="flex-1">
+                          <FormLabel>
+                            {fa.newRequestPage.fields.preferredWindows.end}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...endField}
+                              placeholder={
+                                fa.newRequestPage.fields.preferredWindows
+                                  .timePlaceholder
+                              }
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        preferredWindows.remove(index);
+                      }}
+                      aria-label={
+                        fa.newRequestPage.fields.preferredWindows.removeButton
+                      }
+                    >
+                      {fa.newRequestPage.fields.preferredWindows.removeButton}
+                    </Button>
                   </div>
                 ))}
-              </RadioGroup>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="city"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{fa.newRequestPage.fields.city}</FormLabel>
-              <FormControl>
-                <Input {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="durationMinutes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{fa.newRequestPage.fields.durationMinutes}</FormLabel>
-              <FormControl>
-                <Input type="number" min={15} max={1440} {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="budgetMinToman"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{fa.newRequestPage.fields.budgetMinToman}</FormLabel>
-                <FormControl>
-                  <Input type="number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="budgetMaxToman"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{fa.newRequestPage.fields.budgetMaxToman}</FormLabel>
-                <FormControl>
-                  <Input type="number" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-        <FormField
-          control={form.control}
-          name="deadlineAt"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>{fa.newRequestPage.fields.deadline}</FormLabel>
-              <FormControl>
-                <Input type="date" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="flex flex-col gap-2">
-          <Label>{fa.newRequestPage.fields.preferredWindows.label}</Label>
-          <p className="text-sm text-muted-foreground">
-            {fa.newRequestPage.fields.preferredWindows.hint}
-          </p>
-          {preferredWindows.fields.map((field, index) => (
-            <div key={field.id} className="flex items-end gap-2">
-              <FormField
-                control={form.control}
-                name={preferredWindowFieldPath(index, 'day')}
-                render={({ field: dayField }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>
-                      {fa.newRequestPage.fields.preferredWindows.day}
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...dayField}
-                        placeholder={
-                          fa.newRequestPage.fields.preferredWindows
-                            .dayPlaceholder
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name={preferredWindowFieldPath(index, 'start')}
-                render={({ field: startField }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>
-                      {fa.newRequestPage.fields.preferredWindows.start}
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...startField}
-                        placeholder={
-                          fa.newRequestPage.fields.preferredWindows
-                            .timePlaceholder
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name={preferredWindowFieldPath(index, 'end')}
-                render={({ field: endField }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>
-                      {fa.newRequestPage.fields.preferredWindows.end}
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...endField}
-                        placeholder={
-                          fa.newRequestPage.fields.preferredWindows
-                            .timePlaceholder
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  preferredWindows.remove(index);
-                }}
-                aria-label={
-                  fa.newRequestPage.fields.preferredWindows.removeButton
-                }
-              >
-                {fa.newRequestPage.fields.preferredWindows.removeButton}
-              </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={preferredWindows.fields.length >= 20}
+                  onClick={() => {
+                    preferredWindows.append({ day: '', start: '', end: '' });
+                  }}
+                >
+                  {fa.newRequestPage.fields.preferredWindows.addButton}
+                </Button>
+                {preferredWindows.fields.length >= 20 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {fa.newRequestPage.fields.preferredWindows.maxReached}
+                  </p>
+                ) : null}
+              </div>
             </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            disabled={preferredWindows.fields.length >= 20}
-            onClick={() => {
-              preferredWindows.append({ day: '', start: '', end: '' });
-            }}
-          >
-            {fa.newRequestPage.fields.preferredWindows.addButton}
-          </Button>
-          {preferredWindows.fields.length >= 20 ? (
-            <p className="text-sm text-muted-foreground">
-              {fa.newRequestPage.fields.preferredWindows.maxReached}
-            </p>
-          ) : null}
-        </div>
-        {serverError ? (
-          <p className="text-sm text-destructive">{serverError}</p>
-        ) : null}
-        <Button type="submit" disabled={pending}>
-          {pending
-            ? fa.newRequestPage.submitting
-            : fa.newRequestPage.submitButton}
-        </Button>
-      </form>
-    </Form>
+
+            {serverError ? (
+              <p className="text-sm text-destructive">{serverError}</p>
+            ) : null}
+            <Button type="submit" disabled={pending}>
+              {pending
+                ? fa.newRequestPage.submitting
+                : fa.newRequestPage.submitButton}
+            </Button>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 }

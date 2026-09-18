@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import type { ConversationStatus } from '@vaqt/shared';
 
 import { Badge } from '@vaqt/ui/components/ui/badge';
+import { Avatar, AvatarFallback } from '@vaqt/ui/components/ui/avatar';
 import {
   Empty,
   EmptyHeader,
@@ -119,30 +120,39 @@ export default function ConversationDetailPage() {
           {fa.conversationDetailPage.backLink}
         </Link>
 
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-col">
-            <Link
-              href={`/users/${detail.counterpartId}`}
-              className="text-xl font-semibold hover:underline"
-            >
-              {detail.counterpartDisplayName}
-            </Link>
-            <Link
-              href={`/requests/${detail.requestId}`}
-              className="text-sm text-muted-foreground hover:underline"
-            >
-              {detail.requestTitle}
-            </Link>
+        <div className="flex items-start justify-between gap-2 rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Avatar className="size-11">
+              <AvatarFallback>
+                {detail.counterpartDisplayName.slice(0, 1)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <Link
+                href={`/users/${detail.counterpartId}`}
+                className="text-lg font-semibold hover:underline"
+              >
+                {detail.counterpartDisplayName}
+              </Link>
+              <Link
+                href={`/requests/${detail.requestId}`}
+                className="text-sm text-muted-foreground hover:underline"
+              >
+                {detail.requestTitle}
+              </Link>
+            </div>
           </div>
           <Badge variant="secondary">
             {fa.conversationStatus[detail.status]}
           </Badge>
         </div>
 
-        <MessageThread
-          conversationId={detail.id}
-          archived={detail.status !== 'OPEN'}
-        />
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <MessageThread
+            conversationId={detail.id}
+            archived={detail.status !== 'OPEN'}
+          />
+        </div>
 
         <ReviewPanel conversationId={detail.id} />
       </div>
