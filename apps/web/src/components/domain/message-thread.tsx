@@ -230,7 +230,7 @@ export function MessageThread({
         </Button>
       ) : null}
 
-      <div className="flex flex-col gap-2">
+      <div className="flex max-h-[28rem] flex-col gap-2 overflow-y-auto scroll-smooth px-1 py-2">
         {messages.map((message) =>
           message.type === 'SYSTEM' ? (
             <p

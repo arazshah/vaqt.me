@@ -137,7 +137,7 @@ export function AiWizard() {
               {fa.aiWizardPage.intro}
             </p>
           ) : (
-            <div className="flex flex-col gap-2">
+            <div className="flex max-h-80 flex-col gap-2 overflow-y-auto scroll-smooth px-1 py-1">
               {messages.map((message, index) => (
                 <div
                   key={index}
