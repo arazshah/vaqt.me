@@ -37,13 +37,19 @@ export type RequestCardData = {
   budgetMaxRial: number | null;
 };
 
-export function RequestCard({ data }: { data: RequestCardData }) {
+export function RequestCard({
+  data,
+  className,
+}: {
+  data: RequestCardData;
+  className?: string;
+}) {
   const locationLabel = [fa.requestMode[data.mode], data.city]
     .filter(Boolean)
     .join(' · ');
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">{data.title}</CardTitle>

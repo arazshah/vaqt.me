@@ -294,6 +294,126 @@ describe('RequestsService (real Postgres)', () => {
       const result = await service.list({ limit: 20, id: 'does-not-exist' });
       expect(result.items).toEqual([]);
     });
+
+    it('filters by categoryId', async () => {
+      const categoryA = await makeCategory();
+      const categoryB = await makeCategory();
+      const ownerId = await makeUser();
+      const inA = await service.create(ownerId, validCreateInput(categoryA));
+      const inB = await service.create(ownerId, validCreateInput(categoryB));
+      createdRequestIds.push(inA.id, inB.id);
+      await service.publish(inA.id);
+      await service.publish(inB.id);
+
+      const result = await service.list({ limit: 50, categoryId: categoryA });
+      const ids = result.items.map((i) => i.id);
+      expect(ids).toContain(inA.id);
+      expect(ids).not.toContain(inB.id);
+    });
+
+    it('filters by mode', async () => {
+      const categoryId = await makeCategory();
+      const ownerId = await makeUser();
+      const online = await service.create(
+        ownerId,
+        validCreateInput(categoryId, { mode: 'ONLINE' }),
+      );
+      const inPerson = await service.create(
+        ownerId,
+        validCreateInput(categoryId, { mode: 'IN_PERSON' }),
+      );
+      createdRequestIds.push(online.id, inPerson.id);
+      await service.publish(online.id);
+      await service.publish(inPerson.id);
+
+      const result = await service.list({ limit: 50, mode: 'ONLINE' });
+      const ids = result.items.map((i) => i.id);
+      expect(ids).toContain(online.id);
+      expect(ids).not.toContain(inPerson.id);
+    });
+
+    it('filters by exact city match', async () => {
+      const categoryId = await makeCategory();
+      const ownerId = await makeUser();
+      const tehran = await service.create(
+        ownerId,
+        validCreateInput(categoryId, { city: 'تهران' }),
+      );
+      const shiraz = await service.create(
+        ownerId,
+        validCreateInput(categoryId, { city: 'شیراز' }),
+      );
+      createdRequestIds.push(tehran.id, shiraz.id);
+      await service.publish(tehran.id);
+      await service.publish(shiraz.id);
+
+      const result = await service.list({ limit: 50, city: 'تهران' });
+      const ids = result.items.map((i) => i.id);
+      expect(ids).toContain(tehran.id);
+      expect(ids).not.toContain(shiraz.id);
+    });
+
+    it('filters by free-text search against the normalizeFa-d searchText column, matching across ي/ی variants', async () => {
+      const categoryId = await makeCategory();
+      const ownerId = await makeUser();
+      // Title contains Arabic ي (yeh) on purpose — same normalizeFa
+      // discipline as the seed's req-thesis-literature (CLAUDE.md bond 16).
+      const matching = await service.create(
+        ownerId,
+        validCreateInput(categoryId, {
+          title: 'کمک برای ویرایش پایان‌نامه ادبيات',
+        }),
+      );
+      const other = await service.create(
+        ownerId,
+        validCreateInput(categoryId, {
+          title: 'نیاز به طراح گرافیک برای پوستر',
+        }),
+      );
+      createdRequestIds.push(matching.id, other.id);
+      await service.publish(matching.id);
+      await service.publish(other.id);
+
+      // Search term uses the Persian ی — must still match the Arabic ي
+      // stored in the title, since both sides go through normalizeFa.
+      const result = await service.list({ limit: 50, search: 'ادبیات' });
+      const ids = result.items.map((i) => i.id);
+      expect(ids).toContain(matching.id);
+      expect(ids).not.toContain(other.id);
+    });
+
+    it('combines multiple filters with AND', async () => {
+      const categoryA = await makeCategory();
+      const categoryB = await makeCategory();
+      const ownerId = await makeUser();
+      const wanted = await service.create(
+        ownerId,
+        validCreateInput(categoryA, { mode: 'ONLINE', city: 'تهران' }),
+      );
+      const wrongCategory = await service.create(
+        ownerId,
+        validCreateInput(categoryB, { mode: 'ONLINE', city: 'تهران' }),
+      );
+      const wrongMode = await service.create(
+        ownerId,
+        validCreateInput(categoryA, { mode: 'IN_PERSON', city: 'تهران' }),
+      );
+      createdRequestIds.push(wanted.id, wrongCategory.id, wrongMode.id);
+      await service.publish(wanted.id);
+      await service.publish(wrongCategory.id);
+      await service.publish(wrongMode.id);
+
+      const result = await service.list({
+        limit: 50,
+        categoryId: categoryA,
+        mode: 'ONLINE',
+        city: 'تهران',
+      });
+      const ids = result.items.map((i) => i.id);
+      expect(ids).toContain(wanted.id);
+      expect(ids).not.toContain(wrongCategory.id);
+      expect(ids).not.toContain(wrongMode.id);
+    });
   });
 
   describe('getById()', () => {

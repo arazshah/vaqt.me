@@ -130,4 +130,42 @@ describe('listRequestsSchema', () => {
   it('rejects an empty id string', () => {
     expect(listRequestsSchema.safeParse({ id: '' }).success).toBe(false);
   });
+
+  it('leaves categoryId/mode/city/search undefined when omitted', () => {
+    const result = listRequestsSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.categoryId).toBeUndefined();
+      expect(result.data.mode).toBeUndefined();
+      expect(result.data.city).toBeUndefined();
+      expect(result.data.search).toBeUndefined();
+    }
+  });
+
+  it('accepts a valid mode value', () => {
+    expect(listRequestsSchema.safeParse({ mode: 'ONLINE' }).success).toBe(true);
+  });
+
+  it('rejects an invalid mode value', () => {
+    expect(listRequestsSchema.safeParse({ mode: 'NOT_A_MODE' }).success).toBe(
+      false,
+    );
+  });
+
+  it('accepts a provided categoryId/city/search', () => {
+    const result = listRequestsSchema.safeParse({
+      categoryId: 'cat-1',
+      city: 'تهران',
+      search: 'ترجمه',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects an empty categoryId/city/search string', () => {
+    expect(listRequestsSchema.safeParse({ categoryId: '' }).success).toBe(
+      false,
+    );
+    expect(listRequestsSchema.safeParse({ city: '' }).success).toBe(false);
+    expect(listRequestsSchema.safeParse({ search: '' }).success).toBe(false);
+  });
 });

@@ -160,6 +160,19 @@ export class RequestsService {
     // get skipped or repeated across pages.
     const where: Prisma.RequestWhereInput = {
       status: RequestStatus.PUBLISHED,
+      ...(input.categoryId ? { categoryId: input.categoryId } : {}),
+      ...(input.mode ? { mode: input.mode } : {}),
+      // Exact match, not contains — a free-text "city" filter would let a
+      // guest probe for substrings the same way budget filtering would leak
+      // range info (CLAUDE.md bond 6 is about budget specifically, but the
+      // same caution applies: keep filters exact/enum-shaped, not free text,
+      // except the one field designed for free text below).
+      ...(input.city ? { city: input.city } : {}),
+      // normalizeFa'd the same way searchText was written at create/update
+      // time (CLAUDE.md bond 16) so accents/ي-vs-ی/digit variants match.
+      ...(input.search
+        ? { searchText: { contains: normalizeFa(input.search) } }
+        : {}),
       // Single-item lookup (public metadata rendering) — short-circuits the
       // cursor logic entirely, since a lookup by id has no keyset to walk.
       ...(input.id
