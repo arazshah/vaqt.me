@@ -1,5 +1,6 @@
 'use client';
 
+import { useTheme } from 'next-themes';
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
 import {
   CircleCheckIcon,
@@ -9,11 +10,17 @@ import {
   Loader2Icon,
 } from 'lucide-react';
 
+const VALID_THEMES = ['light', 'dark', 'system'] as const;
+
 const Toaster = ({ ...props }: ToasterProps) => {
-  // No dark mode toggle exists yet (tracked as tech debt in CLAUDE.md),
-  // so this always renders the "system" theme rather than depending on
-  // next-themes' useTheme(), which was removed.
-  const theme: ToasterProps['theme'] = 'system';
+  // next-themes types `theme` as a bare `string` (it supports arbitrary
+  // custom theme names) — narrow it to what sonner actually accepts.
+  const { theme: rawTheme } = useTheme();
+  const theme: ToasterProps['theme'] = VALID_THEMES.includes(
+    rawTheme as (typeof VALID_THEMES)[number],
+  )
+    ? (rawTheme as ToasterProps['theme'])
+    : 'system';
 
   return (
     <Sonner

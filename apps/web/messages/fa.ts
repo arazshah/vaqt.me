@@ -22,6 +22,12 @@ export const fa = {
       login: 'ورود',
       logout: 'خروج',
     },
+    themeToggle: {
+      light: 'روشن',
+      dark: 'تاریک',
+      system: 'خودکار (سیستم)',
+      switchTo: (mode: string) => `تغییر به حالت ${mode}`,
+    },
   },
   homePage: {
     heroEyebrow: 'بازار دقیقه‌های انسانی',

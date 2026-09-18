@@ -6,6 +6,7 @@ import { Button } from '@vaqt/ui/components/ui/button';
 import { Container } from '@vaqt/ui/components/container';
 
 import { useAuth } from '@/lib/auth-context';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { fa } from '@/messages/fa';
 
 const navLinkClass =
@@ -45,10 +46,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="hidden text-sm text-muted-foreground sm:inline">
                   {user.displayName}
                 </span>
-                <Button variant="ghost" size="sm" onClick={() => void logout()}>
-                  {fa.appShell.nav.logout}
-                </Button>
               </>
+            ) : null}
+            <ThemeToggle />
+            {loading ? null : user ? (
+              <Button variant="ghost" size="sm" onClick={() => void logout()}>
+                {fa.appShell.nav.logout}
+              </Button>
             ) : (
               <Link href="/login" className={navLinkClass}>
                 {fa.appShell.nav.login}
