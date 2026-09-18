@@ -134,6 +134,12 @@ export function RequestsFilterBar({
             setSearchDraft(e.target.value);
           }}
           placeholder={fa.requestsPage.filters.searchPlaceholder}
+          // listRequestsSchema caps search at 120 chars — bounding the
+          // input the same way means a user typing past that limit gets
+          // stopped at the edge instead of sending a value the server
+          // rejects with a 400 (which this page then shows as a generic
+          // connection-error state, not a helpful "too long" message).
+          maxLength={120}
           className="ps-9"
         />
       </div>
@@ -189,6 +195,9 @@ export function RequestsFilterBar({
           setCityDraft(e.target.value);
         }}
         placeholder={fa.requestsPage.filters.cityPlaceholder}
+        // Same reasoning as the search input's maxLength above —
+        // listRequestsSchema caps city at 80 chars.
+        maxLength={80}
         className="w-full sm:w-32"
       />
 

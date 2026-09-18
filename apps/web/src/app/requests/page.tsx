@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { CursorPage } from '@vaqt/shared';
 import {
@@ -65,18 +65,28 @@ export default function RequestsPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(false);
 
+  // Incremented on every new first-page load (filter change or initial
+  // mount). A response only commits state if it's still the most recent
+  // request in flight when it resolves — otherwise a slower response for
+  // filters the user has since changed or cleared would land after, and
+  // overwrite, a faster response for the current filters.
+  const requestGeneration = useRef(0);
+
   const loadFirstPage = useCallback(async () => {
+    const generation = ++requestGeneration.current;
     setLoading(true);
     setError(false);
     try {
       const page = await fetchPage(null, filters);
+      if (generation !== requestGeneration.current) return;
       setItems(page.items);
       setCursor(page.nextCursor);
       setHasMore(page.hasMore);
     } catch {
+      if (generation !== requestGeneration.current) return;
       setError(true);
     } finally {
-      setLoading(false);
+      if (generation === requestGeneration.current) setLoading(false);
     }
   }, [filters]);
 
@@ -85,9 +95,15 @@ export default function RequestsPage() {
   }, [loadFirstPage]);
 
   async function handleLoadMore() {
+    // Same staleness guard: if the filters change while a "load more" is
+    // in flight, loadFirstPage() above already bumped the generation, so
+    // this response is discarded instead of appending old-filter items
+    // after the new first page has already loaded.
+    const generation = requestGeneration.current;
     setLoadingMore(true);
     try {
       const page = await fetchPage(cursor, filters);
+      if (generation !== requestGeneration.current) return;
       setItems((prev) => [...prev, ...page.items]);
       setCursor(page.nextCursor);
       setHasMore(page.hasMore);
@@ -95,7 +111,7 @@ export default function RequestsPage() {
       // Load-more failures stay silent on the list itself (the page
       // already has content) — the button just stays put for a retry.
     } finally {
-      setLoadingMore(false);
+      if (generation === requestGeneration.current) setLoadingMore(false);
     }
   }
 
