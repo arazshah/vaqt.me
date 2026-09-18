@@ -1,6 +1,6 @@
 import { defineConfig } from 'tsup';
 
-export default defineConfig({
+export default defineConfig((options) => ({
   entry: ['src/index.ts'],
   format: ['cjs', 'esm'],
   // Declarations are emitted by plain `tsc` (see the `build` script), not
@@ -16,7 +16,10 @@ export default defineConfig({
   // crash — verified with a real `dist/index.d.ts` diff.
   dts: false,
   sourcemap: true,
-  clean: true,
+  // Same reasoning as packages/shared/tsup.config.ts: only clean on a
+  // one-shot build, never during --watch, so a concurrently running
+  // downstream process never observes a transiently-deleted dist/.
+  clean: !options.watch,
   // The generated Prisma client (packages/db/generated/prisma) is a local
   // relative import now, not a bare package specifier, so tsup's default
   // "externalize node_modules dependencies" heuristic no longer applies to
@@ -25,4 +28,4 @@ export default defineConfig({
   // unbundled, exactly like the old default `@prisma/client` output was
   // treated automatically.
   external: [/\/generated\/prisma\//],
-});
+}));
