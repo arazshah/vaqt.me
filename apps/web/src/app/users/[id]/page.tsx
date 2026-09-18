@@ -19,6 +19,7 @@ import {
 } from '@vaqt/ui/components/ui/empty';
 import { Skeleton } from '@vaqt/ui/components/ui/skeleton';
 import { Button } from '@vaqt/ui/components/ui/button';
+import { MessageSquareText } from 'lucide-react';
 
 import { AppShell } from '@/components/app-shell';
 import { StarRating } from '@/components/domain/star-rating';
@@ -193,53 +194,59 @@ export default function PublicProfilePage() {
   return (
     <AppShell>
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
-        <div className="flex items-start gap-4">
-          <Avatar size="lg">
-            <AvatarImage src={profile.avatarThumbnailUrl ?? undefined} />
-            <AvatarFallback>{profile.displayName.slice(0, 1)}</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col gap-1">
-            <h1 className="text-xl font-semibold">{profile.displayName}</h1>
-            {profile.headline ? (
-              <p className="text-sm text-muted-foreground">
-                {profile.headline}
-              </p>
-            ) : null}
-            {profile.city ? (
-              <Badge variant="secondary" className="w-fit">
-                {profile.city}
-              </Badge>
-            ) : null}
+        <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <Avatar size="lg" className="ring-2 ring-primary/15">
+              <AvatarImage src={profile.avatarThumbnailUrl ?? undefined} />
+              <AvatarFallback>{profile.displayName.slice(0, 1)}</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col gap-1">
+              <h1 className="text-xl font-semibold">{profile.displayName}</h1>
+              {profile.headline ? (
+                <p className="text-sm text-muted-foreground">
+                  {profile.headline}
+                </p>
+              ) : null}
+              {profile.city ? (
+                <Badge variant="secondary" className="w-fit">
+                  {profile.city}
+                </Badge>
+              ) : null}
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-3">
-          <StarRating
-            value={profile.ratingAvg}
-            readOnly
-            ariaLabel={fa.profilePage.ratingLabel}
-          />
-          <span className="text-sm text-muted-foreground">
-            {fa.profilePage.successfulCollaborations(
-              String(profile.ratingCount),
-            )}
-          </span>
-        </div>
-
-        {profile.bio ? <p className="text-sm">{profile.bio}</p> : null}
-
-        {profile.skills.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {profile.skills.map((skill) => (
-              <Badge key={skill.id} variant="outline">
-                {skill.name}
-              </Badge>
-            ))}
+          <div className="flex items-center gap-3 border-t border-border pt-4">
+            <StarRating
+              value={profile.ratingAvg}
+              readOnly
+              ariaLabel={fa.profilePage.ratingLabel}
+            />
+            <span className="text-sm text-muted-foreground">
+              {fa.profilePage.successfulCollaborations(
+                String(profile.ratingCount),
+              )}
+            </span>
           </div>
-        ) : null}
+
+          {profile.bio ? <p className="text-sm">{profile.bio}</p> : null}
+
+          {profile.skills.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {profile.skills.map((skill) => (
+                <Badge key={skill.id} variant="outline">
+                  {skill.name}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
+        </div>
 
         <div className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <MessageSquareText
+              className="size-5 text-primary"
+              aria-hidden="true"
+            />
             {fa.profilePage.reviewsSectionTitle}
           </h2>
           {reviewsLoading ? (
