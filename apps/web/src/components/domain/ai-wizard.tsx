@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { AiChatMessage, AiExtractedDraft } from '@vaqt/shared';
 import { formatToman } from '@vaqt/shared';
 
@@ -69,6 +69,7 @@ export function AiWizard() {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     apiFetch<{ items: Category[] }>('/categories')
@@ -100,6 +101,9 @@ export function AiWizard() {
       setDraft(res.draft);
       setNeedsManualForm(res.needsManualForm);
       setInput('');
+      requestAnimationFrame(() =>
+        bottomRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }),
+      );
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : fa.aiWizardPage.sendError,
@@ -158,6 +162,7 @@ export function AiWizard() {
                   </div>
                 </div>
               ))}
+              <div ref={bottomRef} />
             </div>
           )}
 
