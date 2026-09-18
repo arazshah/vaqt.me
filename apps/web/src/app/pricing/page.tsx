@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProductCode } from '@vaqt/shared';
+import { Bell, Crown, Sparkles } from 'lucide-react';
 
 import {
   Empty,
@@ -25,6 +26,14 @@ import { PurchaseButton } from '@/components/domain/purchase-button';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch } from '@/lib/api-client';
 import { fa } from '@/messages/fa';
+
+const PRODUCT_ICONS: Record<ProductCode, typeof Crown> = {
+  [ProductCode.PRO_MONTHLY]: Crown,
+  [ProductCode.TARGETED_NOTIFY]: Bell,
+  [ProductCode.URGENT_BADGE]: Sparkles,
+  [ProductCode.BUMP]: Sparkles,
+  [ProductCode.FEATURE]: Sparkles,
+};
 
 interface ProductView {
   code: ProductCode;
@@ -79,7 +88,10 @@ export default function PricingPage() {
   return (
     <AppShell>
       <div className="mx-auto flex max-w-2xl flex-col gap-6">
-        <div>
+        <div className="flex flex-col items-center gap-2 text-center">
+          <span className="flex size-12 items-center justify-center rounded-full bg-primary/10">
+            <Crown className="size-6 text-primary" aria-hidden="true" />
+          </span>
           <h1 className="text-2xl font-semibold">{fa.pricingPage.title}</h1>
           <p className="text-sm text-muted-foreground">
             {fa.pricingPage.description}
@@ -99,33 +111,49 @@ export default function PricingPage() {
           <Skeleton className="h-48 w-full" />
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
-            {products.map((product) => (
-              <Card key={product.code}>
-                <CardHeader>
-                  <CardTitle className="text-base">{product.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-1 text-sm text-muted-foreground">
-                  <p>{product.description}</p>
-                  <PriceTag
-                    rial={product.priceRial}
-                    className="text-foreground"
-                  />
-                  {product.durationHours ? (
-                    <p>
-                      {fa.pricingPage.durationHours(
-                        String(product.durationHours),
-                      )}
-                    </p>
-                  ) : null}
-                </CardContent>
-                <CardFooter>
-                  <PurchaseButton
-                    productCode={product.code}
-                    label={fa.payment.buyButton}
-                  />
-                </CardFooter>
-              </Card>
-            ))}
+            {products.map((product) => {
+              const Icon = PRODUCT_ICONS[product.code];
+              return (
+                <Card
+                  key={product.code}
+                  className="transition-shadow hover:shadow-md"
+                >
+                  <CardHeader>
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-8 items-center justify-center rounded-full bg-primary/10">
+                        <Icon
+                          className="size-4 text-primary"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <CardTitle className="text-base">
+                        {product.title}
+                      </CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-1 text-sm text-muted-foreground">
+                    <p>{product.description}</p>
+                    <PriceTag
+                      rial={product.priceRial}
+                      className="text-foreground"
+                    />
+                    {product.durationHours ? (
+                      <p>
+                        {fa.pricingPage.durationHours(
+                          String(product.durationHours),
+                        )}
+                      </p>
+                    ) : null}
+                  </CardContent>
+                  <CardFooter>
+                    <PurchaseButton
+                      productCode={product.code}
+                      label={fa.payment.buyButton}
+                    />
+                  </CardFooter>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

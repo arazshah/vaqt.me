@@ -8,6 +8,7 @@ import type { OrderStatus } from '@vaqt/shared';
 import {
   Empty,
   EmptyHeader,
+  EmptyMedia,
   EmptyTitle,
   EmptyDescription,
 } from '@vaqt/ui/components/ui/empty';
@@ -15,6 +16,7 @@ import { Badge } from '@vaqt/ui/components/ui/badge';
 import { Button } from '@vaqt/ui/components/ui/button';
 import { PriceTag } from '@vaqt/ui/components/price-tag';
 import { Skeleton } from '@vaqt/ui/components/ui/skeleton';
+import { CheckCircle2, HelpCircle, XCircle } from 'lucide-react';
 
 import { AppShell } from '@/components/app-shell';
 import { useAuth } from '@/lib/auth-context';
@@ -87,10 +89,26 @@ function PaymentResultContent() {
         ? fa.paymentResultPage.failed
         : fa.paymentResultPage.notFound;
 
+  const OutcomeIcon =
+    status === 'success'
+      ? CheckCircle2
+      : status === 'failed'
+        ? XCircle
+        : HelpCircle;
+  const outcomeIconClass =
+    status === 'success'
+      ? 'bg-primary/10 text-primary'
+      : status === 'failed'
+        ? 'bg-destructive/10 text-destructive'
+        : 'bg-muted text-muted-foreground';
+
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6">
       <Empty>
         <EmptyHeader>
+          <EmptyMedia variant="icon" className={outcomeIconClass}>
+            <OutcomeIcon className="size-5" aria-hidden="true" />
+          </EmptyMedia>
           <EmptyTitle>{outcome.title}</EmptyTitle>
           <EmptyDescription>{outcome.description}</EmptyDescription>
         </EmptyHeader>
@@ -99,7 +117,7 @@ function PaymentResultContent() {
       {orderLoading ? (
         <Skeleton className="h-32 w-full" />
       ) : order ? (
-        <dl className="grid grid-cols-2 gap-4 rounded-lg border p-4 text-sm">
+        <dl className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4 text-sm shadow-sm">
           <div>
             <dt className="text-muted-foreground">
               {fa.paymentResultPage.orderLabels.product}
