@@ -532,21 +532,13 @@ PWA (manifest + آیکون‌ها + theme-color)، و SEO صفحه‌ی درخو
 > برخلاف «بدهی فنی» (که چیزی ناقص یا نادرست است)، این بخش تصمیم‌هایی را ثبت می‌کند
 > که از نظر فنی هیچ نقصی ندارند — فقط یک انتخاب محصولی هنوز گرفته نشده.
 
-- **Toggle واقعی حالت تاریک (dark mode).** `next-themes` که با نصب `sonner` آمده
-  بود، چون هرگز به یک `ThemeProvider` واقعی وصل نشد، کاملاً حذف شد (بازبینی فاز ۴)؛
-  `packages/ui/src/components/ui/sonner.tsx` اکنون همیشه `theme="system"` را
-  hardcode می‌کند. این یک باگ یا بدهی نیست — تصمیم اینکه اپ اصلاً toggle
-  روشن/تاریک داشته باشد یا نه (و اگر بله، با کدام کتابخانه) هنوز گرفته نشده.
-  **وضعیت تست کنتراست در همین حالت:** `packages/ui/src/styles/globals.contrast.test.ts`
-  واقعاً **هر دو** تم را پوشش می‌دهد — `parseCssCustomProperties(globalsCss, ':root')`
-  و `parseCssCustomProperties(globalsCss, '.dark')` هر دو استخراج و در
-  `describe.each([['light', ...], ['dark', ...]])` روی همان ۱۰ جفت متن/پس‌زمینه چک
-  می‌شوند (۲۰ تست = ۱۰ جفت × ۲ تم، هر ۲۰ تا زنده pass — `npx vitest run
-src/styles/globals.contrast.test.ts` در `packages/ui`). این یک ادعای الکی نیست:
-  تست دارد مقادیر واقعی توکن‌های `.dark` در `globals.css` را با فرمول WCAG می‌سنجد.
-  آنچه پوشش داده **نمی‌شود**، تجربه‌ی زنده‌ی toggle‌شده در مرورگر است — چون اصلاً
-  toggleای وجود ندارد که تم را در runtime عوض کند؛ تا وقتی این تصمیم گرفته نشود،
-  تست فقط می‌تواند مقادیر CSS را استاتیک بسنجد، نه یک صفحه‌ی واقعاً رندرشده در تاریک.
+- ~~Toggle واقعی حالت تاریک (dark mode).~~ ✅ رفع شد (فاز ۵ نقشه‌راه
+  بازطراحی، ۲۰۲۶-۰۹-۱۸) — کاربر صریحاً درخواست ساخت toggle واقعی را داد.
+  `next-themes` دوباره نصب و این‌بار واقعاً به یک `ThemeProvider` وصل شد؛
+  جزئیات کامل (معماری، باگ برچسب معکوس کشف‌شده حین اثبات زنده، محاسبه‌ی
+  دقیق `themeColor`) در «یادداشت‌های فاز فعلی (فاز ۵)» پایین. تست کنتراست
+  دوتایی (بند قبلی همین‌جا) اکنون علاوه‌بر مقادیر استاتیک CSS، با
+  اسکرین‌شات‌های زنده‌ی سه صفحه‌ی مختلف در تم تاریک هم تأیید شد.
 
 - ~~صفحه‌ی اصلی هنوز یک لندینگ واقعی نیست.~~ ✅ رفع شد (بازبینی
   ۲۰۲۶-۰۹-۰۷، برنچ `feat/homepage-real-landing`). `apps/web/src/app/page.tsx`
@@ -1108,6 +1100,81 @@ zod، Socket.IO) دست نخورد، فقط چیدمان و استایل:
 
 `pnpm --filter @vaqt/web typecheck/lint/build` سبز (بودجه‌ی باندل سبز).
 این PR هیچ کد `apps/api` را لمس نکرد.
+
+### فاز ۵ نقشه‌راه — حالت تاریک + جلا نهایی
+
+بلافاصله بعد از merge شدن فاز ۴ ادامه یافت. برخلاف فازهای ۰ تا ۴، این فاز
+عمداً پشت یک تصمیم محصولی متوقف مانده بود (بند «تصمیم‌های محصولی معلق»:
+«اینکه اپ اصلاً toggle روشن/تاریک داشته باشد یا نه، هنوز گرفته نشده») —
+پس با کاربر مطرح شد؛ پاسخ صریح: **بله، toggle واقعی ساخته شود.**
+
+- **`next-themes` واقعاً نصب و وصل شد** (نسخه‌ی `^0.4.6`) — هم در
+  `packages/ui` (چون `sonner.tsx` به `useTheme()` نیاز دارد) و هم در
+  `apps/web` (چون خودِ `ThemeToggle` مستقیماً `useTheme()` را صدا می‌زند).
+  یک `ThemeProvider` نازک در `packages/ui/src/components/theme-provider.tsx`
+  فقط `next-themes`ی واقعی را re-export می‌کند — دقیقاً هم‌الگو با
+  `DirectionProvider` موجود در همان `index.ts` — تا `apps/web` هیچ‌وقت
+  مستقیم به `next-themes` وابسته نباشد برای Provider (فقط برای هوک
+  `useTheme` در خودِ کامپوننت toggle، چون آن یک هوک است نه یک provider
+  قابل proxy‌کردن بدون از دست دادن type inference).
+- `apps/web/src/app/layout.tsx`: `<ThemeProvider attribute="class"
+defaultTheme="system" enableSystem>` کل درخت را می‌پیچد — `attribute="class"`
+  الزامی بود چون توکن‌های تاریک `globals.css` (فاز ۰) از ابتدا روی
+  `@custom-variant dark (&:is(.dark *));` بسته شده بودند، نه یک
+  data-attribute. `suppressHydrationWarning` روی `<html>` اضافه شد (تنها
+  برای همین عنصر، طبق توصیه‌ی رسمی `next-themes`) چون اسکریپت ضدّ-فلش
+  آن پیش از هیدریشن کلاس `.dark`/`.light` را می‌نویسد و یک mismatch
+  بی‌ضرر ولی واقعی بین HTML سرور و کلاینت ایجاد می‌کند.
+- **`sonner.tsx`** از یک `theme: 'system'` هاردکد (بدهی مستندشده‌ی فاز ۴
+  طراحی) به `useTheme()` واقعی تغییر کرد؛ چون نوع `theme` در `next-themes`
+  یک `string` آزاد است (برای پشتیبانی از تم‌های دلخواه) ولی `sonner`
+  فقط `'light'|'dark'|'system'` می‌پذیرد، یک type guard صریح
+  (`VALID_THEMES.includes(...)`) قبل از پاس‌دادن اضافه شد — بدون آن
+  یک `as` بی‌قیدوشرط، خطای واقعی TypeScript را خاموش می‌کرد.
+- **`ThemeToggle`** (`apps/web/src/components/theme-toggle.tsx`): یک
+  دکمه‌ی چرخشی سه‌حالته (`light → dark → system → light`) با آیکون
+  متناظر (`Sun`/`Moon`/`SunMoon` از `lucide-react`). چون `next-themes`
+  فقط بعد از mount شدن کلاینت مقدار واقعی تم را می‌داند (پیش از آن از
+  `localStorage`/`matchMedia` چیزی خوانده نشده)، یک state محلی `mounted`
+  تا رسیدن به آن لحظه یک placeholder هم‌اندازه (`div` با `size-8`، دقیقاً
+  اندازه‌ی `Button size="icon"`) رندر می‌کند تا هیچ jump/layout-shiftی
+  رخ ندهد.
+- **باگ واقعی کشف‌شده حین اثبات زنده (نه فقط typecheck/lint/build که
+  هر سه از ابتدا سبز بودند):** برچسب‌های اولیه‌ی دکمه (`fa.appShell.
+themeToggle`) معنایی معکوس داشتند — کلید `light` قرار بود «چون الان
+  تاریک هستیم، این دکمه به روشن برمی‌گرداند» معنا بدهد، ولی کد واقعاً
+  از `themeToggle[next]` (تمِ **مقصد**) استفاده می‌کرد که با همان کلیدها
+  اما معنای متفاوت برخورد می‌کرد — نتیجه: `aria-label`/`title` دکمه گاهی
+  دقیقاً برعکس چیزی بود که کلیک واقعاً انجام می‌داد. یک اسکریپت
+  Playwright که با سه بار کلیک روی همان selector مبتنی بر متن دکمه
+  چرخه‌ی کامل را دنبال می‌کرد، این ناهم‌خوانی را با گیرکردن روی selector
+  دوم لو داد (چون متن نمایش‌داده‌شده اصلاً منتظره نبود). رفع: کلیدهای
+  پیام به نام‌های خنثی (`light`/`dark`/`system` = فقط نام حالت) و یک
+  تابع `switchTo(mode)` که متن نهایی («تغییر به حالت …») را می‌سازد،
+  به‌جای این‌که خودِ کلید معنای جهت‌دار داشته باشد.
+- **رنگ نوار مرورگر (`themeColor`) واقعاً محاسبه شد، نه حدس زده شد:**
+  `viewport.themeColor` اکنون دو مقدار دارد (`prefers-color-scheme:
+light|dark`)، هرکدام دقیقاً برابر hex معادل توکن `--background` همان
+  تم — با اجرای مستقیم `oklchStringToLinearRgb`/فرمول sRGB gamma-encode
+  (همان ریاضیات `packages/ui/src/lib/color-contrast.ts`) در یک اسکریپت
+  Node، نه با چشم تخمین‌زدن یک رنگ نزدیک.
+
+**اثبات زنده (Playwright headless، سرور dev واقعی، بدون نیاز به
+Postgres/Redis چون این فاز هیچ داده‌ای نمی‌خواند/نمی‌نویسد — فقط state
+مرورگر):** یک اسکریپت سه بار روی دکمه‌ی toggle کلیک کرد و بعد از هر بار
+`localStorage.theme` و `document.documentElement.className` را خواند:
+چرخه‌ی کامل `system → light → dark → system` دقیقاً درست بود؛ بعد از
+رفرش کامل صفحه (نه فقط client-side navigation)، کلاس `dark` روی `<html>`
+باقی ماند (اثبات persist شدن واقعی، نه فقط state حافظه)؛ هیچ هشدار
+hydration‌ای در کنسول ثبت نشد. سه صفحه‌ی متفاوت (اصلی، ورود، فهرست
+درخواست‌ها) با تم تاریک اجباری اسکرین‌شات گرفته شدند — هر سه با کنتراست
+خوانا، بدون هیچ متن/border نامرئی، تأیید کردند توکن‌های `.dark` که از
+فاز ۰ فقط با تست استاتیک (`globals.contrast.test.ts`) سنجیده شده بودند،
+در یک رندر واقعی کامل صفحه هم درست کار می‌کنند.
+
+`pnpm --filter @vaqt/web typecheck/lint/build` و `pnpm --filter @vaqt/ui
+typecheck/lint/test` (۳۱/۳۱، شامل همان ۲۰ تست کنتراست فاز ۰ بدون تغییر)
+همگی سبز. این PR هیچ کد `apps/api` را لمس نکرد.
 
 ### self-audit — بستن هفت پیش‌نیاز فاز ۴
 
