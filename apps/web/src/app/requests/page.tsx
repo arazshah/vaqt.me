@@ -17,6 +17,11 @@ import {
   RequestCard,
   type RequestCardData,
 } from '@/components/domain/request-card';
+import {
+  RequestsFilterBar,
+  EMPTY_FILTERS,
+  type RequestsFilters,
+} from '@/components/domain/requests-filter-bar';
 import { apiFetch } from '@/lib/api-client';
 import { fa } from '@/messages/fa';
 
@@ -33,15 +38,26 @@ import { fa } from '@/messages/fa';
 // interaction ("load more") that a Server Component can't provide anyway.
 async function fetchPage(
   cursor: string | null,
+  filters: RequestsFilters,
 ): Promise<CursorPage<RequestCardData>> {
   return apiFetch<CursorPage<RequestCardData>>(
     '/requests/list',
-    { method: 'POST', body: JSON.stringify({ cursor }) },
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        cursor,
+        categoryId: filters.categoryId ?? undefined,
+        mode: filters.mode ?? undefined,
+        city: filters.city ?? undefined,
+        search: filters.search ?? undefined,
+      }),
+    },
     { redirectOnAuthFailure: false },
   );
 }
 
 export default function RequestsPage() {
+  const [filters, setFilters] = useState<RequestsFilters>(EMPTY_FILTERS);
   const [items, setItems] = useState<RequestCardData[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -53,7 +69,7 @@ export default function RequestsPage() {
     setLoading(true);
     setError(false);
     try {
-      const page = await fetchPage(null);
+      const page = await fetchPage(null, filters);
       setItems(page.items);
       setCursor(page.nextCursor);
       setHasMore(page.hasMore);
@@ -62,7 +78,7 @@ export default function RequestsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters]);
 
   useEffect(() => {
     void loadFirstPage();
@@ -71,7 +87,7 @@ export default function RequestsPage() {
   async function handleLoadMore() {
     setLoadingMore(true);
     try {
-      const page = await fetchPage(cursor);
+      const page = await fetchPage(cursor, filters);
       setItems((prev) => [...prev, ...page.items]);
       setCursor(page.nextCursor);
       setHasMore(page.hasMore);
@@ -83,9 +99,18 @@ export default function RequestsPage() {
     }
   }
 
+  const hasActiveFilters =
+    filters.categoryId !== null ||
+    filters.mode !== null ||
+    filters.city !== null ||
+    filters.search !== null;
+
   return (
     <AppShell>
-      <h1 className="mb-6 text-2xl font-semibold">{fa.requestsPage.title}</h1>
+      <div className="mb-6 flex flex-col gap-4">
+        <h1 className="text-2xl font-semibold">{fa.requestsPage.title}</h1>
+        <RequestsFilterBar value={filters} onChange={setFilters} />
+      </div>
 
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -105,9 +130,15 @@ export default function RequestsPage() {
       ) : items.length === 0 ? (
         <Empty className="max-w-sm">
           <EmptyHeader>
-            <EmptyTitle>{fa.requestsPage.emptyTitle}</EmptyTitle>
+            <EmptyTitle>
+              {hasActiveFilters
+                ? fa.requestsPage.noResultsTitle
+                : fa.requestsPage.emptyTitle}
+            </EmptyTitle>
             <EmptyDescription>
-              {fa.requestsPage.emptyDescription}
+              {hasActiveFilters
+                ? fa.requestsPage.noResultsDescription
+                : fa.requestsPage.emptyDescription}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
@@ -115,8 +146,12 @@ export default function RequestsPage() {
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((item) => (
-              <Link key={item.id} href={`/requests/${item.id}`}>
-                <RequestCard data={item} />
+              <Link
+                key={item.id}
+                href={`/requests/${item.id}`}
+                className="group block no-underline transition-transform hover:-translate-y-0.5"
+              >
+                <RequestCard data={item} className="group-hover:shadow-md" />
               </Link>
             ))}
           </div>

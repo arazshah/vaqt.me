@@ -132,7 +132,7 @@ export default function RequestDetailClient() {
 
   return (
     <AppShell>
-      <div className="mx-auto flex max-w-2xl flex-col gap-8">
+      <div className="flex flex-col gap-6">
         <Link
           href="/requests"
           className="text-sm text-muted-foreground hover:underline"
@@ -140,72 +140,82 @@ export default function RequestDetailClient() {
           {fa.requestDetailPage.backLink}
         </Link>
 
-        <div className="flex flex-col gap-4">
-          <div className="flex items-start justify-between gap-2">
-            <h1 className="text-2xl font-semibold">{detail.title}</h1>
-            <div className="flex items-center gap-2">
-              <Badge variant="secondary">
-                {fa.requestCard.offerCount(formatNumber(detail.offerCount))}
-              </Badge>
-              <RequestStatusBadge status={detail.status} />
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="flex flex-col gap-6 rounded-xl border border-border bg-card p-6 shadow-sm lg:col-span-2">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-2">
+                <h1 className="text-2xl font-semibold">{detail.title}</h1>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Badge variant="secondary">
+                    {fa.requestCard.offerCount(formatNumber(detail.offerCount))}
+                  </Badge>
+                  <RequestStatusBadge status={detail.status} />
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {detail.categoryName}
+                {locationLabel ? ` · ${locationLabel}` : ''}
+              </p>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                {detail.description}
+              </p>
             </div>
+
+            <dl className="grid grid-cols-2 gap-4 border-t border-border pt-4 text-sm">
+              <div>
+                <dt className="text-muted-foreground">
+                  {fa.newRequestPage.fields.durationMinutes}
+                </dt>
+                <dd className="mt-1 font-medium">
+                  {fa.requestDetailPage.labels.durationMinutes(
+                    String(detail.durationMinutes),
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {fa.requestDetailPage.labels.deadline}
+                </dt>
+                <dd className="mt-1 font-medium">
+                  {new Intl.DateTimeFormat('fa-IR', {
+                    dateStyle: 'medium',
+                  }).format(new Date(detail.deadlineAt))}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {fa.requestDetailPage.labels.budget}
+                </dt>
+                <dd className="mt-1 font-medium">
+                  {detail.budgetMasked ||
+                  detail.budgetMinRial === null ||
+                  detail.budgetMaxRial === null ? (
+                    <Badge variant="outline">
+                      {fa.requestCard.budgetHidden}
+                    </Badge>
+                  ) : (
+                    <span className="flex items-center gap-1">
+                      <PriceTag rial={detail.budgetMinRial} />
+                      <span aria-hidden="true">{'–'}</span>
+                      <PriceTag rial={detail.budgetMaxRial} />
+                    </span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">
+                  {fa.requestDetailPage.labels.owner}
+                </dt>
+                <dd className="mt-1 font-medium">{detail.ownerDisplayName}</dd>
+              </div>
+            </dl>
           </div>
-          <p className="text-sm text-muted-foreground">
-            {detail.categoryName}
-            {locationLabel ? ` · ${locationLabel}` : ''}
-          </p>
-          <p className="whitespace-pre-wrap text-sm">{detail.description}</p>
-          <dl className="grid grid-cols-2 gap-4 text-sm">
-            <div>
-              <dt className="text-muted-foreground">
-                {fa.newRequestPage.fields.durationMinutes}
-              </dt>
-              <dd>
-                {fa.requestDetailPage.labels.durationMinutes(
-                  String(detail.durationMinutes),
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                {fa.requestDetailPage.labels.deadline}
-              </dt>
-              <dd>
-                {new Intl.DateTimeFormat('fa-IR', {
-                  dateStyle: 'medium',
-                }).format(new Date(detail.deadlineAt))}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                {fa.requestDetailPage.labels.budget}
-              </dt>
-              <dd>
-                {detail.budgetMasked ||
-                detail.budgetMinRial === null ||
-                detail.budgetMaxRial === null ? (
-                  <Badge variant="outline">{fa.requestCard.budgetHidden}</Badge>
-                ) : (
-                  <span className="flex items-center gap-1">
-                    <PriceTag rial={detail.budgetMinRial} />
-                    <span aria-hidden="true">{'–'}</span>
-                    <PriceTag rial={detail.budgetMaxRial} />
-                  </span>
-                )}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                {fa.requestDetailPage.labels.owner}
-              </dt>
-              <dd>{detail.ownerDisplayName}</dd>
-            </div>
-          </dl>
+
+          <div className="flex flex-col gap-6">
+            <RequestUpgrades detail={detail} />
+            <OffersPanel detail={detail} onChanged={() => void load()} />
+          </div>
         </div>
-
-        <RequestUpgrades detail={detail} />
-
-        <OffersPanel detail={detail} onChanged={() => void load()} />
       </div>
     </AppShell>
   );

@@ -51,5 +51,15 @@ export const listRequestsSchema = z.object({
   // masked shape as the rest of this endpoint instead of opening a second
   // public surface. Ignored together with `cursor` (see RequestsService.list).
   id: z.string().min(1).optional(),
+  // Public list filters, CLAUDE.md bond 6 ("فیلتر بودجه" — budget is
+  // deliberately NOT one of these, only these five are allowed in v1).
+  // All optional; combining several ANDs them together.
+  categoryId: z.string().min(1).optional(),
+  mode: RequestModeSchema.optional(),
+  city: z.string().trim().min(1).max(80).optional(),
+  // Free-text search over title+description, matched against the
+  // pg_trgm-indexed searchText column (normalizeFa'd server-side, same as
+  // at write time — see CLAUDE.md bond 16).
+  search: z.string().trim().min(1).max(120).optional(),
 });
 export type ListRequestsInput = z.infer<typeof listRequestsSchema>;
