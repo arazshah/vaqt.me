@@ -5,6 +5,7 @@ import { IS_PUBLIC_KEY } from './common/decorators/public.decorator';
 import { AdminController } from './admin/admin.controller';
 import { AppController } from './app.controller';
 import { AuthController } from './auth/auth.controller';
+import { BookingController } from './booking/booking.controller';
 import { CardsController } from './cards/cards.controller';
 import { CategoriesController } from './categories/categories.controller';
 import { ConversationsController } from './conversations/conversations.controller';
@@ -29,6 +30,7 @@ const CONTROLLERS: (new (...args: never[]) => unknown)[] = [
   ConversationsController,
   ReviewsController,
   CardsController,
+  BookingController,
 ];
 
 const METHOD_NAMES: Record<number, string> = {
@@ -110,6 +112,9 @@ const PUBLIC_ROUTE_ALLOWLIST: { method: string; path: string }[] = [
   { method: 'POST', path: '/requests/list' },
   { method: 'GET', path: '/cards/:username' },
   { method: 'GET', path: '/cards/:username/vcard' },
+  { method: 'GET', path: '/booking/by-token/:token' },
+  { method: 'POST', path: '/booking/cancel-by-token' },
+  { method: 'GET', path: '/booking/:username/availability' },
 ];
 
 describe('public route allowlist', () => {

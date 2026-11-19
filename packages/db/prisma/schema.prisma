@@ -164,25 +164,30 @@ model User {
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
-  requestsOwned           Request[]      @relation("RequestOwner")
-  offers                  Offer[]        @relation("OfferProvider")
+  requestsOwned           Request[]               @relation("RequestOwner")
+  offers                  Offer[]                 @relation("OfferProvider")
   aiSessions              AiSession[]
-  sentMessages            Message[]      @relation("MessageSender")
-  conversationsAsSeeker   Conversation[] @relation("ConversationSeeker")
-  conversationsAsProvider Conversation[] @relation("ConversationProvider")
-  reviewsWritten          Review[]       @relation("ReviewReviewer")
-  reviewsReceived         Review[]       @relation("ReviewReviewee")
+  sentMessages            Message[]               @relation("MessageSender")
+  conversationsAsSeeker   Conversation[]          @relation("ConversationSeeker")
+  conversationsAsProvider Conversation[]          @relation("ConversationProvider")
+  reviewsWritten          Review[]                @relation("ReviewReviewer")
+  reviewsReceived         Review[]                @relation("ReviewReviewee")
   orders                  Order[]
   entitlements            Entitlement[]
   subscriptions           Subscription[]
   notifications           Notification[]
-  reportsFiled            Report[]       @relation("ReportReporter")
-  reportsAgainst          Report[]       @relation("ReportTargetUser")
+  reportsFiled            Report[]                @relation("ReportReporter")
+  reportsAgainst          Report[]                @relation("ReportTargetUser")
   auditLogs               AuditLog[]
   sessions                Session[]
   skills                  UserSkill[]
   card                    Card?
   contactLinks            ContactLink[]
+  serviceTypes            ServiceType[]
+  availabilityRules       AvailabilityRule[]
+  availabilityExceptions  AvailabilityException[]
+  bookingsAsProvider      Booking[]               @relation("BookingProvider")
+  bookingsAsBooker        Booking[]               @relation("BookingBooker")
 
   @@index([status])
   @@map("users")
@@ -577,16 +582,20 @@ model Report {
 
 // One online business card per user (vaqt.me/<username>).
 model Card {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   // One of CARD_TEMPLATES in @vaqt/shared (validated there, not a DB enum,
   // so adding a template needs no migration).
-  template  String   @default("tile")
+  template       String   @default("tile")
   // Owner consent to publish the phone number on the public card.
-  showPhone Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  showPhone      Boolean  @default(false)
+  // Booking switch and rules (hours/leave days live in their own tables).
+  bookingEnabled Boolean  @default(false)
+  minNoticeHours Int      @default(2)
+  maxDaysAhead   Int      @default(30)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@map("cards")
 }
@@ -604,4 +613,79 @@ model ContactLink {
   @@unique([userId, kind])
   @@index([userId, order])
   @@map("contact_links")
+}
+
+// A kind of session a provider offers (e.g. 15-minute intro, 60-minute
+// consultation). Never hard-deleted once bookings exist: deactivated instead,
+// so old bookings keep a valid reference.
+model ServiceType {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  durationMinutes Int
+  // One of SERVICE_MODES in @vaqt/shared.
+  mode            String
+  note            String?
+  isActive        Boolean   @default(true)
+  order           Int       @default(0)
+  bookings        Booking[]
+
+  @@index([userId, order])
+  @@map("service_types")
+}
+
+// Weekly working window in Iran local time. weekday: 0=Sunday … 6=Saturday
+// (Date#getDay); minutes are from local midnight. A day may have several
+// non-overlapping windows (e.g. 9-12 and 14-17).
+model AvailabilityRule {
+  id          String @id @default(cuid())
+  userId      String
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekday     Int
+  startMinute Int
+  endMinute   Int
+
+  @@index([userId, weekday])
+  @@map("availability_rules")
+}
+
+// A whole Iran calendar day the provider is unavailable (leave, holiday).
+model AvailabilityException {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // 'YYYY-MM-DD' in Iran local time.
+  date   String
+
+  @@unique([userId, date])
+  @@map("availability_exceptions")
+}
+
+model Booking {
+  id              String      @id @default(cuid())
+  providerId      String
+  provider        User        @relation("BookingProvider", fields: [providerId], references: [id], onDelete: Cascade)
+  bookerId        String
+  booker          User        @relation("BookingBooker", fields: [bookerId], references: [id], onDelete: Cascade)
+  serviceId       String
+  service         ServiceType @relation(fields: [serviceId], references: [id])
+  // Snapshot so later edits to the service never rewrite history.
+  serviceName     String
+  durationMinutes Int
+  startAt         DateTime
+  endAt           DateTime
+  // One of BOOKING_STATUSES in @vaqt/shared.
+  status          String      @default("PENDING")
+  bookerName      String
+  note            String?
+  // Unguessable token for the no-login booking page (/b/<token>).
+  cancelToken     String      @unique
+  cancelledBy     String?
+  decidedAt       DateTime?
+  createdAt       DateTime    @default(now())
+
+  @@index([providerId, startAt])
+  @@index([bookerId, startAt])
+  @@map("bookings")
 }
