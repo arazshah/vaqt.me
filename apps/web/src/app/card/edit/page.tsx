@@ -28,7 +28,7 @@ import { QrCode } from '@/components/domain/qr-code';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { downloadDataUrl, qrPngDataUrl } from '@/lib/qr';
-import { WEB_ORIGIN } from '@/lib/site';
+import { useOrigin } from '@/lib/use-origin';
 import { fa } from '@/messages/fa';
 
 type LinkDrafts = Partial<Record<LinkKind, string>>;
@@ -42,6 +42,7 @@ function post<T>(path: string, body: unknown): Promise<T> {
 
 export default function CardEditPage() {
   const { user, loading } = useAuth();
+  const origin = useOrigin();
   const router = useRouter();
 
   const [loaded, setLoaded] = useState(false);
@@ -103,7 +104,7 @@ export default function CardEditPage() {
     );
   }
 
-  const cardUrl = username ? `${WEB_ORIGIN}/${username}` : null;
+  const cardUrl = username && origin ? `${origin}/${username}` : null;
   const displayUrl = cardUrl ? cardUrl.replace(/^https?:\/\//, '') : null;
 
   async function saveUsername() {

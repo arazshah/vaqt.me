@@ -20,7 +20,7 @@ import { QrCode } from '@/components/domain/qr-code';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { downloadDataUrl, drawQr } from '@/lib/qr';
-import { WEB_ORIGIN } from '@/lib/site';
+import { useOrigin } from '@/lib/use-origin';
 import { fa } from '@/messages/fa';
 import './print.css';
 
@@ -154,6 +154,7 @@ async function renderStory(
 
 export default function CardPrintPage() {
   const { user, loading } = useAuth();
+  const origin = useOrigin();
   const router = useRouter();
   const [card, setCard] = useState<MyCard | null>(null);
   const [format, setFormat] = useState<Format>('poster');
@@ -193,7 +194,7 @@ export default function CardPrintPage() {
     );
   }
 
-  const base = `${WEB_ORIGIN}/${card.username}`;
+  const base = `${origin}/${card.username}`;
   const url = `${base}?src=${qrSource(channel)}`;
   const displayUrl = base.replace(/^https?:\/\//, '');
   const ink = QR_INK[card.template];
