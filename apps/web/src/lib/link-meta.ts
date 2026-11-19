@@ -81,3 +81,11 @@ export const LINK_META: Record<LinkKind, LinkMeta> = {
 };
 
 export const LINK_GROUPS: LinkGroup[] = ['iran', 'social', 'web'];
+
+/** A stored link as people read it: "@handle", "example.com", "0912…". */
+export function linkText(kind: LinkKind, value: string): string {
+  if (kind === 'website')
+    return value.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
+  if (kind === 'whatsapp') return value.replace(/^\+98/, '0');
+  return `@${value}`;
+}
