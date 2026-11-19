@@ -3,34 +3,41 @@ import type { Page } from '@playwright/test';
 const API_URL = process.env.E2E_API_URL ?? 'http://localhost:3001';
 const WEB_ORIGIN = process.env.E2E_WEB_ORIGIN ?? 'http://localhost:3000';
 
-// There is no in-browser profile-editing UI yet for bio/skills (see
-// CLAUDE.md's Phase 6/8 QA notes — every prior manual verification of the
-// offer flow completed the provider's profile via direct API calls too,
-// never through a page). `page.request` shares the browser context's
-// cookie jar, so this rides on the same httpOnly session the UI login just
-// established — no separate auth needed here.
-//
-// `Origin` is required by hand: `origin-check.middleware.ts` treats every
-// POST as mutating and rejects it without a matching Origin header, and
-// `page.request` (a Node-side HTTP client, not the browser's own fetch)
-// never sets one automatically the way `fetch()` from page JS does.
-export async function completeProviderProfile(page: Page): Promise<void> {
-  await page.request.post(`${API_URL}/api/v1/users/me/update`, {
+// `page.request` shares the browser context's cookie jar, so this rides on
+// the httpOnly session the UI login just established. `Origin` is set by
+// hand: origin-check.middleware.ts rejects mutating requests without it, and
+// page.request (a Node-side client) doesn't add one the way fetch() does.
+async function post(page: Page, path: string, data: unknown): Promise<void> {
+  const res = await page.request.post(`${API_URL}/api/v1${path}`, {
     headers: { Origin: WEB_ORIGIN },
-    data: { bio: 'ارائه‌دهنده‌ی تستی برای مسیر E2E — بدون داده‌ی واقعی.' },
+    data,
   });
-
-  const skillsRes = await page.request.get(`${API_URL}/api/v1/skills`);
-  const skills = (await skillsRes.json()) as { items: { id: string }[] };
-  const skillId = skills.items[0]?.id;
-  if (!skillId) {
-    throw new Error(
-      'No skills available from the API to complete the profile with.',
-    );
+  if (!res.ok()) {
+    throw new Error(`POST ${path} failed: ${String(res.status())}`);
   }
+}
 
-  await page.request.post(`${API_URL}/api/v1/users/me/skills/put`, {
-    headers: { Origin: WEB_ORIGIN },
-    data: { skillIds: [skillId] },
+// Gives the logged-in specialist a card at vaqt.me/<username>, one service
+// and every weekday open 09:00–17:00, so any day has bookable slots.
+export async function setUpBookableCard(
+  page: Page,
+  username: string,
+  serviceName: string,
+): Promise<void> {
+  await post(page, '/cards/me', {});
+  await post(page, '/cards/me/username', { username });
+  await post(page, '/booking/me/settings/update', {
+    enabled: true,
+    minNoticeHours: 0,
+    maxDaysAhead: 14,
+    services: [
+      { name: serviceName, durationMinutes: 30, mode: 'online', note: null },
+    ],
+    rules: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({
+      weekday,
+      startMinute: 9 * 60,
+      endMinute: 17 * 60,
+    })),
+    exceptions: [],
   });
 }

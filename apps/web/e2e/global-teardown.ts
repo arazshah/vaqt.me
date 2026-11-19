@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { execSync } from 'node:child_process';
 
 // Every user this suite creates uses TEST_PHONE_PREFIX (+9899, see
@@ -10,7 +11,7 @@ export default function globalTeardown(): void {
     execSync(
       'pnpm --filter @vaqt/api cleanup:qa --execute --older-than-minutes=0',
       {
-        cwd: `${__dirname}/../../..`,
+        cwd: fileURLToPath(new URL('../../..', import.meta.url)),
         stdio: 'inherit',
         env: {
           ...process.env,

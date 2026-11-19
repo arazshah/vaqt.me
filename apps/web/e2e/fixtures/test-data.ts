@@ -16,7 +16,6 @@ export function randomTestPhone(): string {
 // drift from what the running server will accept.
 export const E2E_OTP_CODE = process.env.DEV_FIXED_OTP ?? '11223';
 
-export function randomTitle(prefix: string): string {
-  const suffix = `${String(Date.now())}-${String(Math.floor(Math.random() * 1000))}`;
-  return `${prefix} ${suffix}`;
+export function randomUsername(): string {
+  return `e2e${String(Date.now()).slice(-8)}${String(Math.floor(Math.random() * 100))}`;
 }

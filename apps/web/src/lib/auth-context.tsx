@@ -8,8 +8,6 @@ import {
   useState,
 } from 'react';
 
-import type { ProfileCompleteness } from '@vaqt/shared';
-
 import { apiFetch } from '@/lib/api-client';
 
 // Mirrors the fields of apps/api's PrivateUser (auth/user-view.ts) that
@@ -18,11 +16,9 @@ import { apiFetch } from '@/lib/api-client';
 export interface AuthUser {
   id: string;
   displayName: string;
-  roleIntent: string;
   phoneVerified: boolean;
   maskedPhone: string;
   systemRole: 'USER' | 'ADMIN';
-  completeness: ProfileCompleteness;
 }
 
 interface AuthContextValue {

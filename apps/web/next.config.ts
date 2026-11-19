@@ -17,7 +17,6 @@ const nextConfig: NextConfig = {
     return Promise.resolve([
       { source: '/api/:path*', destination: `${api}/api/:path*` },
       { source: '/uploads/:path*', destination: `${api}/uploads/:path*` },
-      { source: '/socket.io/:path*', destination: `${api}/socket.io/:path*` },
     ]);
   },
 };
