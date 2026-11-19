@@ -1,0 +1,227 @@
+/* Physical-card look. Each template is a fixed palette on purpose: it is a
+   printed object, so it does not follow the light/dark app theme. Only
+   logical properties are used (RTL rule). */
+.bc-stage {
+  perspective: 1400px;
+}
+.bc {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 85 / 55;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: start;
+  cursor: pointer;
+  container-type: inline-size;
+}
+.bc-inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.75s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.bc[data-flipped='true'] .bc-inner {
+  transform: rotateY(180deg);
+}
+.bc-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 4cqw;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.12),
+    0 14px 34px -12px rgb(10 30 40 / 0.38);
+}
+.bc-back {
+  transform: rotateY(180deg);
+}
+.bc-front {
+  display: grid;
+  grid-template-columns: auto 1fr;
+}
+.bc-band {
+  block-size: 100%;
+  inline-size: 26%;
+}
+.bc-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-inline-size: 0;
+  padding: 7cqw 7cqw 6cqw;
+}
+.bc-mono {
+  display: grid;
+  place-items: center;
+  inline-size: 11cqw;
+  block-size: 11cqw;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 6.4cqw;
+  line-height: 1;
+}
+.bc-name {
+  margin: 0;
+  font-weight: 800;
+  font-size: 8.6cqw;
+  line-height: 1.15;
+}
+.bc-title {
+  margin-block-start: 1cqw;
+  font-size: 3.7cqw;
+  opacity: 0.82;
+}
+.bc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 2cqw;
+  font-size: 3.1cqw;
+}
+.bc-url {
+  direction: ltr;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.bc-hint {
+  opacity: 0.65;
+  font-size: 2.8cqw;
+}
+.bc-bback {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6cqw;
+  align-items: center;
+  block-size: 100%;
+  padding: 7cqw;
+}
+.bc-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2cqw;
+  min-inline-size: 0;
+  font-size: 3.4cqw;
+}
+.bc-k {
+  opacity: 0.65;
+  font-size: 2.8cqw;
+}
+.bc-v {
+  direction: ltr;
+  text-align: end;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.bc-qr {
+  line-height: 0;
+  padding: 2cqw;
+  border-radius: 2.4cqw;
+  background: #fff;
+}
+.bc-qr canvas {
+  inline-size: 27cqw;
+  block-size: auto;
+  image-rendering: pixelated;
+}
+
+/* tile — Persian tilework */
+.bc-tile .bc-face {
+  background: #f7f5ef;
+  color: #123b37;
+}
+.bc-tile .bc-band {
+  background:
+    radial-gradient(circle at 50% 50%, #f2c14e 0 9%, transparent 10%) 0 0 / 9cqw
+      9cqw,
+    repeating-conic-gradient(from 45deg, #0d6b60 0 25%, #13887a 0 50%) 0 0 /
+      9cqw 9cqw;
+}
+.bc-tile .bc-mono {
+  background: #0d6b60;
+  color: #f2c14e;
+}
+.bc-tile .bc-back {
+  background: #0d6b60;
+  color: #f7f5ef;
+}
+
+/* night — dark with gold */
+.bc-night .bc-face {
+  background: radial-gradient(120% 140% at 100% 0%, #22304a, #0f1726 60%);
+  color: #e9dcc0;
+}
+.bc-night .bc-band {
+  inline-size: 1.2cqw;
+  margin-inline-start: 7cqw;
+  background: linear-gradient(180deg, #c9a45a, #8a6a2c);
+}
+.bc-night .bc-mono {
+  border: 0.4cqw solid #c9a45a;
+  color: #c9a45a;
+}
+.bc-night .bc-name {
+  background: linear-gradient(90deg, #f3dfab, #c9a45a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* minimal — white, ink and one red accent */
+.bc-minimal .bc-face {
+  background: #fff;
+  color: #111;
+}
+.bc-minimal .bc-band {
+  inline-size: 0;
+}
+.bc-minimal .bc-body {
+  padding: 8cqw;
+}
+.bc-minimal .bc-mono {
+  background: #111;
+  color: #fff;
+  border-radius: 2cqw;
+}
+.bc-minimal .bc-url {
+  color: #e2462f;
+}
+.bc-minimal .bc-back {
+  background: #111;
+  color: #fff;
+}
+
+/* kahi — kraft paper */
+.bc-kahi .bc-face {
+  background:
+    radial-gradient(rgb(120 90 40 / 0.1) 1px, transparent 1.4px) 0 0 / 6px 6px,
+    linear-gradient(135deg, #d9c7a3, #cbb488);
+  color: #3b2a14;
+}
+.bc-kahi .bc-band {
+  inline-size: 0;
+}
+.bc-kahi .bc-body {
+  align-items: center;
+  text-align: center;
+  margin: 4.5cqw;
+  padding: 4cqw;
+  border: 0.35cqw solid rgb(59 42 20 / 0.45);
+  border-radius: 2cqw;
+}
+.bc-kahi .bc-row {
+  inline-size: 100%;
+}
+.bc-kahi .bc-mono {
+  background: #3b2a14;
+  color: #e7d6b3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bc-inner {
+    transition: none;
+  }
+}

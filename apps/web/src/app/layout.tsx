@@ -11,8 +11,9 @@ import { DARK_THEME_COLOR, LIGHT_THEME_COLOR } from '@/lib/theme-colors';
 
 export const metadata: Metadata = {
   metadataBase: new URL(WEB_ORIGIN),
-  title: 'Vaqt.me — چند دقیقه از وقت یک آدمِ درست',
-  description: 'بازار دقیقه‌های انسانی، بدون واسطه در معامله',
+  title: 'وقت من — کارت ویزیت آنلاین',
+  description:
+    'کارت ویزیت آنلاین و رزرو وقت برای متخصص‌ها: به‌جای شماره، لینکت را بده.',
 };
 
 // themeColor/colorScheme moved out of Metadata into a dedicated Viewport

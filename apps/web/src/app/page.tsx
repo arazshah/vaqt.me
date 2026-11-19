@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { CalendarClock, MessageSquareText, ShieldCheck } from 'lucide-react';
+import { Contact, IdCard, MessagesSquare } from 'lucide-react';
 
 import { Button } from '@vaqt/ui/components/ui/button';
 import {
@@ -18,17 +18,17 @@ import { fa } from '@/messages/fa';
 
 const features = [
   {
-    icon: CalendarClock,
+    icon: IdCard,
     title: fa.homePage.feature1Title,
     description: fa.homePage.feature1Description,
   },
   {
-    icon: MessageSquareText,
+    icon: MessagesSquare,
     title: fa.homePage.feature2Title,
     description: fa.homePage.feature2Description,
   },
   {
-    icon: ShieldCheck,
+    icon: Contact,
     title: fa.homePage.feature3Title,
     description: fa.homePage.feature3Description,
   },
@@ -54,15 +54,10 @@ export default function HomePage() {
             {fa.homePage.heroSubtitle}
           </p>
           <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-            <Button asChild size="lg">
-              <Link href="/requests">{fa.homePage.ctaBrowse}</Link>
-            </Button>
             {!loading && (
-              <Button asChild size="lg" variant="outline">
-                <Link href={user ? '/requests/new' : '/login'}>
-                  {user
-                    ? fa.homePage.ctaNewRequest
-                    : fa.homePage.ctaLoginOrStart}
+              <Button asChild size="lg">
+                <Link href={user ? '/card/edit' : '/login'}>
+                  {user ? fa.homePage.ctaMyCard : fa.homePage.ctaStart}
                 </Link>
               </Button>
             )}

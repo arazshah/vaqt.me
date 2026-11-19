@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Vaqt.me — بازار دقیقه‌های انسانی',
-    short_name: 'Vaqt.me',
-    description: 'بازار دقیقه‌های انسانی، بدون واسطه در معامله',
+    name: 'وقت من — کارت ویزیت آنلاین',
+    short_name: 'وقت من',
+    description: 'کارت ویزیت آنلاین و رزرو وقت برای متخصص‌ها',
     start_url: '/',
     display: 'standalone',
     background_color: '#FFFFFF',
