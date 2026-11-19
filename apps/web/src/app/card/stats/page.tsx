@@ -17,7 +17,7 @@ const t = fa.statsPage;
 
 function Tile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex flex-col rounded-xl border bg-card p-4">
+    <div className="flex flex-col rounded-3xl border bg-card p-5">
       <b className="text-2xl tabular-nums">{formatNumber(value)}</b>
       <span className="text-sm text-muted-foreground">{label}</span>
     </div>
@@ -58,7 +58,7 @@ export default function CardStatsPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <div className="flex w-full flex-col gap-6">
         <div>
           <h1 className="text-2xl font-semibold">{t.title}</h1>
           <p className="text-sm text-muted-foreground">{t.subtitle}</p>
@@ -95,7 +95,7 @@ export default function CardStatsPage() {
               <Tile label={t.bookingRequests} value={stats.bookingRequests} />
             </div>
 
-            <section className="flex flex-col gap-2 rounded-xl border bg-card p-4">
+            <section className="flex flex-col gap-2 rounded-3xl border bg-card p-5">
               <h2 className="font-semibold">{t.daily}</h2>
               <div
                 className="flex h-32 items-end gap-1"
@@ -130,7 +130,7 @@ export default function CardStatsPage() {
               </div>
             </section>
 
-            <section className="flex flex-col gap-2 rounded-xl border bg-card p-4">
+            <section className="flex flex-col gap-2 rounded-3xl border bg-card p-5">
               <h2 className="font-semibold">{t.sources}</h2>
               {stats.bySource.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t.nothing}</p>
@@ -159,7 +159,7 @@ export default function CardStatsPage() {
               )}
             </section>
 
-            <section className="flex flex-col gap-2 rounded-xl border bg-card p-4">
+            <section className="flex flex-col gap-2 rounded-3xl border bg-card p-5">
               <h2 className="font-semibold">{t.links}</h2>
               {stats.byLink.length === 0 ? (
                 <p className="text-sm text-muted-foreground">{t.nothing}</p>

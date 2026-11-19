@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -14,6 +13,7 @@ import { Button } from '@vaqt/ui/components/ui/button';
 import { Skeleton } from '@vaqt/ui/components/ui/skeleton';
 
 import { AppShell } from '@/components/app-shell';
+import { NeedCardState } from '@/components/domain/empty-state';
 import { BusinessCard } from '@/components/domain/business-card';
 import { QrCode } from '@/components/domain/qr-code';
 import { ShareHub } from '@/components/domain/share-hub';
@@ -210,12 +210,7 @@ export default function CardPrintPage() {
   if (!card.username) {
     return (
       <AppShell>
-        <div className="flex flex-col items-start gap-3">
-          <p>{t.needUsername}</p>
-          <Button asChild>
-            <Link href="/card/edit">{t.goEdit}</Link>
-          </Button>
-        </div>
+        <NeedCardState text={t.needUsername} action={t.goEdit} />
       </AppShell>
     );
   }

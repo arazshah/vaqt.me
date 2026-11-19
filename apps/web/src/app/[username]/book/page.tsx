@@ -21,6 +21,7 @@ import { AppShell } from '@/components/app-shell';
 import { OtpForm } from '@/components/domain/otp-form';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
+import { coverBackground, themeFor } from '@/lib/card-themes';
 import {
   dayKeyLabel,
   formatDay,
@@ -171,12 +172,56 @@ export default function BookPage() {
   return (
     <AppShell>
       <div className="mx-auto flex w-full max-w-lg flex-col gap-5">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {t.title(card.displayName)}
-          </h1>
-          <p className="text-sm text-muted-foreground">{t.timezoneNote}</p>
-        </div>
+        <header className="overflow-hidden rounded-3xl border bg-card">
+          <div
+            className="flex items-center gap-4 p-5 text-white"
+            style={{
+              background: coverBackground(themeFor(card.category)),
+              color: '#fff',
+            }}
+          >
+            {card.avatarUrl ? (
+              <img
+                src={card.avatarUrl}
+                alt=""
+                className="size-14 rounded-full border-2 border-white/80 object-cover"
+              />
+            ) : (
+              <span
+                className="flex size-14 items-center justify-center rounded-full border-2 border-white/80 bg-white/15 text-xl font-bold"
+                aria-hidden="true"
+              >
+                {Array.from(card.displayName.trim())[0] ?? ''}
+              </span>
+            )}
+            <div className="min-w-0">
+              <h1 className="m-0 text-lg font-bold">
+                {t.title(card.displayName)}
+              </h1>
+              {card.headline ? (
+                <p className="m-0 text-sm opacity-90">{card.headline}</p>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-3 px-5 py-3">
+            <ol className="m-0 flex list-none gap-1.5 p-0" aria-hidden="true">
+              {(['service', 'time', 'info'] as const).map((st, i) => (
+                <li
+                  key={st}
+                  className={`h-1.5 w-10 rounded-full ${
+                    i <=
+                    ['service', 'time', 'info', 'login', 'done'].indexOf(step)
+                      ? 'bg-primary'
+                      : 'bg-muted'
+                  }`}
+                />
+              ))}
+            </ol>
+            <p className="m-0 text-xs text-muted-foreground">
+              {t.timezoneNote}
+            </p>
+          </div>
+        </header>
 
         {error ? (
           <p
@@ -199,7 +244,7 @@ export default function BookPage() {
                   setDays(null);
                   setStep('time');
                 }}
-                className="flex items-center justify-between gap-3 rounded-xl border bg-card p-3 text-start transition-colors hover:border-primary"
+                className="flex items-center justify-between gap-3 rounded-2xl border bg-card p-3 text-start transition-colors hover:border-primary"
               >
                 <span className="flex flex-col">
                   <b>{svc.name}</b>
@@ -259,7 +304,7 @@ export default function BookPage() {
                           setDayIndex(i);
                           setSlot(null);
                         }}
-                        className={`flex w-16 shrink-0 flex-col items-center rounded-xl border p-2 text-xs leading-snug transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                        className={`flex w-16 shrink-0 flex-col items-center rounded-2xl border p-2 text-xs leading-snug transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                           dayIndex === i
                             ? 'border-primary bg-primary text-primary-foreground'
                             : 'bg-card hover:border-primary'
@@ -394,7 +439,7 @@ export default function BookPage() {
         ) : null}
 
         {step === 'done' && result ? (
-          <section className="flex flex-col gap-3 rounded-xl border bg-card p-5 text-center">
+          <section className="flex flex-col gap-3 rounded-2xl border bg-card p-5 text-center">
             <h2 className="text-xl font-semibold">{t.doneTitle}</h2>
             <p className="text-sm">
               {result.serviceName} · {formatDay(result.startAt)}،{' '}
