@@ -90,6 +90,7 @@ export const fa = {
     cardTitle: 'کارت ویزیت من',
     scanToSave: 'اسکن کنید یا ذخیره کنید',
     cityLabel: 'شهر',
+    nextSlot: 'نزدیک‌ترین وقت خالی',
   },
   editor: {
     title: 'ویرایش کارت',

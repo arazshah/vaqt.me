@@ -15,13 +15,16 @@ import {
 import {
   formatNumber,
   VPN_LINK_KINDS,
+  type AvailabilityDay,
   type LinkKind,
   type PublicCard,
 } from '@vaqt/shared';
 
 import { BusinessCard } from '@/components/domain/business-card';
 import { WalletActions } from '@/components/domain/wallet-actions';
+import { apiFetch } from '@/lib/api-client';
 import { trackCardEvent, vcardUrl } from '@/lib/card';
+import { formatDayTime } from '@/lib/date-format';
 import { coverBackground, themeFor } from '@/lib/card-themes';
 import { fa } from '@/messages/fa';
 
@@ -52,6 +55,22 @@ export function CardView({
   const viewed = useRef(false);
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [nextSlot, setNextSlot] = useState<string | null>(null);
+  const firstServiceId = card.booking.services.at(0)?.id;
+  const bookingOn = card.booking.enabled;
+
+  useEffect(() => {
+    if (!bookingOn || !firstServiceId) return;
+    apiFetch<AvailabilityDay[]>(
+      `/booking/${card.username}/availability?serviceId=${encodeURIComponent(firstServiceId)}`,
+      undefined,
+      { redirectOnAuthFailure: false },
+    )
+      .then((days) => {
+        setNextSlot(days.find((d) => d.slots.length > 0)?.slots[0] ?? null);
+      })
+      .catch(() => undefined);
+  }, [bookingOn, firstServiceId, card.username]);
   const theme = themeFor(card.category);
   const bookLabel = card.category
     ? fa.categories[card.category].book
@@ -192,6 +211,12 @@ export function CardView({
                   </span>
                 ) : null}
               </div>
+              {nextSlot ? (
+                <p className="mt-2 flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
+                  <Clock className="size-3.5" aria-hidden="true" />
+                  {p.nextSlot}: {formatDayTime(nextSlot)}
+                </p>
+              ) : null}
               <div className="mt-4 hidden w-full gap-2 lg:flex">{actions}</div>
             </div>
           </div>
