@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CARD_CATEGORIES,
+  CARD_TEMPLATES,
+  CATEGORY_TEMPLATE,
   CARD_FIELDS,
   visibleCardFields,
   buildLinkHref,
@@ -72,6 +75,14 @@ describe('buildLinkHref', () => {
     expect(buildLinkHref('website', 'https://alinikpour.ir/')).toBe(
       'https://alinikpour.ir/',
     );
+  });
+});
+
+describe('CATEGORY_TEMPLATE', () => {
+  it('gives every category its own valid, distinct design', () => {
+    const designs = CARD_CATEGORIES.map((c) => CATEGORY_TEMPLATE[c]);
+    expect(new Set(designs).size).toBe(CARD_CATEGORIES.length);
+    for (const d of designs) expect(CARD_TEMPLATES).toContain(d);
   });
 });
 

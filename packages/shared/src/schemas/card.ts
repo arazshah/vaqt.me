@@ -84,6 +84,17 @@ export const CARD_TEMPLATES = [
   'kahi',
   'marble',
   'aurora',
+  // One design made for each professional category (see CATEGORY_TEMPLATE).
+  'clinic',
+  'justice',
+  'calm',
+  'notebook',
+  'terminal',
+  'studio',
+  'bloom',
+  'skyline',
+  'executive',
+  'pulse',
 ] as const;
 export const CardTemplateSchema = z.enum(CARD_TEMPLATES);
 export type CardTemplate = z.infer<typeof CardTemplateSchema>;
@@ -128,6 +139,20 @@ export const CARD_CATEGORIES = [
 ] as const;
 export const CardCategorySchema = z.enum(CARD_CATEGORIES);
 export type CardCategory = z.infer<typeof CardCategorySchema>;
+
+/** The business-card design made for each category (suggested first). */
+export const CATEGORY_TEMPLATE: Record<CardCategory, CardTemplate> = {
+  health: 'clinic',
+  legal: 'justice',
+  counseling: 'calm',
+  education: 'notebook',
+  tech: 'terminal',
+  creative: 'studio',
+  beauty: 'bloom',
+  realestate: 'skyline',
+  business: 'executive',
+  fitness: 'pulse',
+};
 
 // ---------------------------------------------------------------------------
 // Contact links

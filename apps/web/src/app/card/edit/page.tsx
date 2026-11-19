@@ -287,6 +287,7 @@ export default function CardEditPage() {
             <h2 className="font-semibold">{t.cardStyle}</h2>
             <p className="text-xs text-muted-foreground">{t.cardStyleHelp}</p>
             <TemplatePicker
+              category={draft.category}
               value={draft.template}
               sample={cardSample(draft, origin)}
               fields={draft.cardFields}
