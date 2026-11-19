@@ -189,6 +189,9 @@ model User {
   bookingsAsProvider      Booking[]               @relation("BookingProvider")
   bookingsAsBooker        Booking[]               @relation("BookingBooker")
   messengerBindings       MessengerBinding[]
+  cardEvents              CardEvent[]
+  savedCards              SavedCard[]             @relation("WalletOwner")
+  savedByOthers           SavedCard[]             @relation("WalletCard")
 
   @@index([status])
   @@map("users")
@@ -708,4 +711,36 @@ model MessengerBinding {
   @@unique([userId, platform])
   @@unique([platform, chatId])
   @@map("messenger_bindings")
+}
+
+// Anonymous interaction counters for a card (no IP, no user agent stored).
+// type is one of CARD_EVENT_TYPES in @vaqt/shared; source is where the visit
+// came from (qr-card, qr-office, ..., or "direct").
+model CardEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  source    String?
+  linkKind  String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@map("card_events")
+}
+
+// A card kept in someone's wallet. "exchanged" rows are created in both
+// directions when two people swap cards.
+model SavedCard {
+  id         String   @id @default(cuid())
+  ownerId    String
+  owner      User     @relation("WalletOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  cardUserId String
+  cardUser   User     @relation("WalletCard", fields: [cardUserId], references: [id], onDelete: Cascade)
+  source     String   @default("saved")
+  createdAt  DateTime @default(now())
+
+  @@unique([ownerId, cardUserId])
+  @@index([ownerId, createdAt])
+  @@map("saved_cards")
 }

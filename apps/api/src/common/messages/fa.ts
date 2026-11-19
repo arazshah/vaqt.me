@@ -36,5 +36,10 @@ export const errorMessagesFa: Record<ErrorCode, string> = {
   BOOKING_NOT_PENDING: 'این رزرو دیگر در انتظار تصمیم نیست.',
   BOOKING_NOT_CANCELLABLE: 'این رزرو دیگر قابل لغو نیست.',
   OWN_CARD_BOOKING_FORBIDDEN: 'نمی‌توانید برای کارت خودتان رزرو کنید.',
+  WALLET_OWN_CARD: 'کارت خودتان را نمی‌توانید در کیف کارت ذخیره کنید.',
+  CARD_REQUIRED_FOR_EXCHANGE:
+    'برای تبادل کارت، ابتدا کارت خودتان را بسازید و آدرس آن را ثبت کنید.',
+  EXCHANGE_LIMIT_REACHED:
+    'امروز به سقف تبادل کارت رسیده‌اید. فردا دوباره تلاش کنید.',
   INTERNAL_ERROR: 'خطایی پیش‌آمد. لطفاً بعداً دوباره تلاش کنید.',
 };

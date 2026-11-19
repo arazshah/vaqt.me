@@ -8,3 +8,5 @@ export * from './message';
 export * from './review';
 export * from './card';
 export * from './booking';
+export * from './analytics';
+export * from './wallet';

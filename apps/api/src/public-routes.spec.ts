@@ -14,6 +14,7 @@ import { OffersController } from './offers/offers.controller';
 import { RequestsController } from './requests/requests.controller';
 import { ReviewsController } from './reviews/reviews.controller';
 import { SkillsController } from './skills/skills.controller';
+import { WalletController } from './wallet/wallet.controller';
 import { UsersController } from './users/users.controller';
 
 // Every controller registered in the app — kept in sync manually so a new
@@ -33,6 +34,7 @@ const CONTROLLERS: (new (...args: never[]) => unknown)[] = [
   CardsController,
   BookingController,
   MessengerController,
+  WalletController,
 ];
 
 const METHOD_NAMES: Record<number, string> = {
@@ -114,6 +116,7 @@ const PUBLIC_ROUTE_ALLOWLIST: { method: string; path: string }[] = [
   { method: 'POST', path: '/requests/list' },
   { method: 'GET', path: '/cards/:username' },
   { method: 'GET', path: '/cards/:username/vcard' },
+  { method: 'POST', path: '/cards/:username/event' },
   { method: 'GET', path: '/booking/by-token/:token' },
   { method: 'POST', path: '/booking/cancel-by-token' },
   { method: 'GET', path: '/booking/:username/availability' },
