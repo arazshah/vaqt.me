@@ -29,7 +29,7 @@ const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
  * The public card is the product's front door, so it gets its own budget.
  */
 const BUDGETS_KB = {
-  '/page': 190,
+  '/page': 200, // landing grew with the redesign (preview card, category list)
   '/[username]/page': 215,
 };
 

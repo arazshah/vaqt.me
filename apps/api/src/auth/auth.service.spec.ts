@@ -69,6 +69,7 @@ function makeAuthService(overrides: Record<string, string> = {}): {
     sessions,
     audit,
     authConfig,
+    {} as never,
   );
 
   return { service, redis, config: authConfig, smsQueue };
@@ -628,6 +629,7 @@ describe('AuthService', () => {
         fakeSessions as unknown as SessionService,
         new AuditService(),
         authConfig,
+        {} as never,
       );
 
       await expect(service.refresh('irrelevant', DEVICE)).rejects.toBe(boom);

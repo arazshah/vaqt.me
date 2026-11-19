@@ -350,7 +350,7 @@ describe('BookingService (real Postgres)', () => {
 
     it("shows the booker's phone to the provider only", async () => {
       const { provider, booker, booking } = await pendingBooking();
-      const local = `0${booker.phone.slice(3)}`;
+      const local = `0${(booker.phone ?? '').slice(3)}`;
       const providerView = await service.listForProvider(provider.id);
       expect(providerView.find((b) => b.id === booking.id)?.bookerPhone).toBe(
         local,
@@ -361,9 +361,9 @@ describe('BookingService (real Postgres)', () => {
         await service.getByToken(booking.cancelToken),
       );
       for (const json of [bookerJson, tokenJson]) {
-        expect(json).not.toContain(provider.phone.slice(3));
+        expect(json).not.toContain((provider.phone ?? '').slice(3));
       }
-      expect(tokenJson).not.toContain(booker.phone.slice(3));
+      expect(tokenJson).not.toContain((booker.phone ?? '').slice(3));
     });
   });
 

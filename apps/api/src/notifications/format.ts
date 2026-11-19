@@ -16,6 +16,7 @@ export function formatWhen(date: Date): string {
   return `${dayFmt.format(date)}، ساعت ${timeFmt.format(date)}`;
 }
 
-export function toLocalPhone(canonical: string): string {
+export function toLocalPhone(canonical: string | null): string {
+  if (!canonical) return '';
   return canonical.startsWith('+98') ? `0${canonical.slice(3)}` : canonical;
 }

@@ -50,14 +50,24 @@ function BookingRow({
         </p>
       ) : null}
       <p className="text-sm text-muted-foreground">
-        {t.phone}:{' '}
-        <a
-          dir="ltr"
-          className="font-medium text-foreground"
-          href={`tel:${booking.bookerPhone}`}
-        >
-          {booking.bookerPhone}
-        </a>
+        {booking.bookerPhone ? t.phone : t.email}:{' '}
+        {booking.bookerPhone ? (
+          <a
+            dir="ltr"
+            className="font-medium text-foreground"
+            href={`tel:${booking.bookerPhone}`}
+          >
+            {booking.bookerPhone}
+          </a>
+        ) : (
+          <a
+            dir="ltr"
+            className="font-medium text-foreground"
+            href={`mailto:${booking.bookerEmail ?? ''}`}
+          >
+            {booking.bookerEmail}
+          </a>
+        )}
       </p>
       {upcoming && booking.status === 'PENDING' ? (
         <div className="flex gap-2">

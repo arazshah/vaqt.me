@@ -18,6 +18,7 @@ import { Public } from '../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
 import { setAuthCookies, clearAuthCookies } from './auth-cookies';
 import { SmsConfiguredGuard } from './guards/sms-configured.guard';
+import { SmsLoginEnabledGuard } from './guards/sms-login-enabled.guard';
 import { AuthConfigService } from './auth.config';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { RequestOtpDto } from './dto/request-otp.dto';
@@ -51,7 +52,7 @@ export class AuthController {
   ) {}
 
   @Public()
-  @UseGuards(SmsConfiguredGuard)
+  @UseGuards(SmsLoginEnabledGuard, SmsConfiguredGuard)
   @Post('otp/request')
   @HttpCode(HttpStatus.OK)
   requestOtp(@Body() dto: RequestOtpDto, @Ip() ip: string) {
@@ -59,6 +60,7 @@ export class AuthController {
   }
 
   @Public()
+  @UseGuards(SmsLoginEnabledGuard)
   @Post('otp/verify')
   @HttpCode(HttpStatus.OK)
   async verifyOtp(

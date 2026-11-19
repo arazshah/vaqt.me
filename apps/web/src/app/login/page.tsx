@@ -9,7 +9,7 @@ import {
 } from '@vaqt/ui/components/ui/card';
 
 import { AppShell } from '@/components/app-shell';
-import { OtpForm } from '@/components/domain/otp-form';
+import { AuthForm } from '@/components/domain/auth-form';
 import { fa } from '@/messages/fa';
 
 export default function LoginPage() {
@@ -26,7 +26,7 @@ export default function LoginPage() {
               <CardDescription>{fa.loginPage.subtitle}</CardDescription>
             </CardHeader>
             <CardContent>
-              <OtpForm />
+              <AuthForm />
             </CardContent>
           </Card>
         </div>

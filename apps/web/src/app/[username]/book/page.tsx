@@ -18,7 +18,7 @@ import { Skeleton } from '@vaqt/ui/components/ui/skeleton';
 import { Textarea } from '@vaqt/ui/components/ui/textarea';
 
 import { AppShell } from '@/components/app-shell';
-import { OtpForm } from '@/components/domain/otp-form';
+import { AuthForm } from '@/components/domain/auth-form';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { coverBackground, themeFor } from '@/lib/card-themes';
@@ -425,7 +425,7 @@ export default function BookPage() {
           <section className="flex flex-col gap-3">
             <h2 className="font-semibold">{t.stepLogin}</h2>
             <p className="text-sm text-muted-foreground">{t.loginHint}</p>
-            <OtpForm onSuccess={() => void submit()} />
+            <AuthForm onSuccess={() => void submit()} />
             <Button
               type="button"
               variant="ghost"

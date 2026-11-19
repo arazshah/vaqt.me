@@ -29,7 +29,7 @@ export async function createTestUser(overrides: {
           : overrides.phoneVerifiedAt,
     },
   });
-  return { id: user.id, phone: user.phone };
+  return { id: user.id, phone };
 }
 
 export async function cleanupTestUser(userId: string): Promise<void> {
@@ -37,7 +37,9 @@ export async function cleanupTestUser(userId: string): Promise<void> {
   await prisma.auditLog.deleteMany({ where: { actorId: userId } });
   await prisma.session.deleteMany({ where: { userId } });
   if (user) {
-    await prisma.verificationCode.deleteMany({ where: { phone: user.phone } });
+    await prisma.verificationCode.deleteMany({
+      where: { phone: user.phone ?? '' },
+    });
   }
   await prisma.user.deleteMany({ where: { id: userId } });
 }

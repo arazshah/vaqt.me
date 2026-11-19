@@ -5,6 +5,8 @@ function makeUser(overrides: Partial<User> = {}): User {
   return {
     id: 'user-1',
     phone: '+989121234567',
+    email: null,
+    passwordHash: null,
     username: null,
     phoneVerifiedAt: new Date('2026-01-01T00:00:00Z'),
     displayName: 'کاربر تست',

@@ -129,7 +129,7 @@ describe('NotificationDispatcher (real Postgres + Redis)', () => {
       const sent = messenger.sent[0];
       expect(sent.chatId).toBe(chatId);
       expect(sent.text).toContain('سارا احمدی');
-      expect(sent.text).toContain(`0${booker.phone.slice(3)}`);
+      expect(sent.text).toContain(`0${(booker.phone ?? '').slice(3)}`);
       expect(sent.keyboard?.[0].map((b) => b.callbackData)).toEqual([
         `bk:c:${booking.id}`,
         `bk:r:${booking.id}`,

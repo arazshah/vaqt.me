@@ -1,6 +1,11 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { prisma, OtpPurpose } from '@vaqt/db';
-import { normalizePhone, toPersianDigits } from '@vaqt/shared';
+import {
+  normalizePhone,
+  toPersianDigits,
+  type LoginInput,
+  type RegisterInput,
+} from '@vaqt/shared';
 import { AppError } from '../common/errors/app-error';
 import { ErrorCode } from '../common/errors/error-codes';
 import { maskPhone } from '../common/utils/mask-phone';
@@ -16,6 +21,7 @@ import {
   type DeviceContext,
   type IssuedTokens,
 } from './session/session.service';
+import { PasswordAuthService } from './password/password-auth.service';
 import { SmsQueueService } from './sms/sms-queue.service';
 import { toPrivateUser, type PrivateUser } from './user-view';
 
@@ -40,7 +46,24 @@ export class AuthService {
     private readonly sessions: SessionService,
     private readonly audit: AuditService,
     private readonly config: AuthConfigService,
+    private readonly passwordAuth: PasswordAuthService,
   ) {}
+
+  async registerWithPassword(
+    input: RegisterInput,
+    device: DeviceContext,
+  ): Promise<VerifyOtpResult> {
+    const { user, tokens } = await this.passwordAuth.register(input, device);
+    return { user: toPrivateUser(user), tokens };
+  }
+
+  async loginWithPassword(
+    input: LoginInput,
+    device: DeviceContext,
+  ): Promise<VerifyOtpResult> {
+    const { user, tokens } = await this.passwordAuth.login(input, device);
+    return { user: toPrivateUser(user), tokens };
+  }
 
   async requestOtp(rawPhone: string, ip: string): Promise<OtpRequestResult> {
     const phone = this.requirePhone(rawPhone);

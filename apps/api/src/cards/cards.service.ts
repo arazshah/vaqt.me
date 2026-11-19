@@ -15,7 +15,8 @@ import { ErrorCode } from '../common/errors/error-codes';
 import { getPublicBookingInfo } from '../booking/public-info';
 
 // +989123456747 -> 09123456747 (the form people dial and recognise).
-function toLocalPhone(canonical: string): string {
+function toLocalPhone(canonical: string | null): string {
+  if (!canonical) return '';
   return canonical.startsWith('+98') ? `0${canonical.slice(3)}` : canonical;
 }
 
@@ -83,7 +84,8 @@ export class CardsService {
       avatarUrl: user.avatarUrl,
       template: toTemplate(user.card?.template),
       category: toCategory(user.card?.category),
-      phone: user.card?.showPhone ? toLocalPhone(user.phone) : null,
+      phone:
+        user.card?.showPhone && user.phone ? toLocalPhone(user.phone) : null,
       links: toLinkViews(user.contactLinks),
       booking: await getPublicBookingInfo(user.id),
     };

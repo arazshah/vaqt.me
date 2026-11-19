@@ -2,6 +2,10 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthConfigService } from './auth.config';
+import { PasswordAuthController } from './password-auth.controller';
+import { AntiSpamService } from './password/anti-spam.service';
+import { PasswordAuthService } from './password/password-auth.service';
+import { PasswordService } from './password/password.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { AuditService } from './audit/audit.service';
@@ -23,10 +27,13 @@ import { RequireOwnershipGuard } from './guards/require-ownership.guard';
     SmsModule,
     SessionCleanupModule,
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, PasswordAuthController],
   providers: [
     AuthConfigService,
     AuthService,
+    PasswordService,
+    AntiSpamService,
+    PasswordAuthService,
     AuditService,
     OtpService,
     OtpPendingCodeStore,
