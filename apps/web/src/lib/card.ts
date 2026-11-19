@@ -1,4 +1,8 @@
-import { USERNAME_REGEX, type PublicCard } from '@vaqt/shared';
+import {
+  USERNAME_REGEX,
+  type PublicCard,
+  type RecordCardEventInput,
+} from '@vaqt/shared';
 import { BASE_URL } from '@/lib/api-client';
 
 // GET /cards/:username is @Public() and read-only, so unlike the POST calls
@@ -25,4 +29,28 @@ export async function fetchPublicCard(
 
 export function vcardUrl(username: string): string {
   return `${BASE_URL}/api/v1/cards/${encodeURIComponent(username)}/vcard`;
+}
+
+/**
+ * Fire-and-forget interaction beacon. Failures are ignored on purpose:
+ * analytics must never get in the way of the visitor.
+ */
+export function trackCardEvent(
+  username: string,
+  event: RecordCardEventInput,
+): void {
+  try {
+    void fetch(
+      `${BASE_URL}/api/v1/cards/${encodeURIComponent(username)}/event`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(event),
+        keepalive: true,
+        credentials: 'omit',
+      },
+    ).catch(() => undefined);
+  } catch {
+    // ignore
+  }
 }

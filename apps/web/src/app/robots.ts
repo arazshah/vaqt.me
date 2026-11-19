@@ -17,6 +17,9 @@ export default function robots(): MetadataRoute.Robots {
       disallow: [
         '/card/edit',
         '/card/booking',
+        '/card/stats',
+        '/card/print',
+        '/wallet',
         '/card/bookings',
         '/b/',
         '/requests/new',

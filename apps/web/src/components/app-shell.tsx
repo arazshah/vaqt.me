@@ -37,6 +37,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link href="/card/bookings" className={navLinkClass}>
                   {fa.appShell.nav.bookings}
                 </Link>
+                <Link href="/wallet" className={navLinkClass}>
+                  {fa.appShell.nav.wallet}
+                </Link>
                 <span className="hidden text-sm text-muted-foreground sm:inline">
                   {user.displayName}
                 </span>

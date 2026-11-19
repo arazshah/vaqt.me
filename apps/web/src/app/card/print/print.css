@@ -1,0 +1,71 @@
+/* Print layout: only the chosen artifact stays on the page. */
+@media print {
+  header,
+  .no-print {
+    display: none !important;
+  }
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  body,
+  main {
+    background: #fff !important;
+  }
+  /* AppShell's root is min-h-dvh; in print that would add a page of its own. */
+  body > div,
+  main {
+    min-height: 0 !important;
+  }
+  main > * {
+    padding: 0 !important;
+    max-width: none !important;
+  }
+  .print-poster {
+    border: 0 !important;
+    min-height: 260mm;
+    justify-content: center;
+  }
+  .print-poster-qr {
+    border: 0 !important;
+  }
+  .print-cards {
+    gap: 0 !important;
+  }
+  /* One card face per 85x55 mm page. */
+  .print-card {
+    inline-size: 85mm;
+    block-size: 55mm;
+    break-after: page;
+    page-break-after: always;
+  }
+  .print-card:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+  .print-card .bc-face {
+    box-shadow: none;
+    border-radius: 0;
+  }
+}
+@media screen {
+  .print-card {
+    max-inline-size: 22rem;
+  }
+}
+
+/* The flip is a 3D effect and PDF output ignores backface-visibility, so the
+   printable sheet shows exactly one flat face per card instead. */
+.print-card .bc-inner,
+.print-card .bc[data-flipped='true'] .bc-inner {
+  transform: none !important;
+  transform-style: flat !important;
+}
+.print-card .bc-back {
+  transform: none !important;
+}
+.print-card .bc[data-flipped='false'] .bc-back,
+.print-card .bc[data-flipped='true'] .bc-front {
+  display: none !important;
+}

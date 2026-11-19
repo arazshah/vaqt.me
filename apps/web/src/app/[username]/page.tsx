@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { normalizeSource } from '@vaqt/shared';
 
 import { fetchPublicCard } from '@/lib/card';
 import { WEB_ORIGIN } from '@/lib/site';
@@ -8,6 +9,7 @@ import { CardView } from './card-view';
 
 interface PageProps {
   params: Promise<{ username: string }>;
+  searchParams: Promise<{ src?: string | string[] }>;
 }
 
 export async function generateMetadata({
@@ -31,10 +33,17 @@ export async function generateMetadata({
   };
 }
 
-export default async function CardPage({ params }: PageProps) {
+export default async function CardPage({ params, searchParams }: PageProps) {
   const { username } = await params;
+  const { src } = await searchParams;
   const card = await fetchPublicCard(username);
   if (!card) notFound();
 
-  return <CardView card={card} cardUrl={`${WEB_ORIGIN}/${card.username}`} />;
+  return (
+    <CardView
+      card={card}
+      cardUrl={`${WEB_ORIGIN}/${card.username}`}
+      source={normalizeSource(Array.isArray(src) ? src[0] : src)}
+    />
+  );
 }

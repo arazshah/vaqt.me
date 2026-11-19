@@ -24,6 +24,10 @@ export interface BusinessCardProps {
   qrValue: string | null;
   phone: string | null;
   city: string | null;
+  /** Start on the back (used by the printable sheet). */
+  initialFlipped?: boolean;
+  /** false = a static face for print/preview, no flipping. */
+  interactive?: boolean;
 }
 
 export function BusinessCard({
@@ -34,8 +38,10 @@ export function BusinessCard({
   qrValue,
   phone,
   city,
+  initialFlipped = false,
+  interactive = true,
 }: BusinessCardProps) {
-  const [flipped, setFlipped] = useState(false);
+  const [flipped, setFlipped] = useState(initialFlipped);
   const t = fa.cardPage;
   const initial = Array.from(displayName.trim())[0] ?? '';
 
@@ -47,6 +53,7 @@ export function BusinessCard({
         data-flipped={flipped}
         aria-pressed={flipped}
         aria-label={`${displayName} — ${t.flipHint}`}
+        disabled={!interactive}
         onClick={() => {
           setFlipped((f) => !f);
         }}
