@@ -4,9 +4,17 @@ export const BASE_URL =
 export class ApiError extends Error {
   code: string;
   status: number;
+  /** Machine-readable extras the API attached (e.g. which setting was invalid). */
+  details?: unknown;
 
-  constructor(code: string, message: string, status: number) {
+  constructor(
+    code: string,
+    message: string,
+    status: number,
+    details?: unknown,
+  ) {
     super(message);
+    this.details = details;
     this.name = 'ApiError';
     this.code = code;
     this.status = status;
@@ -16,6 +24,7 @@ export class ApiError extends Error {
 interface BackendErrorBody {
   code?: string;
   message?: string;
+  details?: unknown;
 }
 
 // Narrower than RequestInit: headers is restricted to a plain string map.
@@ -110,6 +119,7 @@ export async function apiFetch<T>(
       errorBody.code ?? 'UNKNOWN_ERROR',
       errorBody.message ?? 'خطای غیرمنتظره‌ای رخ داد',
       res.status,
+      errorBody.details,
     );
   }
 

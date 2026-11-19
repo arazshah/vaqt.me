@@ -17,6 +17,7 @@ export const fa = {
       myCard: 'کارت من',
       bookings: 'رزروها',
       wallet: 'کیف کارت',
+      admin: 'مدیریت',
       requests: 'درخواست‌ها',
       newRequest: 'درخواست جدید',
       conversations: 'گفتگوها',
@@ -537,6 +538,115 @@ export const fa = {
     storyHelp: 'تصویر ۱۰۸۰×۱۹۲۰ برای استوری اینستاگرام یا بله.',
     storyCta: 'برای ارتباط و رزرو وقت اسکن کنید',
     storyError: 'ساخت تصویر انجام نشد.',
+  },
+  adminSetupPage: {
+    title: 'راه‌اندازی اولیه',
+    intro:
+      'هنوز مدیری ثبت نشده. توکن راه‌اندازی را از لاگ سرور کپی کنید (خطی که با «ADMIN SETUP TOKEN» شروع می‌شود؛ در Coolify بخش Logs سرویس api).',
+    token: 'توکن راه‌اندازی',
+    phone: 'شماره‌ی موبایل مدیر',
+    displayName: 'نام (اختیاری)',
+    submit: 'ساخت مدیر و ورود',
+    submitting: 'در حال ثبت…',
+    error: 'راه‌اندازی انجام نشد. توکن و شماره را بررسی کنید.',
+    alreadyDone: 'راه‌اندازی قبلاً انجام شده است.',
+    goLogin: 'ورود',
+    loading: 'در حال بررسی…',
+  },
+  adminSettingsPage: {
+    title: 'تنظیمات سامانه',
+    subtitle:
+      'هر تغییر بعد از «ذخیره» بلافاصله اعمال می‌شود؛ نیازی به راه‌اندازی دوباره نیست. مقدارهای محرمانه هرگز دوباره نمایش داده نمی‌شوند.',
+    forbidden: 'فقط مدیر سامانه به این صفحه دسترسی دارد.',
+    loadError: 'تنظیمات بارگذاری نشد.',
+    save: 'ذخیره',
+    saving: 'در حال ذخیره…',
+    saved: 'ذخیره شد.',
+    nothingChanged: 'تغییری برای ذخیره نیست.',
+    secretSet: 'تنظیم شده (برای تغییر، مقدار تازه را وارد کنید)',
+    secretUnset: 'تنظیم نشده',
+    clear: 'پاک‌کردن',
+    sources: {
+      panel: 'از همین پنل',
+      env: 'از متغیر محیطی سرور',
+      default: 'مقدار پیش‌فرض',
+      none: 'تنظیم نشده',
+    },
+    groups: {
+      sms: 'پیامک (sms.ir)',
+      sms_templates: 'الگوهای پیامک رزرو',
+      bale: 'ربات بله',
+    },
+    groupHelp: {
+      sms: 'کد ورود (OTP) و پیامک‌های رزرو از این‌جا ارسال می‌شود. تا زمانی که «sms.ir» انتخاب و کلید ثبت نشود، هیچ پیامکی ارسال نمی‌شود.',
+      sms_templates:
+        'شناسه‌ی عددی الگوهایی که در پنل sms.ir ساخته‌اید. اگر الگویی خالی باشد، همان پیامک ارسال نمی‌شود. متغیرهای هر الگو زیر هر فیلد آمده است.',
+      bale: 'اعلان رزرو جدید همراه با دکمه‌ی تأیید/رد برای متخصص. بعد از ذخیره‌ی توکن، «اتصال و ثبت وبهوک» را بزنید.',
+    },
+    options: {
+      mock: 'آزمایشی (چیزی ارسال نمی‌شود)',
+      smsir: 'sms.ir',
+      bale: 'بله',
+      disabled: 'غیرفعال',
+    } as Record<string, string>,
+    fields: {
+      'sms.provider': { label: 'سرویس‌دهنده‌ی پیامک' },
+      'sms.smsir.apiKey': { label: 'کلید API سامانه‌ی sms.ir' },
+      'sms.smsir.otpTemplateId': {
+        label: 'شناسه‌ی الگوی کد ورود',
+        help: 'الگوی «verify» با یک متغیر به نام CODE.',
+      },
+      'sms.template.bookingNewForProvider': {
+        label: 'رزرو جدید (برای متخصص بدون بله)',
+        help: 'متغیرها: NAME، TIME',
+      },
+      'sms.template.bookingConfirmed': {
+        label: 'تأیید رزرو',
+        help: 'متغیرها: NAME، SERVICE، TIME، LINK',
+      },
+      'sms.template.bookingRejected': {
+        label: 'رد رزرو',
+        help: 'متغیرها: NAME، SERVICE، TIME، LINK',
+      },
+      'sms.template.bookingCanceledByProvider': {
+        label: 'لغو رزرو توسط متخصص',
+        help: 'متغیرها: NAME، SERVICE، TIME، LINK',
+      },
+      'sms.template.bookingReminder': {
+        label: 'یادآوری جلسه',
+        help: 'متغیرها: NAME، SERVICE، TIME، LINK',
+      },
+      'bale.provider': { label: 'ربات بله' },
+      'bale.botToken': { label: 'توکن ربات' },
+      'bale.botUsername': {
+        label: 'نام کاربری ربات',
+        help: 'با دکمه‌ی «اتصال» خودکار پر می‌شود.',
+      },
+      'bale.webhookSecret': {
+        label: 'رمز مسیر وبهوک',
+        help: 'خودکار ساخته می‌شود؛ معمولاً نیازی به تغییر نیست.',
+      },
+    } as Record<string, { label: string; help?: string }>,
+    invalid: {
+      invalid: 'قالب مقدار درست نیست.',
+      too_long: 'مقدار بیش از حد طولانی است.',
+      not_an_option: 'گزینه‌ی نامعتبر.',
+      unknown_key: 'تنظیم ناشناخته.',
+    } as Record<string, string>,
+    baleConnect: 'اتصال و ثبت وبهوک',
+    baleConnecting: 'در حال اتصال…',
+    baleConnected: (username: string) => `متصل شد. ربات: @${username}`,
+    baleConnectedNoName: 'متصل شد.',
+    baleConnectError:
+      'اتصال انجام نشد. توکن را ذخیره کرده‌اید؟ آدرس سایت باید https باشد.',
+    smsTestTitle: 'پیامک آزمایشی',
+    smsTestPhone: 'شماره‌ی موبایل',
+    smsTestSend: 'ارسال',
+    smsTestSending: 'در حال ارسال…',
+    smsTestOk: 'ارسال شد. پیامک را بررسی کنید.',
+    smsTestNotDelivered:
+      'ارسال نشد. سرویس‌دهنده و کلید API را بررسی کنید (جزئیات در لاگ سرور).',
+    smsTestError: 'شماره معتبر نیست یا درخواست انجام نشد.',
   },
   devUi: {
     title: 'گالری سیستم طراحی',
