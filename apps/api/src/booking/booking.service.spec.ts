@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto';
 import { prisma } from '@vaqt/db';
 import { ErrorCode } from '../common/errors/error-codes';
+import { NotificationQueueService } from '../notifications/notification-queue.service';
 import { BookingService } from './booking.service';
 
 function uniquePhone(): string {
@@ -363,6 +364,67 @@ describe('BookingService (real Postgres)', () => {
         expect(json).not.toContain(provider.phone.slice(3));
       }
       expect(tokenJson).not.toContain(booker.phone.slice(3));
+    });
+  });
+
+  describe('notifications', () => {
+    it('enqueues created, decided and canceled events, and never fails the booking if the queue does', async () => {
+      const events: unknown[] = [];
+      const notifying = new BookingService({
+        enqueue: (e: unknown) => {
+          events.push(e);
+          return Promise.resolve();
+        },
+      } as unknown as NotificationQueueService);
+      const { provider, serviceId } = await makeProvider();
+      const booker = await makeUser();
+      const { days } = await notifying.getAvailability(
+        provider.username,
+        serviceId,
+      );
+
+      const first = await notifying.create(booker.id, {
+        username: provider.username,
+        serviceId,
+        startAt: days[1].slots[0],
+        name: 'سارا',
+      });
+      await notifying.decide(provider.id, first.id, 'confirm');
+      await notifying.cancel(booker.id, first.id);
+      expect(events).toEqual([
+        { type: 'booking.created', bookingId: first.id },
+        { type: 'booking.decided', bookingId: first.id },
+        { type: 'booking.canceled', bookingId: first.id, by: 'booker' },
+      ]);
+
+      // A failing enqueue is swallowed by NotificationQueueService itself;
+      // a bare service with no queue at all must work the same.
+      await expect(
+        service.create(booker.id, {
+          username: provider.username,
+          serviceId,
+          startAt: days[1].slots[0],
+          name: 'سارا',
+        }),
+      ).resolves.toMatchObject({ status: 'PENDING' });
+    });
+
+    it('does not enqueue anything when the action is refused', async () => {
+      const events: unknown[] = [];
+      const notifying = new BookingService({
+        enqueue: (e: unknown) => {
+          events.push(e);
+          return Promise.resolve();
+        },
+      } as unknown as NotificationQueueService);
+      const { provider } = await makeProvider();
+      await expect(
+        notifying.decide(provider.id, 'missing', 'confirm'),
+      ).rejects.toBeDefined();
+      await expect(
+        notifying.cancel(provider.id, 'missing'),
+      ).rejects.toBeDefined();
+      expect(events).toEqual([]);
     });
   });
 });

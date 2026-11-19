@@ -188,6 +188,7 @@ model User {
   availabilityExceptions  AvailabilityException[]
   bookingsAsProvider      Booking[]               @relation("BookingProvider")
   bookingsAsBooker        Booking[]               @relation("BookingBooker")
+  messengerBindings       MessengerBinding[]
 
   @@index([status])
   @@map("users")
@@ -663,29 +664,48 @@ model AvailabilityException {
 }
 
 model Booking {
-  id              String      @id @default(cuid())
-  providerId      String
-  provider        User        @relation("BookingProvider", fields: [providerId], references: [id], onDelete: Cascade)
-  bookerId        String
-  booker          User        @relation("BookingBooker", fields: [bookerId], references: [id], onDelete: Cascade)
-  serviceId       String
-  service         ServiceType @relation(fields: [serviceId], references: [id])
+  id               String      @id @default(cuid())
+  providerId       String
+  provider         User        @relation("BookingProvider", fields: [providerId], references: [id], onDelete: Cascade)
+  bookerId         String
+  booker           User        @relation("BookingBooker", fields: [bookerId], references: [id], onDelete: Cascade)
+  serviceId        String
+  service          ServiceType @relation(fields: [serviceId], references: [id])
   // Snapshot so later edits to the service never rewrite history.
-  serviceName     String
-  durationMinutes Int
-  startAt         DateTime
-  endAt           DateTime
+  serviceName      String
+  durationMinutes  Int
+  startAt          DateTime
+  endAt            DateTime
   // One of BOOKING_STATUSES in @vaqt/shared.
-  status          String      @default("PENDING")
-  bookerName      String
-  note            String?
+  status           String      @default("PENDING")
+  bookerName       String
+  note             String?
   // Unguessable token for the no-login booking page (/b/<token>).
-  cancelToken     String      @unique
-  cancelledBy     String?
-  decidedAt       DateTime?
-  createdAt       DateTime    @default(now())
+  cancelToken      String      @unique
+  cancelledBy      String?
+  decidedAt        DateTime?
+  // Set once each reminder has been claimed for sending (idempotent scan).
+  reminder24SentAt DateTime?
+  reminder1SentAt  DateTime?
+  createdAt        DateTime    @default(now())
 
   @@index([providerId, startAt])
   @@index([bookerId, startAt])
   @@map("bookings")
+}
+
+// Links a user to a chat on a messenger (today only "bale") so the platform
+// can notify them there. One binding per user per platform, and one user per
+// chat, so a chat can never receive another account's bookings.
+model MessengerBinding {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform  String
+  chatId    String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, platform])
+  @@unique([platform, chatId])
+  @@map("messenger_bindings")
 }

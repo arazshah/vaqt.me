@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto';
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Optional } from '@nestjs/common';
 import { Prisma, prisma } from '@vaqt/db';
 import {
   BookingStatusSchema,
@@ -18,6 +18,7 @@ import {
 } from '@vaqt/shared';
 import { AppError } from '../common/errors/app-error';
 import { ErrorCode } from '../common/errors/error-codes';
+import { NotificationQueueService } from '../notifications/notification-queue.service';
 import { generateSlots } from './slots';
 
 const MAX_PENDING_PER_PROVIDER = 2;
@@ -56,6 +57,11 @@ const notFound = () => new AppError(ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND);
 
 @Injectable()
 export class BookingService {
+  // Optional so unit tests can build the service without a queue.
+  constructor(
+    @Optional() private readonly notifications?: NotificationQueueService,
+  ) {}
+
   // ------------------------------------------------------------------
   // Provider settings
   // ------------------------------------------------------------------
@@ -302,6 +308,11 @@ export class BookingService {
       });
     });
 
+    await this.notifications?.enqueue({
+      type: 'booking.created',
+      bookingId: booking.id,
+    });
+
     return {
       id: booking.id,
       status: toStatus(booking.status),
@@ -396,6 +407,10 @@ export class BookingService {
       if (!exists) throw notFound();
       throw new AppError(ErrorCode.BOOKING_NOT_PENDING, HttpStatus.CONFLICT);
     }
+    await this.notifications?.enqueue({
+      type: 'booking.decided',
+      bookingId: id,
+    });
     return this.listForProvider(providerId);
   }
 
@@ -403,25 +418,30 @@ export class BookingService {
     where: Prisma.BookingWhereInput,
     by: 'booker' | 'provider',
   ): Promise<void> {
+    const target = await prisma.booking.findFirst({
+      where,
+      select: { id: true },
+    });
+    if (!target) throw notFound();
     const res = await prisma.booking.updateMany({
       where: {
-        ...where,
+        id: target.id,
         status: { in: [...SLOT_BLOCKING_STATUSES] },
         startAt: { gt: new Date() },
       },
       data: { status: 'CANCELED', cancelledBy: by, decidedAt: new Date() },
     });
     if (res.count === 0) {
-      const exists = await prisma.booking.findFirst({
-        where,
-        select: { id: true },
-      });
-      if (!exists) throw notFound();
       throw new AppError(
         ErrorCode.BOOKING_NOT_CANCELLABLE,
         HttpStatus.CONFLICT,
       );
     }
+    await this.notifications?.enqueue({
+      type: 'booking.canceled',
+      bookingId: target.id,
+      by,
+    });
   }
 
   /** Either side of a booking can cancel it while it is still upcoming. */

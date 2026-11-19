@@ -9,6 +9,7 @@ import { BookingController } from './booking/booking.controller';
 import { CardsController } from './cards/cards.controller';
 import { CategoriesController } from './categories/categories.controller';
 import { ConversationsController } from './conversations/conversations.controller';
+import { MessengerController } from './messenger/messenger.controller';
 import { OffersController } from './offers/offers.controller';
 import { RequestsController } from './requests/requests.controller';
 import { ReviewsController } from './reviews/reviews.controller';
@@ -31,6 +32,7 @@ const CONTROLLERS: (new (...args: never[]) => unknown)[] = [
   ReviewsController,
   CardsController,
   BookingController,
+  MessengerController,
 ];
 
 const METHOD_NAMES: Record<number, string> = {
@@ -115,6 +117,7 @@ const PUBLIC_ROUTE_ALLOWLIST: { method: string; path: string }[] = [
   { method: 'GET', path: '/booking/by-token/:token' },
   { method: 'POST', path: '/booking/cancel-by-token' },
   { method: 'GET', path: '/booking/:username/availability' },
+  { method: 'POST', path: '/messenger/bale/webhook/:secret' },
 ];
 
 describe('public route allowlist', () => {

@@ -13,13 +13,24 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
  * throwing, since this runs as raw Express middleware ahead of Nest's own
  * exception-filter pipeline.
  */
-export function createOriginCheckMiddleware(webOrigin: string) {
+export function createOriginCheckMiddleware(
+  webOrigin: string,
+  // Server-to-server callbacks (e.g. the Bale webhook) never carry a browser
+  // Origin. They are authenticated by a secret in the path instead, so those
+  // exact path prefixes skip the browser-origin check.
+  exemptPathPrefixes: readonly string[] = [],
+) {
   return function originCheckMiddleware(
     req: Request,
     res: Response,
     next: NextFunction,
   ): void {
     if (!MUTATING_METHODS.has(req.method)) {
+      next();
+      return;
+    }
+
+    if (exemptPathPrefixes.some((prefix) => req.path.startsWith(prefix))) {
       next();
       return;
     }
