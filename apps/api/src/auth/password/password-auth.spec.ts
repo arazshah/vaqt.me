@@ -133,17 +133,16 @@ describe('PasswordAuthService (real Postgres)', () => {
       { email, password: 'Passw0rdOK', formToken: oldToken() },
       device('reg2'),
     );
-    const wrong = service.login({ email, password: 'nope-nope1' }, device('a'));
-    const unknown = service.login(
-      { email: newEmail(), password: 'nope-nope1' },
-      device('b'),
-    );
-    await expect(wrong).rejects.toMatchObject({
-      response: { code: ErrorCode.INVALID_CREDENTIALS },
-    });
-    await expect(unknown).rejects.toMatchObject({
-      response: { code: ErrorCode.INVALID_CREDENTIALS },
-    });
+    const [wrong, unknown] = await Promise.allSettled([
+      service.login({ email, password: 'nope-nope1' }, device('a')),
+      service.login({ email: newEmail(), password: 'nope-nope1' }, device('b')),
+    ]);
+    for (const r of [wrong, unknown]) {
+      expect(r.status).toBe('rejected');
+      expect((r as PromiseRejectedResult).reason).toMatchObject({
+        response: { code: ErrorCode.INVALID_CREDENTIALS },
+      });
+    }
   });
 
   it('refuses a second account with the same email', async () => {
