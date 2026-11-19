@@ -29,8 +29,8 @@ const manifest = JSON.parse(readFileSync(manifestPath, 'utf-8'));
  * The public card is the product's front door, so it gets its own budget.
  */
 const BUDGETS_KB = {
-  '/page': 200, // landing grew with the redesign (preview card, category list)
-  '/[username]/page': 215,
+  '/page': 230, // full marketing landing: live flip cards, profession showcase, bento, FAQ
+  '/[username]/page': 225, // chunk re-split after landing/guide shared the card components (was 214 KB)
 };
 
 function gzipSizeKb(relativePath) {
@@ -67,6 +67,8 @@ for (const [routeKey, budgetKb] of Object.entries(BUDGETS_KB)) {
 }
 
 if (failed) {
-  console.error('\nBundle budget exceeded — see routes marked OVER BUDGET above.');
+  console.error(
+    '\nBundle budget exceeded — see routes marked OVER BUDGET above.',
+  );
   process.exit(1);
 }
