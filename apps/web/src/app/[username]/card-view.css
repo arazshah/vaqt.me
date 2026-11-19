@@ -1,0 +1,214 @@
+/*
+ * Public card ("vitrine"). The category theme arrives as custom properties on
+ * .cv (--cv-from, --cv-to, --cv-accent, --cv-on-accent, --cv-motif); every
+ * rule here reads them, so one stylesheet serves all ten professions.
+ * Logical properties only (RTL).
+ */
+
+.cv {
+  /* Text/icon colour on light surfaces: the deep cover colour. In dark mode
+     the cover colour disappears into the card, so the accent takes over. */
+  --cv-ink: var(--cv-from);
+  --cv-tint: color-mix(in oklab, var(--cv-from) 8%, var(--card));
+}
+.dark .cv {
+  --cv-ink: var(--cv-accent);
+  --cv-tint: color-mix(in oklab, var(--cv-accent) 10%, var(--card));
+}
+
+/* ---------- Hero ---------- */
+
+.cv-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(150deg, var(--cv-from) 0%, var(--cv-to) 100%);
+  border-end-start-radius: 2.25rem;
+  border-end-end-radius: 2.25rem;
+}
+/* Profession pattern, fading out towards the bottom. */
+.cv-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--cv-motif);
+  mask-image: linear-gradient(to bottom, #000 0%, transparent 85%);
+}
+/* Soft depth at the bottom so white text always has contrast. */
+.cv-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    to bottom,
+    transparent 40%,
+    color-mix(in oklab, var(--cv-from) 70%, #000) 130%
+  );
+}
+.cv-glow {
+  position: absolute;
+  z-index: -1;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(48px);
+  background: radial-gradient(circle, var(--cv-accent) 0%, transparent 68%);
+}
+.cv-glow-a {
+  inline-size: 22rem;
+  block-size: 22rem;
+  inset-block-start: -9rem;
+  inset-inline-end: -7rem;
+  opacity: 0.45;
+}
+.cv-glow-b {
+  inline-size: 18rem;
+  block-size: 18rem;
+  inset-block-end: -10rem;
+  inset-inline-start: -6rem;
+  opacity: 0.3;
+}
+
+.cv-glass {
+  background: rgb(255 255 255 / 0.14);
+  border: 1px solid rgb(255 255 255 / 0.24);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+}
+.cv-glass:hover {
+  background: rgb(255 255 255 / 0.22);
+}
+
+/* Gradient ring around the photo. */
+.cv-avatar-ring {
+  padding: 4px;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 200deg,
+    var(--cv-accent),
+    #fff,
+    var(--cv-accent),
+    color-mix(in oklab, var(--cv-accent) 40%, #fff),
+    var(--cv-accent)
+  );
+  box-shadow: 0 18px 40px -12px rgb(0 0 0 / 0.45);
+}
+
+/* ---------- Surfaces ---------- */
+
+.cv-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 1.75rem;
+  box-shadow: var(--shadow-sm);
+}
+.cv-ink {
+  color: var(--cv-ink);
+}
+.cv-tint {
+  background: var(--cv-tint);
+}
+.cv-cta {
+  background: var(--cv-accent);
+  color: var(--cv-on-accent);
+  box-shadow: 0 10px 24px -10px color-mix(in oklab, var(--cv-accent) 75%, #000);
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease;
+}
+.cv-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px -10px color-mix(in oklab, var(--cv-accent) 75%, #000);
+}
+.cv-cta:active {
+  transform: translateY(0);
+}
+
+/* Booking card: a strip of the cover on top so it reads as the main act. */
+.cv-book {
+  position: relative;
+  overflow: hidden;
+}
+.cv-book::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 0;
+  block-size: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--cv-from),
+    var(--cv-accent),
+    var(--cv-to)
+  );
+}
+
+.cv-row {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+.cv-row:hover {
+  border-color: color-mix(in oklab, var(--cv-ink) 35%, var(--border));
+  background: var(--cv-tint);
+}
+.cv-row:hover .cv-chevron {
+  transform: translateX(-3px);
+}
+.cv-chevron {
+  transition: transform 150ms ease;
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes cv-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.cv-rise {
+  animation: cv-rise 520ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.cv-bar {
+  transition:
+    transform 260ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 200ms ease;
+}
+.cv-bar[data-hidden='true'] {
+  transform: translateY(110%);
+  opacity: 0;
+}
+
+.cv-dialog {
+  border: 0;
+  padding: 0;
+  margin: auto;
+  background: transparent;
+  max-inline-size: calc(100vw - 2rem);
+}
+.cv-dialog::backdrop {
+  background: rgb(0 0 0 / 0.55);
+  backdrop-filter: blur(4px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-rise {
+    animation: none;
+  }
+  .cv-bar,
+  .cv-cta,
+  .cv-row,
+  .cv-chevron {
+    transition: none;
+  }
+}

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Globe, MapPin, Phone } from 'lucide-react';
 import type { CardField, CardTemplate, LinkKind } from '@vaqt/shared';
 
-import { LINK_META } from '@/lib/link-meta';
+import { LINK_META, linkText } from '@/lib/link-meta';
 import { fa } from '@/messages/fa';
 import { QrCode } from './qr-code';
 import './business-card.css';
@@ -56,14 +56,6 @@ export interface BusinessCardProps {
   initialFlipped?: boolean;
   /** false = a static face for print/preview, no flipping. */
   interactive?: boolean;
-}
-
-/** What a stored link looks like printed on paper. */
-function linkText(kind: LinkKind, value: string): string {
-  if (kind === 'website')
-    return value.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '');
-  if (kind === 'whatsapp') return value.replace(/^\+98/, '0');
-  return `@${value}`;
 }
 
 interface Row {

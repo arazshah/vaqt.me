@@ -59,8 +59,13 @@ export default function BookPage() {
     })
       .then((c) => {
         setCard(c);
+        // A service row on the public card links here with ?service=<id>.
+        const wanted = new URLSearchParams(window.location.search).get(
+          'service',
+        );
         const only =
-          c.booking.services.length === 1 ? c.booking.services[0] : null;
+          c.booking.services.find((s) => s.id === wanted) ??
+          (c.booking.services.length === 1 ? c.booking.services[0] : null);
         if (only) {
           setService(only);
           setStep('time');
