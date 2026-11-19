@@ -10,6 +10,7 @@ import { Label } from '@vaqt/ui/components/ui/label';
 
 import { CategoryPicker } from '@/components/domain/category-picker';
 import { LinkEditor } from '@/components/domain/link-editor';
+import { ContactLocationFields } from '@/components/domain/contact-location-fields';
 import { PhotoPicker } from '@/components/domain/photo-picker';
 import { TemplatePicker } from '@/components/domain/template-picker';
 import { CardPreview } from '@/components/domain/card-preview';
@@ -233,13 +234,24 @@ export function CardWizard({
           ) : null}
 
           {step === 'links' ? (
-            <LinkEditor
-              links={draft.links}
-              errors={form.linkErrors}
-              onChange={(links) => {
-                patch({ links });
-              }}
-            />
+            <div className="flex flex-col gap-6">
+              <LinkEditor
+                links={draft.links}
+                errors={form.linkErrors}
+                onChange={(links) => {
+                  patch({ links });
+                }}
+              />
+              <section className="flex flex-col gap-3 border-t pt-4">
+                <b className="text-sm">{fa.editor.contact.title}</b>
+                <ContactLocationFields
+                  contactPhone={draft.contactPhone}
+                  address={draft.address}
+                  location={draft.location}
+                  onChange={patch}
+                />
+              </section>
+            </div>
           ) : null}
 
           {step === 'look' ? (

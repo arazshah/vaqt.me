@@ -10,7 +10,7 @@ const ARABIC_INDIC_DIGIT_BASE = 0x0660;
 const PERSIAN_DIGITS = /[\u06F0-\u06F9]/g;
 const PERSIAN_DIGIT_BASE = 0x06f0;
 
-function toLatinDigits(input: string): string {
+export function toLatinDigits(input: string): string {
   return input
     .replace(ARABIC_INDIC_DIGITS, (d) =>
       String(d.charCodeAt(0) - ARABIC_INDIC_DIGIT_BASE),

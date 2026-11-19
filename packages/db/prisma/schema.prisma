@@ -168,6 +168,12 @@ model Card {
   category       String?
   // Owner consent to publish the phone number on the public card.
   showPhone      Boolean  @default(false)
+  // Public contact info typed in by the owner (so publishing it IS consent):
+  // a phone (mobile or landline), a street address and a map pin.
+  contactPhone   String?
+  address        String?
+  latitude       Float?
+  longitude      Float?
   // Booking switch and rules (hours/leave days live in their own tables).
   bookingEnabled Boolean  @default(false)
   minNoticeHours Int      @default(2)

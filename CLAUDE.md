@@ -52,6 +52,8 @@ migrationها افزایشی‌اند و **هرگز ویرایش نمی‌شون
   حتی برای مالک برنمی‌گردد (`maskedPhone`). قواعد ESLint `no-raw-user-return` و
   `restrict-to-private-user` اجرای آن‌اند. کارت عمومی field-by-field ساخته می‌شود (هرگز spread ردیف User).
 - شماره‌ها در لاگ/AuditLog با `maskPhone()` ماسک می‌شوند.
+- `Card.contactPhone`/`address`/`latitude`/`longitude` را خود مالک برای نمایش عمومی وارد می‌کند (رضایت صریح)؛ شماره‌ی حساب (`User.phone`) همچنان فقط با `showPhone`.
+- آواتار: اگر `sharp` روی CPU بالا نیاید، `process-avatar.ts` با jpeg-js/pngjs (JS خالص، فقط JPEG/PNG) پردازش می‌کند؛ مسیر سریع با CPU نوع `host` (x86-64-v2+).
 - `IP` و user-agent بازدیدکننده هرگز ذخیره نمی‌شود (آمار فقط شمارنده است).
 - مجوز سطح سیستم فقط `SystemRole` (`USER`/`ADMIN`) است، نه چیز دیگری. `RolesGuard` از DB می‌خواند.
 - هیچ سکرتی در کد/کامیت. `.env` واقعی هرگز ساخته نمی‌شود، فقط `.env.example`.

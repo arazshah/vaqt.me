@@ -158,6 +158,39 @@ describe('CardsService (real Postgres)', () => {
     });
   });
 
+  describe('contact info and map pin', () => {
+    it('publishes the typed phone, address and location, and can clear them', async () => {
+      const username = newUsername();
+      const user = await makeUser({ username });
+      await service.update(user.id, {
+        contactPhone: '02112345678',
+        address: 'تهران، خیابان ولیعصر',
+        location: { lat: 35.7, lng: 51.4 },
+      });
+
+      const card = await service.getPublic(username);
+      expect(card.phone).toBe('02112345678');
+      expect(card.address).toBe('تهران، خیابان ولیعصر');
+      expect(card.location).toEqual({ lat: 35.7, lng: 51.4 });
+      // The account phone never leaks just because a contact phone exists.
+      expect(JSON.stringify(card)).not.toContain(user.phone ?? 'x');
+
+      const vcard = await service.getVCard(username, 'https://vaqt.me/x');
+      expect(vcard).toContain('TEL;TYPE=CELL:02112345678');
+      expect(vcard).toContain('GEO:35.7;51.4');
+
+      await service.update(user.id, {
+        contactPhone: null,
+        address: null,
+        location: null,
+      });
+      const cleared = await service.getPublic(username);
+      expect(cleared.phone).toBeNull();
+      expect(cleared.address).toBeNull();
+      expect(cleared.location).toBeNull();
+    });
+  });
+
   describe('setUsername', () => {
     it('claims a username and rejects one that is taken', async () => {
       const taken = newUsername();
