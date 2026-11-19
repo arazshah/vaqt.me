@@ -8,13 +8,12 @@ import { BaleLinkService } from '../messenger/bale-link.service';
 import { MockMessengerAdapter } from '../messenger/mock-messenger.adapter';
 import { fakeConfig } from '../test-support/fake-config';
 import { NotificationDispatcher } from './notification.dispatcher';
+import { randomTestPhone } from '../test-support/test-db';
 
 const HOUR = 3_600_000;
 
 function uniquePhone(): string {
-  return `+9899${String(Date.now()).slice(-4)}${String(
-    Math.floor(Math.random() * 10000),
-  ).padStart(4, '0')}`;
+  return randomTestPhone();
 }
 
 describe('NotificationDispatcher (real Postgres + Redis)', () => {

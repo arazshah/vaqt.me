@@ -3,11 +3,10 @@ import { prisma } from '@vaqt/db';
 import { ErrorCode } from '../common/errors/error-codes';
 import { NotificationQueueService } from '../notifications/notification-queue.service';
 import { BookingService } from './booking.service';
+import { randomTestPhone } from '../test-support/test-db';
 
 function uniquePhone(): string {
-  return `+9899${String(Date.now()).slice(-4)}${String(
-    Math.floor(Math.random() * 10000),
-  ).padStart(4, '0')}`;
+  return randomTestPhone();
 }
 
 const ALL_WEEK = Array.from({ length: 7 }, (_, weekday) => ({

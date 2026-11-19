@@ -2,13 +2,8 @@ import { randomBytes } from 'crypto';
 import { prisma } from '@vaqt/db';
 import { ErrorCode } from '../common/errors/error-codes';
 import { KvService } from '../common/kv/kv.service';
+import { randomTestPhone } from '../test-support/test-db';
 import { WalletService } from './wallet.service';
-
-function uniquePhone(): string {
-  return `+9899${String(Date.now()).slice(-4)}${String(
-    Math.floor(Math.random() * 10000),
-  ).padStart(4, '0')}`;
-}
 
 describe('WalletService (real Postgres + Redis)', () => {
   const userIds: string[] = [];
@@ -34,7 +29,7 @@ describe('WalletService (real Postgres + Redis)', () => {
   ) {
     const user = await prisma.user.create({
       data: {
-        phone: uniquePhone(),
+        phone: randomTestPhone(),
         displayName: 'کاربر تست',
         headline: 'مشاور',
         username:
