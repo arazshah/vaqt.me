@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { AdminModule } from './admin/admin.module';
-import { AiModule } from './ai/ai.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -13,7 +12,6 @@ import { ConversationsModule } from './conversations/conversations.module';
 import { BullRedisModule } from './common/redis/bull-redis.module';
 import { RedisModule } from './common/redis/redis.module';
 import { OffersModule } from './offers/offers.module';
-import { PaymentsModule } from './payments/payments.module';
 import { RequestsModule } from './requests/requests.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { SkillsModule } from './skills/skills.module';
@@ -34,8 +32,6 @@ import { UsersModule } from './users/users.module';
     RequestsModule,
     OffersModule,
     ConversationsModule,
-    AiModule,
-    PaymentsModule,
     ReviewsModule,
   ],
   controllers: [AppController],

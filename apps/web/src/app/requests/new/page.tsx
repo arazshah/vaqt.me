@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FileEdit, Sparkles } from 'lucide-react';
+import { FileEdit } from 'lucide-react';
 
 import { Skeleton } from '@vaqt/ui/components/ui/skeleton';
 
@@ -41,13 +40,6 @@ export default function NewRequestPage() {
           <p className="text-sm text-muted-foreground">
             {fa.newRequestPage.subtitle}
           </p>
-          <Link
-            href="/requests/new/ai"
-            className="mt-1 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-primary no-underline transition-colors hover:bg-accent"
-          >
-            <Sparkles className="size-3.5" aria-hidden="true" />
-            {fa.newRequestPage.aiWizardLink}
-          </Link>
         </div>
         <RequestForm />
       </div>
