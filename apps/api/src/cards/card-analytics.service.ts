@@ -94,7 +94,10 @@ export class CardAnalyticsService {
           _count: { _all: true },
         }),
         prisma.$queryRaw<{ d: string; n: bigint }[]>`
-          SELECT to_char("createdAt" AT TIME ZONE 'Asia/Tehran', 'YYYY-MM-DD') AS d,
+          -- "createdAt" is a naive UTC timestamp: mark it UTC first, then
+          -- convert to Tehran wall time (a bare AT TIME ZONE 'Asia/Tehran'
+          -- would read it AS Tehran time and shift the day the wrong way).
+          SELECT to_char(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Tehran', 'YYYY-MM-DD') AS d,
                  count(*) AS n
           FROM card_events
           WHERE "userId" = ${userId} AND type = 'view' AND "createdAt" >= ${since}

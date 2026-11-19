@@ -24,6 +24,7 @@ import { CardWizard } from '@/components/domain/card-wizard';
 import { useAuth } from '@/lib/auth-context';
 import { useOrigin } from '@/lib/use-origin';
 import { useCardDraft, type SaveState } from '@/lib/use-card-draft';
+import { cardSample } from '@/lib/card-sample';
 import { fa } from '@/messages/fa';
 
 const t = fa.editor;
@@ -287,8 +288,11 @@ export default function CardEditPage() {
             <p className="text-xs text-muted-foreground">{t.cardStyleHelp}</p>
             <TemplatePicker
               value={draft.template}
-              displayName={draft.displayName}
-              headline={draft.headline}
+              sample={cardSample(draft, origin)}
+              fields={draft.cardFields}
+              onFieldsChange={(cardFields) => {
+                patch({ cardFields });
+              }}
               onChange={(template) => {
                 patch({ template });
               }}

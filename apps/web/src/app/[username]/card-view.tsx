@@ -379,6 +379,10 @@ export function CardView({
                 qrValue={cardUrl}
                 phone={card.phone}
                 city={card.city}
+                address={card.address}
+                avatarUrl={card.avatarUrl}
+                links={card.links}
+                fields={card.cardFields}
               />
             </div>
           </section>

@@ -5,6 +5,8 @@ import {
   CardTemplateSchema,
   CardCategorySchema,
   LinkKindSchema,
+  CARD_FIELDS,
+  visibleCardFields,
   type CardLinkView,
   type GeoPoint,
   type MyCard,
@@ -102,6 +104,7 @@ export class CardsService {
       address: user.card?.address ?? null,
       location: toLocation(user.card),
       links: toLinkViews(user.contactLinks),
+      cardFields: visibleCardFields(user.card?.hiddenCardFields ?? []),
       booking: await getPublicBookingInfo(user.id),
     };
   }
@@ -154,6 +157,7 @@ export class CardsService {
       address: user.card?.address ?? null,
       location: toLocation(user.card),
       links: toLinkViews(user.contactLinks),
+      cardFields: visibleCardFields(user.card?.hiddenCardFields ?? []),
     };
   }
 
@@ -166,6 +170,11 @@ export class CardsService {
         contactPhone: input.contactPhone,
       }),
       ...(input.address !== undefined && { address: input.address }),
+      ...(input.cardFields !== undefined && {
+        hiddenCardFields: CARD_FIELDS.filter(
+          (f) => !input.cardFields?.includes(f),
+        ),
+      }),
       ...(input.location !== undefined && {
         latitude: input.location?.lat ?? null,
         longitude: input.location?.lng ?? null,
