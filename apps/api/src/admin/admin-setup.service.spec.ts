@@ -6,11 +6,12 @@ import { ErrorCode } from '../common/errors/error-codes';
 import { KvService } from '../common/kv/kv.service';
 import { fakeConfig } from '../test-support/fake-config';
 import { AdminSetupService } from './admin-setup.service';
+import { randomTestPhone } from '../test-support/test-db';
 
 const DEVICE = { userAgent: 'jest', ip: randomUUID() };
 
 function phone(): string {
-  return `+9899${String(Date.now()).slice(-4)}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+  return randomTestPhone();
 }
 const local = (p: string) => `0${p.slice(3)}`;
 

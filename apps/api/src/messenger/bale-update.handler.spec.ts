@@ -12,13 +12,12 @@ import { BaleUpdateHandler } from './bale-update.handler';
 import { MessengerController } from './messenger.controller';
 import { baleMessagesFa } from './messenger.messages.fa';
 import { MockMessengerAdapter } from './mock-messenger.adapter';
+import { randomTestPhone } from '../test-support/test-db';
 
 const HOUR = 3_600_000;
 
 function uniquePhone(): string {
-  return `+9899${String(Date.now()).slice(-4)}${String(
-    Math.floor(Math.random() * 10000),
-  ).padStart(4, '0')}`;
+  return randomTestPhone();
 }
 
 describe('Bale linking and webhook (real Postgres + Redis)', () => {

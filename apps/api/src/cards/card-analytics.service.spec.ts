@@ -2,11 +2,10 @@ import { randomBytes } from 'crypto';
 import { prisma } from '@vaqt/db';
 import { KvService } from '../common/kv/kv.service';
 import { CardAnalyticsService } from './card-analytics.service';
+import { randomTestPhone } from '../test-support/test-db';
 
 function uniquePhone(): string {
-  return `+9899${String(Date.now()).slice(-4)}${String(
-    Math.floor(Math.random() * 10000),
-  ).padStart(4, '0')}`;
+  return randomTestPhone();
 }
 
 describe('CardAnalyticsService (real Postgres + Redis)', () => {
