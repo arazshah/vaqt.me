@@ -116,12 +116,8 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
-    # Deliberately its own job, not a step tacked onto `ci`: unlike the
-    # unit/integration suite, this needs the database *seeded* (categories
-    # and skills the golden path picks from — the `ci` job above never
-    # seeds, on purpose, so its tests don't depend on seed content) and a
-    # real Chromium binary, both of which are slow enough to want their own
-    # cache and their own pass/fail signal.
+    # Deliberately its own job: it needs a real Chromium binary and both apps
+    # running, which is slow enough to want its own cache and pass/fail signal.
     env:
       DATABASE_URL: postgresql://vaqt:vaqt@localhost:5432/vaqt
       REDIS_URL: redis://localhost:6379
@@ -177,13 +173,8 @@ jobs:
         # their built dist/ output, not source — see CLAUDE.md's build
         # strategy notes. Scoped to just these two (not `pnpm build`, which
         # would also build apps/web/apps/api themselves) since Playwright's
-        # webServer runs both apps in dev mode directly. Must run before
-        # seeding too: packages/db/src/seed.ts itself imports @vaqt/shared
-        # from its built dist/, not source.
+        # webServer runs both apps in dev mode directly.
         run: pnpm exec turbo run build --filter=@vaqt/shared --filter=@vaqt/db
-
-      - name: Seed database
-        run: pnpm db:seed
 
       - name: E2E
         run: pnpm --filter @vaqt/web test:e2e

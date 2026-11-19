@@ -36,13 +36,9 @@ const API_ENV = {
 
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: false, // one shared seeker/provider pair per run, not per-test isolated
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  // 2, not 1: the golden path exercises a real WebSocket delivery race
-  // (join room vs. broadcast timing — see MessageThread's socket effect
-  // and CLAUDE.md's Phase 11 notes) that's genuinely rare (~5% locally)
-  // but was observed failing 2 attempts in a row on a slower CI runner.
-  retries: process.env.CI ? 2 : 0,
+  retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: process.env.CI ? 'github' : 'html',
   globalTeardown: './e2e/global-teardown.ts',
@@ -53,7 +49,18 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
 
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // Optional: point at a preinstalled Chromium (sandboxes, CI images).
+        launchOptions: process.env.PW_CHROMIUM_PATH
+          ? { executablePath: process.env.PW_CHROMIUM_PATH }
+          : {},
+      },
+    },
+  ],
 
   webServer: [
     {

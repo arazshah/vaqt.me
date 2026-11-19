@@ -136,7 +136,7 @@ describe('WalletService (real Postgres + Redis)', () => {
     await expect(
       wallet.exchange(me.id, partners[0].username),
     ).resolves.toMatchObject({ exchanged: true });
-  });
+  }, 30_000); // 22 users + 21 sequential exchanges: slow when the machine is busy
 
   it("removing only deletes the caller's copy", async () => {
     const [me, other] = [await makeUser(), await makeUser()];

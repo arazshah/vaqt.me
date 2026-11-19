@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import { CalendarClock, Contact, Phone } from 'lucide-react';
 import { VPN_LINK_KINDS, type LinkKind, type PublicCard } from '@vaqt/shared';
-import { formatNumber } from '@vaqt/shared';
 
 import { Button } from '@vaqt/ui/components/ui/button';
 import { Container } from '@vaqt/ui/components/container';
@@ -161,34 +160,12 @@ export function CardView({
           </section>
         ) : null}
 
-        {card.bio || card.skills.length > 0 || card.ratingCount > 0 ? (
+        {card.bio ? (
           <section className="rounded-xl border bg-card p-4 shadow-sm">
             <h2 className="mb-2 text-sm font-semibold">{t.aboutTitle}</h2>
-            {card.bio ? (
-              <p className="whitespace-pre-line text-sm text-muted-foreground">
-                {card.bio}
-              </p>
-            ) : null}
-            {card.skills.length > 0 ? (
-              <ul className="m-0 mt-3 flex list-none flex-wrap gap-1.5 p-0">
-                {card.skills.map((skill) => (
-                  <li
-                    key={skill}
-                    className="rounded-full border bg-muted px-2.5 py-0.5 text-xs"
-                  >
-                    {skill}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {card.ratingCount > 0 ? (
-              <p className="mt-3 text-xs text-muted-foreground">
-                {t.rating(
-                  formatNumber(Number(card.ratingAvg.toFixed(1))),
-                  formatNumber(card.ratingCount),
-                )}
-              </p>
-            ) : null}
+            <p className="whitespace-pre-line text-sm text-muted-foreground">
+              {card.bio}
+            </p>
           </section>
         ) : null}
 
