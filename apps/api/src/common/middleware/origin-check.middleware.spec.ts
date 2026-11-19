@@ -9,6 +9,7 @@ function makeReqRes(overrides: {
   method: string;
   origin?: string;
   referer?: string;
+  path?: string;
 }): {
   req: Request;
   res: Response;
@@ -20,6 +21,7 @@ function makeReqRes(overrides: {
   const status = jest.fn(() => ({ json }));
   const req = {
     method: overrides.method,
+    path: overrides.path ?? '/api/v1/anything',
     headers: {
       origin: overrides.origin,
       referer: overrides.referer,
@@ -109,5 +111,41 @@ describe('createOriginCheckMiddleware', () => {
     });
     middleware(req, res, next);
     expect(next).toHaveBeenCalled();
+  });
+
+  describe('exempt path prefixes (server-to-server webhooks)', () => {
+    const exempt = createOriginCheckMiddleware(WEB_ORIGIN, [
+      '/api/v1/messenger/bale/webhook/',
+    ]);
+
+    it('lets a POST without Origin through on an exempt prefix', () => {
+      const { req, res, next, status } = makeReqRes({
+        method: 'POST',
+        path: '/api/v1/messenger/bale/webhook/some-secret',
+      });
+      exempt(req, res, next);
+      expect(next).toHaveBeenCalledTimes(1);
+      expect(status).not.toHaveBeenCalled();
+    });
+
+    it('still rejects a POST without Origin on any other path', () => {
+      const { req, res, next, status } = makeReqRes({
+        method: 'POST',
+        path: '/api/v1/booking/create',
+      });
+      exempt(req, res, next);
+      expect(next).not.toHaveBeenCalled();
+      expect(status).toHaveBeenCalledWith(403);
+    });
+
+    it('does not exempt a path that merely contains the prefix later on', () => {
+      const { req, res, next, status } = makeReqRes({
+        method: 'POST',
+        path: '/evil/api/v1/messenger/bale/webhook/x',
+      });
+      exempt(req, res, next);
+      expect(next).not.toHaveBeenCalled();
+      expect(status).toHaveBeenCalledWith(403);
+    });
   });
 });

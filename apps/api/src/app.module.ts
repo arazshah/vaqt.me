@@ -13,6 +13,8 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { ConversationsModule } from './conversations/conversations.module';
 import { BullRedisModule } from './common/redis/bull-redis.module';
 import { RedisModule } from './common/redis/redis.module';
+import { MessengerModule } from './messenger/messenger.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { OffersModule } from './offers/offers.module';
 import { RequestsModule } from './requests/requests.module';
 import { ReviewsModule } from './reviews/reviews.module';
@@ -37,6 +39,8 @@ import { UsersModule } from './users/users.module';
     ReviewsModule,
     CardsModule,
     BookingModule,
+    MessengerModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

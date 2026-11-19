@@ -43,7 +43,9 @@ async function bootstrap() {
   );
 
   const webOrigin = process.env.WEB_ORIGIN || 'http://localhost:3000';
-  app.use(createOriginCheckMiddleware(webOrigin));
+  app.use(
+    createOriginCheckMiddleware(webOrigin, ['/api/v1/messenger/bale/webhook/']),
+  );
 
   // فقط برای LocalDiskAdapter در dev — در production آواتارها از S3/Arvan سرو می‌شوند
   if ((process.env.STORAGE_PROVIDER ?? 'local') === 'local') {

@@ -10,6 +10,7 @@ import { Button } from '@vaqt/ui/components/ui/button';
 import { Skeleton } from '@vaqt/ui/components/ui/skeleton';
 
 import { AppShell } from '@/components/app-shell';
+import { BaleConnect } from '@/components/domain/bale-connect';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { formatDayTime } from '@/lib/date-format';
@@ -184,6 +185,7 @@ export default function BookingsPage() {
             <Link href="/card/booking">{t.settingsLink}</Link>
           </Button>
         </div>
+        <BaleConnect />
         {error ? (
           <p role="alert" className="text-sm text-destructive">
             {error}
