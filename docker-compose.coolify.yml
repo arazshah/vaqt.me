@@ -25,8 +25,11 @@ services:
       - WEB_ORIGIN=${SERVICE_URL_WEB}
       - API_INTERNAL_URL=http://api:3001
     depends_on:
+      # started, not healthy: if the API ever fails to boot, the deploy still
+      # finishes and its container (and logs) stay available in Coolify
+      # instead of the whole stack being torn down.
       api:
-        condition: service_healthy
+        condition: service_started
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1"]
@@ -47,7 +50,6 @@ services:
       # change it after first start (saved secrets would become unreadable).
       - APP_SECRET=${SERVICE_PASSWORD_64_APPSECRET}
       - DATABASE_URL=postgresql://vaqt:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/vaqt
-      - REDIS_URL=redis://redis:6379
       - WEB_ORIGIN=${SERVICE_URL_WEB}
       - STORAGE_PROVIDER=local
       - LOCAL_STORAGE_DIR=/data/uploads
@@ -58,9 +60,13 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/api/v1/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
     # No published ports: the API is reachable only through `web`.
 
   postgres:
@@ -78,19 +84,6 @@ services:
       retries: 10
     restart: unless-stopped
 
-  redis:
-    image: redis:7-alpine
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redisdata:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
 volumes:
   pgdata:
-  redisdata:
   uploads:

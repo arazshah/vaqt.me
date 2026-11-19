@@ -7,7 +7,7 @@ import {
 import { prisma, UserStatus } from '@vaqt/db';
 import { AppError } from '../../common/errors/app-error';
 import { ErrorCode } from '../../common/errors/error-codes';
-import { RedisService } from '../../common/redis/redis.service';
+import { KvService } from '../../common/kv/kv.service';
 import { AuthConfigService } from '../auth.config';
 import type { AuthenticatedRequest } from '../auth-request';
 
@@ -25,7 +25,7 @@ interface CachedVerificationState {
 @Injectable()
 export class RequireVerifiedPhoneGuard implements CanActivate {
   constructor(
-    private readonly redis: RedisService,
+    private readonly kv: KvService,
     private readonly authConfig: AuthConfigService,
   ) {}
 
@@ -36,8 +36,8 @@ export class RequireVerifiedPhoneGuard implements CanActivate {
       throw new AppError(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
     }
 
-    const cacheKey = this.redis.key('verified-phone', userId);
-    const cached = await this.redis.client.get(cacheKey);
+    const cacheKey = this.kv.key('verified-phone', userId);
+    const cached = await this.kv.get(cacheKey);
 
     let verified: boolean;
     if (cached !== null) {
@@ -51,10 +51,9 @@ export class RequireVerifiedPhoneGuard implements CanActivate {
         !!user &&
         user.phoneVerifiedAt !== null &&
         user.status === UserStatus.ACTIVE;
-      await this.redis.client.set(
+      await this.kv.set(
         cacheKey,
         JSON.stringify({ verified } satisfies CachedVerificationState),
-        'EX',
         this.authConfig.verifiedPhoneCacheTtlSeconds,
       );
     }

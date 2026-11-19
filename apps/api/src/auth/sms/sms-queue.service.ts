@@ -1,22 +1,23 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import type { Queue } from 'bullmq';
+import { JobsService } from '../../common/jobs/jobs.service';
 import type { NotificationSmsJobData, OtpSmsJobData } from './sms-job.types';
+
+export const SMS_QUEUE = 'sms';
 
 @Injectable()
 export class SmsQueueService {
   private readonly logger = new Logger(SmsQueueService.name);
 
-  constructor(@InjectQueue('sms') private readonly queue: Queue) {}
+  constructor(private readonly jobs: JobsService) {}
 
   /**
-   * Enqueues and returns — never awaits delivery. A queue failure (e.g.
-   * Redis briefly unavailable) is caught and logged, never allowed to fail
-   * the HTTP response for /auth/otp/request.
+   * Enqueues and returns — never awaits delivery. A queue failure is caught
+   * and logged, never allowed to fail the HTTP response for
+   * /auth/otp/request.
    */
   async enqueueOtp(data: OtpSmsJobData): Promise<void> {
     try {
-      await this.queue.add('otp', data);
+      await this.jobs.enqueue(SMS_QUEUE, 'otp', data);
     } catch (error) {
       this.logger.error('failed to enqueue otp sms job', error);
     }
@@ -24,7 +25,7 @@ export class SmsQueueService {
 
   async enqueueNotification(data: NotificationSmsJobData): Promise<void> {
     try {
-      await this.queue.add('notification', data);
+      await this.jobs.enqueue(SMS_QUEUE, 'notification', data);
     } catch (error) {
       this.logger.error('failed to enqueue notification sms job', error);
     }

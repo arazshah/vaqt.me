@@ -7,13 +7,13 @@
 ## پشته
 
 pnpm + Turborepo · NestJS 10 · Next.js 15 (RTL، Tailwind v4، Vazirmatn) · Prisma + Postgres 16 ·
-Redis 7 + BullMQ.
+(صف و کش هم روی Postgres؛ Redis لازم نیست).
 
 ## اجرای محلی
 
 ```bash
 nvm use && pnpm install
-docker compose up -d                       # Postgres + Redis
+docker compose up -d                       # فقط Postgres
 cp apps/api/.env.example apps/api/.env     # مقادیر را ست کنید
 pnpm --filter @vaqt/db migrate:deploy && pnpm db:seed   # seed: کارت نمونه vaqt.me/demo
 pnpm dev                                    # web:3000  api:3001

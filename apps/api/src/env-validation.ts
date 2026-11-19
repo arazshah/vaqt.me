@@ -27,7 +27,6 @@ const envSchema = z.object({
   JWT_ACCESS_SECRET: secretSchema,
   JWT_REFRESH_SECRET: secretSchema,
   DATABASE_URL: z.string().min(1, 'باید تنظیم شود'),
-  REDIS_URL: z.string().min(1, 'باید تنظیم شود'),
 });
 
 export interface EnvValidationFailure {

@@ -3,9 +3,8 @@ import { HttpStatus } from '@nestjs/common';
 import { prisma } from '@vaqt/db';
 import { BookingService } from '../booking/booking.service';
 import { ErrorCode } from '../common/errors/error-codes';
-import { RedisService } from '../common/redis/redis.service';
+import { KvService } from '../common/kv/kv.service';
 import { fakeConfig } from '../test-support/fake-config';
-import { randomTestRedisPrefix } from '../test-support/test-db';
 import { SettingsService } from '../settings/settings.service';
 import { MemorySettingsStore } from '../settings/settings.store';
 import { BaleLinkService } from './bale-link.service';
@@ -14,7 +13,6 @@ import { MessengerController } from './messenger.controller';
 import { baleMessagesFa } from './messenger.messages.fa';
 import { MockMessengerAdapter } from './mock-messenger.adapter';
 
-const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6380';
 const HOUR = 3_600_000;
 
 function uniquePhone(): string {
@@ -25,21 +23,19 @@ function uniquePhone(): string {
 
 describe('Bale linking and webhook (real Postgres + Redis)', () => {
   const userIds: string[] = [];
-  let redis: RedisService;
+  let redis: KvService;
   let messenger: MockMessengerAdapter;
   let links: BaleLinkService;
   let handler: BaleUpdateHandler;
   const config = () =>
     fakeConfig({
-      REDIS_URL,
-      REDIS_PREFIX: randomTestRedisPrefix(),
       BALE_BOT_USERNAME: 'vaqt_bot',
       BALE_WEBHOOK_SECRET: 'super-secret-webhook-path-1234',
     });
 
   beforeEach(() => {
     const cfg = config();
-    redis = new RedisService(cfg);
+    redis = new KvService();
     messenger = new MockMessengerAdapter();
     links = new BaleLinkService(
       redis,
@@ -48,9 +44,7 @@ describe('Bale linking and webhook (real Postgres + Redis)', () => {
     handler = new BaleUpdateHandler(links, new BookingService(), messenger);
   });
 
-  afterEach(async () => {
-    await redis.client.quit();
-  });
+  afterEach(async () => {});
 
   afterAll(async () => {
     await prisma.booking.deleteMany({ where: { providerId: { in: userIds } } });

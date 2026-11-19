@@ -9,7 +9,7 @@ import {
   type CardStatsView,
   type RecordCardEventInput,
 } from '@vaqt/shared';
-import { RedisService } from '../common/redis/redis.service';
+import { KvService } from '../common/kv/kv.service';
 
 const VIEW_DEDUPE_SECONDS = 1800;
 const EVENT_LIMIT_PER_HOUR = 120;
@@ -21,7 +21,7 @@ const fingerprint = (ip: string) =>
 
 @Injectable()
 export class CardAnalyticsService {
-  constructor(private readonly redis: RedisService) {}
+  constructor(private readonly kv: KvService) {}
 
   /**
    * Records one interaction. Never throws for "soft" reasons (unknown card,
@@ -40,20 +40,17 @@ export class CardAnalyticsService {
     if (!user || user.status !== 'ACTIVE') return;
 
     const who = fingerprint(ip);
-    const limitKey = this.redis.key('card-event', user.id, who, input.type);
-    const count = await this.redis.client.incr(limitKey);
-    if (count === 1) await this.redis.client.expire(limitKey, 3600);
+    const limitKey = this.kv.key('card-event', user.id, who, input.type);
+    const count = await this.kv.increment(limitKey, 3600);
     if (count > EVENT_LIMIT_PER_HOUR) return;
 
     if (input.type === 'view') {
-      const first = await this.redis.client.set(
-        this.redis.key('card-view', user.id, who),
+      const first = await this.kv.setIfAbsent(
+        this.kv.key('card-view', user.id, who),
         '1',
-        'EX',
         VIEW_DEDUPE_SECONDS,
-        'NX',
       );
-      if (first === null) return; // same visitor reloading
+      if (!first) return; // same visitor reloading
     }
 
     const linkKind = LinkKindSchema.safeParse(input.linkKind);

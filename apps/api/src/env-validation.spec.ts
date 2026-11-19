@@ -9,7 +9,6 @@ const VALID_ENV: NodeJS.ProcessEnv = {
   JWT_ACCESS_SECRET: 'b'.repeat(32),
   JWT_REFRESH_SECRET: 'c'.repeat(32),
   DATABASE_URL: 'postgresql://vaqt:vaqt@localhost:5432/vaqt',
-  REDIS_URL: 'redis://localhost:6380',
 };
 
 describe('collectEnvValidationFailures', () => {
@@ -51,12 +50,6 @@ describe('collectEnvValidationFailures', () => {
     const { DATABASE_URL: _omit, ...rest } = VALID_ENV;
     const failures = collectEnvValidationFailures(rest);
     expect(failures.some((f) => f.path === 'DATABASE_URL')).toBe(true);
-  });
-
-  it('rejects a missing REDIS_URL', () => {
-    const { REDIS_URL: _omit, ...rest } = VALID_ENV;
-    const failures = collectEnvValidationFailures(rest);
-    expect(failures.some((f) => f.path === 'REDIS_URL')).toBe(true);
   });
 
   it('outside production, a placeholder value fails only the length rule, not a placeholder-specific rule', () => {
@@ -122,7 +115,6 @@ describe('collectEnvValidationFailures', () => {
         'JWT_ACCESS_SECRET',
         'JWT_REFRESH_SECRET',
         'DATABASE_URL',
-        'REDIS_URL',
       ]),
     );
   });

@@ -1,7 +1,7 @@
 import { randomInt } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { prisma } from '@vaqt/db';
-import { RedisService } from '../common/redis/redis.service';
+import { KvService } from '../common/kv/kv.service';
 import { SettingsService } from '../settings/settings.service';
 
 export const BALE_PLATFORM = 'bale';
@@ -19,12 +19,12 @@ export interface BaleLinkOffer {
 @Injectable()
 export class BaleLinkService {
   constructor(
-    private readonly redis: RedisService,
+    private readonly kv: KvService,
     private readonly settings: SettingsService,
   ) {}
 
   private codeKey(code: string): string {
-    return this.redis.key('bale-link', code);
+    return this.kv.key('bale-link', code);
   }
 
   /** One-time code the user sends to the bot (or opens as a deep link). */
@@ -33,12 +33,7 @@ export class BaleLinkService {
     for (let i = 0; i < CODE_LENGTH; i++) {
       code += CODE_ALPHABET[randomInt(CODE_ALPHABET.length)];
     }
-    await this.redis.client.set(
-      this.codeKey(code),
-      userId,
-      'EX',
-      LINK_CODE_TTL_SECONDS,
-    );
+    await this.kv.set(this.codeKey(code), userId, LINK_CODE_TTL_SECONDS);
     const bot = await this.settings.get('bale.botUsername');
     return {
       code,
@@ -55,7 +50,7 @@ export class BaleLinkService {
   async completeLink(code: string, chatId: string): Promise<string | null> {
     const normalized = code.trim().toUpperCase();
     if (!/^[A-Z0-9]{8}$/.test(normalized)) return null;
-    const userId = await this.redis.client.getdel(this.codeKey(normalized));
+    const userId = await this.kv.getAndDelete(this.codeKey(normalized));
     if (!userId) return null;
     await prisma.$transaction([
       prisma.messengerBinding.deleteMany({

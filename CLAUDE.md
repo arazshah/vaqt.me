@@ -35,11 +35,11 @@ vCard، آمار) · `booking` (اسلات، رزرو، لغو با توکن) ·
 `messenger` (ربات بله) · `wallet` (کیف کارت/تبادل) · `settings` (تنظیمات زمان اجرا) ·
 `admin` (setup اولین مدیر + تنظیمات) · `storage` (دیسک/S3).
 
-### مدل‌های دیتابیس (۱۴ جدول)
+### مدل‌های دیتابیس (۱۷ جدول)
 
 `User` `Session` `VerificationCode` `AuditLog` `Card` `ContactLink` `ServiceType`
 `AvailabilityRule` `AvailabilityException` `Booking` `MessengerBinding` `CardEvent`
-`SavedCard` `AppSetting`. یک migration تمیز `init` (قبل از اولین استقرار یکی شد؛ از این به بعد
+`SavedCard` `AppSetting` `KvEntry` `RateEvent` `Job`. بدون Redis: کلید/مقدار موقت، rate limit و صف کارها همه روی Postgres هستند. migrationها: `init` + افزایشی. یک migration تمیز `init` (قبل از اولین استقرار یکی شد؛ از این به بعد
 migrationها افزایشی‌اند و **هرگز ویرایش نمی‌شوند**).
 
 ## قواعد سخت (نقض‌شان باگ امنیتی/محصولی است)
@@ -65,7 +65,7 @@ migrationها افزایشی‌اند و **هرگز ویرایش نمی‌شون
 ### OTP و نشست
 
 - کد OTP با HMAC-SHA256 + `OTP_PEPPER` (نه bcrypt)، مقایسه با `timingSafeEqual`.
-- ۵ لایه rate limit با Redis sorted-set در یک اسکریپت Lua اتمیک؛ ۵ تلاش برای هر کد، بلاک ۳۰ دقیقه‌ای پس از ۳ کد باطل.
+- ۵ لایه rate limit با جدول `RateEvent` داخل یک تراکنش با advisory lock (`KvService.slidingWindow`)؛ ۵ تلاش برای هر کد، بلاک ۳۰ دقیقه‌ای پس از ۳ کد باطل.
 - access token ۱۵ دقیقه، refresh ۳۰ روز، هر دو httpOnly/SameSite=Lax (Secure در production).
   payload فقط `sub` و `sid`؛ نقش/وضعیت همیشه از DB. چرخش refresh؛ replay ⇒ ابطال کل family + AuditLog سطح high.
 - `SMS_PROVIDER=mock` یا `BALE_PROVIDER=mock` با `NODE_ENV=production` ⇒ throw در بوت.
@@ -97,7 +97,7 @@ migrationها افزایشی‌اند و **هرگز ویرایش نمی‌شون
 
 ## اعلان‌ها
 
-صف BullMQ `notifications` (۳ retry نمایی) + scan یادآوری هر ۵ دقیقه. متخصص ← ربات بله (دکمه‌های
+صف کار Postgres (`JobsService`، `FOR UPDATE SKIP LOCKED`، ۳ retry نمایی) + scan یادآوری هر ۵ دقیقه (تایمر داخل پروسه، idempotent). متخصص ← ربات بله (دکمه‌های
 تأیید/رد)، اگر وصل نیست پیامک (سقف ۱۰ در روز)؛ رزروکننده ← پیامک. وبهوک بله با رمز داخل مسیر
 (`/messenger/bale/webhook/:secret`)، همیشه ۲۰۰ (هرگز throw). `BaleAdapter` و `SmsIrAdapter` هرگز با
 توکن/الگوی واقعی تست نشده‌اند — پیش از production یک‌بار زنده بررسی شوند.
@@ -111,9 +111,9 @@ migrationها افزایشی‌اند و **هرگز ویرایش نمی‌شون
 
 ## توسعه
 
-- Node 22، pnpm 9. `docker compose up -d` (Postgres 16 + Redis 7)، `pnpm dev`. web:3000، api:3001.
+- Node 22، pnpm 9. `docker compose up -d` (Postgres 16)، `pnpm dev`. web:3000، api:3001.
 - دروازه‌ها: `pnpm lint && pnpm typecheck && pnpm build && pnpm test` + `pnpm --filter @vaqt/web test:e2e`
-  (مسیر طلایی: کارت ← رزرو ← تأیید دستی). تست‌های API روی Postgres/Redis **واقعی** (نه mock).
+  (مسیر طلایی: کارت ← رزرو ← تأیید دستی). تست‌های API روی Postgres **واقعی** (نه mock).
 - `pnpm --filter @vaqt/api cleanup:qa` داده‌ی QA (شماره‌ی `+9899…`) را از dev پاک می‌کند.
 - **Conventional Commits** انگلیسی؛ scopeها: `api web ui shared db infra ci docs`؛ سقف header ۱۰۰ کاراکتر.
 - migration: همیشه افزایشی؛ `prisma migrate dev --name <x>`.
@@ -126,6 +126,7 @@ migrationها افزایشی‌اند و **هرگز ویرایش نمی‌شون
   (`/root/.ccr/ca-bundle.crt`) انجام شود — هرگز TLS را غیرفعال نکنید.
 - `NODE_ENV=development` در شل `next build` را خراب می‌کند؛ build را بدون آن (یا `production`) اجرا کنید.
 - Chromium از پیش نصب است: `PW_CHROMIUM_PATH=/opt/pw-browsers/chromium-*/chrome-linux64/chrome`.
+- حالت تست: state صف/rate-limit در Postgres می‌ماند؛ تست‌ها باید شناسه‌ی یکتا (شماره/IP تصادفی) بسازند، نه مقدار ثابت.
 - turbo در `envMode: strict` است؛ هر env جدید باید در `globalPassThroughEnv` بیاید.
 
 ## فرآیند git

@@ -1,4 +1,4 @@
-import { randomInt, randomUUID } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import { prisma } from '@vaqt/db';
 
 // Test users always live in the +9899xxxxxxxx sub-range so they're easy to
@@ -12,10 +12,6 @@ export const TEST_PHONE_PREFIX = '+9899';
 export function randomTestPhone(): string {
   const suffix = String(randomInt(0, 1e8)).padStart(8, '0');
   return `${TEST_PHONE_PREFIX}${suffix}`;
-}
-
-export function randomTestRedisPrefix(): string {
-  return `vaqt:test:${randomUUID()}:`;
 }
 
 export async function createTestUser(overrides: {

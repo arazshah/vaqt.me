@@ -9,7 +9,7 @@ import { prisma, UserStatus } from '@vaqt/db';
 import type { SystemRole } from '@vaqt/shared';
 import { AppError } from '../errors/app-error';
 import { ErrorCode } from '../errors/error-codes';
-import { RedisService } from '../redis/redis.service';
+import { KvService } from '../kv/kv.service';
 import { AuthConfigService } from '../../auth/auth.config';
 import type { AuthenticatedRequest } from '../../auth/auth-request';
 import { REQUIRED_ROLES_KEY } from '../decorators/roles.decorator';
@@ -29,7 +29,7 @@ interface CachedRoleState {
 export class RolesGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly redis: RedisService,
+    private readonly kv: KvService,
     private readonly authConfig: AuthConfigService,
   ) {}
 
@@ -47,8 +47,8 @@ export class RolesGuard implements CanActivate {
       throw new AppError(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
     }
 
-    const cacheKey = this.redis.key('system-role', userId);
-    const cached = await this.redis.client.get(cacheKey);
+    const cacheKey = this.kv.key('system-role', userId);
+    const cached = await this.kv.get(cacheKey);
 
     let systemRole: SystemRole;
     if (cached !== null) {
@@ -62,10 +62,9 @@ export class RolesGuard implements CanActivate {
         throw new AppError(ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
       }
       systemRole = user.systemRole;
-      await this.redis.client.set(
+      await this.kv.set(
         cacheKey,
         JSON.stringify({ systemRole } satisfies CachedRoleState),
-        'EX',
         this.authConfig.verifiedPhoneCacheTtlSeconds,
       );
     }

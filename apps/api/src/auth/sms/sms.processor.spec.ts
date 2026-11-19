@@ -1,5 +1,4 @@
-import type { Job } from 'bullmq';
-import type { SmsJobData } from './sms-job.types';
+import type { JobsService } from '../../common/jobs/jobs.service';
 import type { SmsPort } from './sms.port';
 import { SmsProcessor } from './sms.processor';
 
@@ -12,15 +11,20 @@ describe('SmsProcessor', () => {
       sendOtp: jest.fn().mockResolvedValue({ delivered: true }),
       sendNotification: jest.fn().mockResolvedValue({ delivered: true }),
     };
-    return { processor: new SmsProcessor(smsPort), smsPort };
+    return {
+      processor: new SmsProcessor(smsPort, {
+        register: jest.fn(),
+      } as unknown as JobsService),
+      smsPort,
+    };
   }
 
   it('dispatches an "otp" job to sendOtp', async () => {
     const { processor, smsPort } = makeProcessor();
     const job = {
       name: 'otp',
-      data: { phone: '+989123456789', code: '12345' },
-    } as unknown as Job<SmsJobData>;
+      payload: { phone: '+989123456789', code: '12345' },
+    };
 
     await processor.process(job);
 
@@ -32,8 +36,8 @@ describe('SmsProcessor', () => {
     const { processor, smsPort } = makeProcessor();
     const job = {
       name: 'notification',
-      data: { phone: '+989123456789', templateId: '42', params: { a: 'b' } },
-    } as unknown as Job<SmsJobData>;
+      payload: { phone: '+989123456789', templateId: '42', params: { a: 'b' } },
+    };
 
     await processor.process(job);
 
@@ -47,10 +51,7 @@ describe('SmsProcessor', () => {
 
   it('ignores an unrecognized job name', async () => {
     const { processor, smsPort } = makeProcessor();
-    const job = {
-      name: 'something-else',
-      data: {},
-    } as unknown as Job<SmsJobData>;
+    const job = { name: 'something-else', payload: {} };
 
     await processor.process(job);
 

@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { prisma } from '@vaqt/db';
 import { SmsQueueService } from '../auth/sms/sms-queue.service';
-import { RedisService } from '../common/redis/redis.service';
+import { KvService } from '../common/kv/kv.service';
 import { BaleLinkService } from '../messenger/bale-link.service';
 import { SettingsService } from '../settings/settings.service';
 import { baleMessagesFa } from '../messenger/messenger.messages.fa';
@@ -48,7 +48,7 @@ export class NotificationDispatcher {
     @Inject(MESSENGER_PORT) private readonly messenger: MessengerPort,
     private readonly links: BaleLinkService,
     private readonly sms: SmsQueueService,
-    private readonly redis: RedisService,
+    private readonly kv: KvService,
     private readonly config: ConfigService,
     private readonly settings: SettingsService,
   ) {}
@@ -229,9 +229,8 @@ export class NotificationDispatcher {
     }
     if (!smsKey) return;
     const day = new Date().toISOString().slice(0, 10);
-    const capKey = this.redis.key('notif-sms', b.providerId, day);
-    const used = await this.redis.client.incr(capKey);
-    if (used === 1) await this.redis.client.expire(capKey, 86_400);
+    const capKey = this.kv.key('notif-sms', b.providerId, day);
+    const used = await this.kv.increment(capKey, 86_400);
     if (used > PROVIDER_SMS_DAILY_CAP) {
       this.logger.warn(`provider sms cap reached for ${b.providerId}`);
       return;

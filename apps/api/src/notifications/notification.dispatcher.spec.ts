@@ -1,16 +1,14 @@
 import { randomBytes } from 'crypto';
 import { prisma } from '@vaqt/db';
 import { SmsQueueService } from '../auth/sms/sms-queue.service';
-import { RedisService } from '../common/redis/redis.service';
+import { KvService } from '../common/kv/kv.service';
 import { SettingsService } from '../settings/settings.service';
 import { MemorySettingsStore } from '../settings/settings.store';
 import { BaleLinkService } from '../messenger/bale-link.service';
 import { MockMessengerAdapter } from '../messenger/mock-messenger.adapter';
 import { fakeConfig } from '../test-support/fake-config';
-import { randomTestRedisPrefix } from '../test-support/test-db';
 import { NotificationDispatcher } from './notification.dispatcher';
 
-const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6380';
 const HOUR = 3_600_000;
 
 function uniquePhone(): string {
@@ -21,7 +19,7 @@ function uniquePhone(): string {
 
 describe('NotificationDispatcher (real Postgres + Redis)', () => {
   const userIds: string[] = [];
-  let redis: RedisService;
+  let redis: KvService;
   let messenger: MockMessengerAdapter;
   let smsJobs: {
     phone: string;
@@ -33,11 +31,9 @@ describe('NotificationDispatcher (real Postgres + Redis)', () => {
 
   beforeEach(() => {
     const config = fakeConfig({
-      REDIS_URL,
-      REDIS_PREFIX: randomTestRedisPrefix(),
       WEB_ORIGIN: 'https://vaqt.me',
     });
-    redis = new RedisService(config);
+    redis = new KvService();
     messenger = new MockMessengerAdapter();
     smsJobs = [];
     const sms = {
@@ -58,9 +54,7 @@ describe('NotificationDispatcher (real Postgres + Redis)', () => {
     );
   });
 
-  afterEach(async () => {
-    await redis.client.quit();
-  });
+  afterEach(async () => {});
 
   afterAll(async () => {
     await prisma.booking.deleteMany({ where: { providerId: { in: userIds } } });
@@ -162,7 +156,7 @@ describe('NotificationDispatcher (real Postgres + Redis)', () => {
     it('stops sending provider SMS after the daily cap', async () => {
       const { provider, makeBooking } = await setup();
       const day = new Date().toISOString().slice(0, 10);
-      await redis.client.set(redis.key('notif-sms', provider.id, day), '10');
+      await redis.set(redis.key('notif-sms', provider.id, day), '10', 86_400);
       const booking = await makeBooking(48 * HOUR);
       await dispatcher.handle({
         type: 'booking.created',

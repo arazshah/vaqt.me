@@ -1,14 +1,14 @@
+import { randomUUID } from 'node:crypto';
 import { JwtService } from '@nestjs/jwt';
 import { prisma } from '@vaqt/db';
 import { AppError } from '../common/errors/app-error';
 import { ErrorCode } from '../common/errors/error-codes';
-import { RedisService } from '../common/redis/redis.service';
+import { KvService } from '../common/kv/kv.service';
 import { fakeConfig } from '../test-support/fake-config';
 import {
   cleanupTestUser,
   createTestUser,
   randomTestPhone,
-  randomTestRedisPrefix,
   requireNonNull,
 } from '../test-support/test-db';
 import { AuthConfigService } from './auth.config';
@@ -21,12 +21,18 @@ import { SessionService } from './session/session.service';
 import { TokenService } from './session/token.service';
 import type { SmsQueueService } from './sms/sms-queue.service';
 
-const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6380';
-const DEVICE = { userAgent: 'jest-test-agent', ip: '198.51.100.10' };
+// Rate-limit state now lives in Postgres and survives between runs, so each
+// run uses its own IP namespace instead of fixed addresses.
+const RUN_ID = randomUUID().slice(0, 8);
+function runIp(label: string): string {
+  return `${RUN_ID}-${label}`;
+}
+
+const DEVICE = { userAgent: 'jest-test-agent', ip: runIp('10') };
 
 function makeAuthService(overrides: Record<string, string> = {}): {
   service: AuthService;
-  redis: RedisService;
+  redis: KvService;
   config: AuthConfigService;
   smsQueue: { enqueueOtp: jest.Mock };
 } {
@@ -34,8 +40,6 @@ function makeAuthService(overrides: Record<string, string> = {}): {
     OTP_PEPPER: 'test-pepper',
     JWT_ACCESS_SECRET: 'access-secret',
     JWT_REFRESH_SECRET: 'refresh-secret',
-    REDIS_URL,
-    REDIS_PREFIX: randomTestRedisPrefix(),
     RATE_LIMIT_RESEND_COOLDOWN_SECONDS: '60',
     RATE_LIMIT_MAX_RESEND_PER_CODE: '3',
     RATE_LIMIT_MAX_VERIFY_ATTEMPTS: '2',
@@ -48,7 +52,7 @@ function makeAuthService(overrides: Record<string, string> = {}): {
     ...overrides,
   });
   const authConfig = new AuthConfigService(config);
-  const redis = new RedisService(config);
+  const redis = new KvService();
   const otp = new OtpService(config);
   const rateLimit = new RateLimitService(redis, authConfig);
   const pendingCode = new OtpPendingCodeStore(redis);
@@ -87,13 +91,7 @@ async function expectAppError(
 describe('AuthService', () => {
   const createdUserIds: string[] = [];
   const createdPhones: string[] = [];
-  const redisInstances: RedisService[] = [];
-
-  afterEach(async () => {
-    for (const redis of redisInstances.splice(0)) {
-      await redis.client.quit();
-    }
-  });
+  const redisInstances: KvService[] = [];
 
   afterAll(async () => {
     for (const id of createdUserIds.splice(0)) {
@@ -105,7 +103,7 @@ describe('AuthService', () => {
     await prisma.$disconnect();
   });
 
-  function track(redis: RedisService): void {
+  function track(redis: KvService): void {
     redisInstances.push(redis);
   }
 
@@ -116,7 +114,7 @@ describe('AuthService', () => {
       const phone = randomTestPhone();
       createdPhones.push(phone);
 
-      const result = await service.requestOtp(phone, '198.51.100.1');
+      const result = await service.requestOtp(phone, runIp('1'));
 
       expect(result.ok).toBe(true);
       expect(result.expiresIn).toBeGreaterThan(0);
@@ -138,14 +136,14 @@ describe('AuthService', () => {
       createdUserIds.push(existingUser.id);
       const resultForExisting = await serviceA.requestOtp(
         existingUser.phone,
-        '198.51.100.2',
+        runIp('2'),
       );
 
       const { service: serviceB, redis: redisB } = makeAuthService();
       track(redisB);
       const newPhone = randomTestPhone();
       createdPhones.push(newPhone);
-      const resultForNew = await serviceB.requestOtp(newPhone, '198.51.100.2');
+      const resultForNew = await serviceB.requestOtp(newPhone, runIp('2'));
 
       expect(Object.keys(resultForExisting).sort()).toEqual(
         Object.keys(resultForNew).sort(),
@@ -158,7 +156,7 @@ describe('AuthService', () => {
       const { service, redis } = makeAuthService();
       track(redis);
       await expectAppError(
-        service.requestOtp('not-a-phone', '198.51.100.3'),
+        service.requestOtp('not-a-phone', runIp('3')),
         ErrorCode.PHONE_INVALID,
       );
     });
@@ -169,9 +167,9 @@ describe('AuthService', () => {
       const phone = randomTestPhone();
       createdPhones.push(phone);
 
-      await service.requestOtp(phone, '198.51.100.4');
+      await service.requestOtp(phone, runIp('4'));
       const error = await expectAppError(
-        service.requestOtp(phone, '198.51.100.4'),
+        service.requestOtp(phone, runIp('4')),
         ErrorCode.OTP_RATE_LIMITED,
       );
       expect(error.retryAfterSeconds).toBeGreaterThan(0);
@@ -183,15 +181,15 @@ describe('AuthService', () => {
       const phone = randomTestPhone();
       createdPhones.push(phone);
 
-      await service.requestOtp(phone, '198.51.100.5');
+      await service.requestOtp(phone, runIp('5'));
       const firstRow = await prisma.verificationCode.findFirst({
         where: { phone },
         orderBy: { createdAt: 'desc' },
       });
 
       // bypass only the resend cooldown (not the whole rate limit stack)
-      await redis.client.del(redis.key('ratelimit', 'otp-resend', phone));
-      await service.requestOtp(phone, '198.51.100.5');
+      await redis.del(redis.key('ratelimit', 'otp-resend', phone));
+      await service.requestOtp(phone, runIp('5'));
 
       const secondRow = await prisma.verificationCode.findFirst({
         where: { phone },
@@ -211,7 +209,7 @@ describe('AuthService', () => {
       const phone = randomTestPhone();
       createdPhones.push(phone);
 
-      await service.requestOtp(phone, '198.51.100.5b');
+      await service.requestOtp(phone, runIp('5b'));
       const firstRow = await prisma.verificationCode.findFirst({
         where: { phone },
         orderBy: { createdAt: 'desc' },
@@ -219,9 +217,9 @@ describe('AuthService', () => {
 
       // Simulate the pending-code cache entry being gone (e.g. Redis
       // restart) while the VerificationCode row itself is still active.
-      await redis.client.del(redis.key('otp', 'pending-code', phone));
-      await redis.client.del(redis.key('ratelimit', 'otp-resend', phone));
-      await service.requestOtp(phone, '198.51.100.5b');
+      await redis.del(redis.key('otp', 'pending-code', phone));
+      await redis.del(redis.key('ratelimit', 'otp-resend', phone));
+      await service.requestOtp(phone, runIp('5b'));
 
       const secondRow = await prisma.verificationCode.findFirst({
         where: { phone },
@@ -235,7 +233,7 @@ describe('AuthService', () => {
       expect(secondRow?.codeHash).not.toBe(firstRow?.codeHash);
       expect(secondRow?.sendCount).toBe(2);
 
-      const newPendingCode = await redis.client.get(
+      const newPendingCode = await redis.get(
         redis.key('otp', 'pending-code', phone),
       );
       expect(newPendingCode).not.toBeNull();
@@ -249,13 +247,13 @@ describe('AuthService', () => {
       const phone = randomTestPhone();
       createdPhones.push(phone);
 
-      await service.requestOtp(phone, '198.51.100.6'); // sendCount 1
-      await redis.client.del(redis.key('ratelimit', 'otp-resend', phone));
-      await service.requestOtp(phone, '198.51.100.6'); // sendCount 2, at the cap
-      await redis.client.del(redis.key('ratelimit', 'otp-resend', phone));
+      await service.requestOtp(phone, runIp('6')); // sendCount 1
+      await redis.del(redis.key('ratelimit', 'otp-resend', phone));
+      await service.requestOtp(phone, runIp('6')); // sendCount 2, at the cap
+      await redis.del(redis.key('ratelimit', 'otp-resend', phone));
 
       const error = await expectAppError(
-        service.requestOtp(phone, '198.51.100.6'),
+        service.requestOtp(phone, runIp('6')),
         ErrorCode.OTP_RATE_LIMITED,
       );
       expect(
@@ -273,9 +271,9 @@ describe('AuthService', () => {
       const phone = randomTestPhone();
       createdPhones.push(phone);
 
-      await service.requestOtp(phone, '198.51.100.7');
+      await service.requestOtp(phone, runIp('7'));
       await expectAppError(
-        service.requestOtp(phone, '198.51.100.7'),
+        service.requestOtp(phone, runIp('7')),
         ErrorCode.OTP_RATE_LIMITED,
       );
     });
@@ -290,9 +288,9 @@ describe('AuthService', () => {
       const phone = randomTestPhone();
       createdPhones.push(phone);
 
-      await service.requestOtp(phone, '198.51.100.8');
+      await service.requestOtp(phone, runIp('8'));
       await expectAppError(
-        service.requestOtp(phone, '198.51.100.8'),
+        service.requestOtp(phone, runIp('8')),
         ErrorCode.OTP_RATE_LIMITED,
       );
     });
@@ -306,7 +304,7 @@ describe('AuthService', () => {
       const phoneA = randomTestPhone();
       const phoneB = randomTestPhone();
       createdPhones.push(phoneA, phoneB);
-      const ip = '198.51.100.9';
+      const ip = runIp('9');
 
       await service.requestOtp(phoneA, ip);
       await expectAppError(
@@ -325,7 +323,7 @@ describe('AuthService', () => {
       const phoneA = randomTestPhone();
       const phoneB = randomTestPhone();
       createdPhones.push(phoneA, phoneB);
-      const ip = '198.51.100.11';
+      const ip = runIp('11');
 
       await service.requestOtp(phoneA, ip);
       await expectAppError(
@@ -346,7 +344,7 @@ describe('AuthService', () => {
 
       // First invalidation cycle: one below the streak threshold, so the
       // failed verify itself still reports OTP_INVALID.
-      await service.requestOtp(phone, '198.51.100.12');
+      await service.requestOtp(phone, runIp('12'));
       await expectAppError(
         service.verifyOtp(phone, '00000', DEVICE),
         ErrorCode.OTP_INVALID,
@@ -354,14 +352,14 @@ describe('AuthService', () => {
 
       // Second invalidation cycle reaches the threshold — the block fires
       // immediately, from the verify call itself, not from a later request.
-      await service.requestOtp(phone, '198.51.100.12');
+      await service.requestOtp(phone, runIp('12'));
       await expectAppError(
         service.verifyOtp(phone, '00000', DEVICE),
         ErrorCode.PHONE_BLOCKED,
       );
 
       await expectAppError(
-        service.requestOtp(phone, '198.51.100.12'),
+        service.requestOtp(phone, runIp('12')),
         ErrorCode.PHONE_BLOCKED,
       );
     });
@@ -385,7 +383,7 @@ describe('AuthService', () => {
       const phone = randomTestPhone();
       createdPhones.push(phone);
 
-      await service.requestOtp(phone, '198.51.100.13');
+      await service.requestOtp(phone, runIp('13'));
       await prisma.verificationCode.updateMany({
         where: { phone, consumedAt: null },
         data: { expiresAt: new Date(Date.now() - 1000) },
@@ -405,7 +403,7 @@ describe('AuthService', () => {
       const phone = randomTestPhone();
       createdPhones.push(phone);
 
-      await service.requestOtp(phone, '198.51.100.14');
+      await service.requestOtp(phone, runIp('14'));
       const error = await expectAppError(
         service.verifyOtp(phone, '00000', DEVICE),
         ErrorCode.OTP_INVALID,
@@ -424,7 +422,7 @@ describe('AuthService', () => {
       const phone = randomTestPhone();
       createdPhones.push(phone);
 
-      await service.requestOtp(phone, '198.51.100.15');
+      await service.requestOtp(phone, runIp('15'));
       await expectAppError(
         service.verifyOtp(phone, '00000', DEVICE),
         ErrorCode.OTP_INVALID,
@@ -444,7 +442,7 @@ describe('AuthService', () => {
       // plaintext is unrecoverable now — any code (including a lucky
       // guess of the real one) must be rejected once the row is consumed.
       await expect(
-        redis.client.get(redis.key('otp', 'pending-code', phone)),
+        redis.get(redis.key('otp', 'pending-code', phone)),
       ).resolves.toBeNull();
       await expectAppError(
         service.verifyOtp(phone, '00000', DEVICE),
@@ -458,13 +456,13 @@ describe('AuthService', () => {
 
       const phone = randomTestPhone();
       createdPhones.push(phone);
-      await service.requestOtp(phone, '198.51.100.16');
+      await service.requestOtp(phone, runIp('16'));
 
       // Recover the real plaintext code from the pending-code Redis store
       // the same way a resend would — the service never exposes it via
       // Postgres, only via that short-lived cache.
       const code = requireNonNull(
-        await redis.client.get(redis.key('otp', 'pending-code', phone)),
+        await redis.get(redis.key('otp', 'pending-code', phone)),
         'expected a pending OTP code in redis',
       );
       expect(code).not.toBeNull();
@@ -494,9 +492,9 @@ describe('AuthService', () => {
 
       const { service, redis } = makeAuthService();
       track(redis);
-      await service.requestOtp(user.phone, '198.51.100.17');
+      await service.requestOtp(user.phone, runIp('17'));
       const code = requireNonNull(
-        await redis.client.get(redis.key('otp', 'pending-code', user.phone)),
+        await redis.get(redis.key('otp', 'pending-code', user.phone)),
         'expected a pending OTP code in redis',
       );
 
@@ -514,9 +512,9 @@ describe('AuthService', () => {
       const { service, redis } = makeAuthService();
       track(redis);
       const before = Date.now();
-      await service.requestOtp(user.phone, '198.51.100.17b');
+      await service.requestOtp(user.phone, runIp('17b'));
       const code = requireNonNull(
-        await redis.client.get(redis.key('otp', 'pending-code', user.phone)),
+        await redis.get(redis.key('otp', 'pending-code', user.phone)),
         'expected a pending OTP code in redis',
       );
 
@@ -537,15 +535,15 @@ describe('AuthService', () => {
       const phone = randomTestPhone();
       createdPhones.push(phone);
 
-      await service.requestOtp(phone, '198.51.100.18');
+      await service.requestOtp(phone, runIp('18'));
       await expectAppError(
         service.verifyOtp(phone, '00000', DEVICE),
         ErrorCode.OTP_INVALID,
       );
 
-      await service.requestOtp(phone, '198.51.100.18');
+      await service.requestOtp(phone, runIp('18'));
       const code = requireNonNull(
-        await redis.client.get(redis.key('otp', 'pending-code', phone)),
+        await redis.get(redis.key('otp', 'pending-code', phone)),
         'expected a pending OTP code in redis',
       );
       const result = await service.verifyOtp(phone, code, DEVICE);
@@ -553,12 +551,12 @@ describe('AuthService', () => {
 
       // Streak was cleared by the success above, so this single failure
       // afterward should not yet trigger a block.
-      await service.requestOtp(phone, '198.51.100.18');
+      await service.requestOtp(phone, runIp('18'));
       await expectAppError(
         service.verifyOtp(phone, '00000', DEVICE),
         ErrorCode.OTP_INVALID,
       );
-      const stillOk = await service.requestOtp(phone, '198.51.100.18');
+      const stillOk = await service.requestOtp(phone, runIp('18'));
       expect(stillOk.ok).toBe(true);
     });
   });
@@ -566,13 +564,13 @@ describe('AuthService', () => {
   describe('refresh', () => {
     async function loginFreshUser(
       service: AuthService,
-      redis: RedisService,
+      redis: KvService,
     ): Promise<{ userId: string; refreshToken: string }> {
       const phone = randomTestPhone();
       createdPhones.push(phone);
-      await service.requestOtp(phone, '198.51.100.19');
+      await service.requestOtp(phone, runIp('19'));
       const code = requireNonNull(
-        await redis.client.get(redis.key('otp', 'pending-code', phone)),
+        await redis.get(redis.key('otp', 'pending-code', phone)),
         'expected a pending OTP code in redis',
       );
       const { user, tokens } = await service.verifyOtp(phone, code, DEVICE);
@@ -614,11 +612,9 @@ describe('AuthService', () => {
     it('rethrows an unrecognized error from session rotation as-is (not wrapped in AppError)', async () => {
       const config = fakeConfig({
         OTP_PEPPER: 'test-pepper',
-        REDIS_URL,
-        REDIS_PREFIX: randomTestRedisPrefix(),
       });
       const authConfig = new AuthConfigService(config);
-      const redis = new RedisService(config);
+      const redis = new KvService();
       track(redis);
 
       const boom = new Error('unexpected database outage');
@@ -644,9 +640,9 @@ describe('AuthService', () => {
       track(redis);
       const phone = randomTestPhone();
       createdPhones.push(phone);
-      await service.requestOtp(phone, '198.51.100.20');
+      await service.requestOtp(phone, runIp('20'));
       const code = requireNonNull(
-        await redis.client.get(redis.key('otp', 'pending-code', phone)),
+        await redis.get(redis.key('otp', 'pending-code', phone)),
         'expected a pending OTP code in redis',
       );
       const { user, tokens } = await service.verifyOtp(phone, code, DEVICE);
@@ -681,9 +677,9 @@ describe('AuthService', () => {
       track(redis);
       const phone = randomTestPhone();
       createdPhones.push(phone);
-      await service.requestOtp(phone, '198.51.100.21');
+      await service.requestOtp(phone, runIp('21'));
       const code = requireNonNull(
-        await redis.client.get(redis.key('otp', 'pending-code', phone)),
+        await redis.get(redis.key('otp', 'pending-code', phone)),
         'expected a pending OTP code in redis',
       );
       const { user } = await service.verifyOtp(phone, code, DEVICE);

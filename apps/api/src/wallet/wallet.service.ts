@@ -3,7 +3,7 @@ import { prisma } from '@vaqt/db';
 import type { WalletEntryView, WalletStatusView } from '@vaqt/shared';
 import { AppError } from '../common/errors/app-error';
 import { ErrorCode } from '../common/errors/error-codes';
-import { RedisService } from '../common/redis/redis.service';
+import { KvService } from '../common/kv/kv.service';
 
 const EXCHANGES_PER_DAY = 20;
 
@@ -11,7 +11,7 @@ const notFound = () => new AppError(ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND);
 
 @Injectable()
 export class WalletService {
-  constructor(private readonly redis: RedisService) {}
+  constructor(private readonly kv: KvService) {}
 
   private async findCardOwner(username: string) {
     const user = await prisma.user.findUnique({
@@ -112,9 +112,8 @@ export class WalletService {
     // doesn't count against the cap.
     if (already?.source !== 'exchanged') {
       const day = new Date().toISOString().slice(0, 10);
-      const key = this.redis.key('card-exchange', userId, day);
-      const used = await this.redis.client.incr(key);
-      if (used === 1) await this.redis.client.expire(key, 86_400);
+      const key = this.kv.key('card-exchange', userId, day);
+      const used = await this.kv.increment(key, 86_400);
       if (used > EXCHANGES_PER_DAY) {
         throw new AppError(
           ErrorCode.EXCHANGE_LIMIT_REACHED,

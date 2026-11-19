@@ -1,28 +1,29 @@
-import { Inject } from '@nestjs/common';
-import { Processor, WorkerHost } from '@nestjs/bullmq';
-import type { Job } from 'bullmq';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { JobsService, type JobPayload } from '../../common/jobs/jobs.service';
 import { SMS_PORT, type SmsPort } from './sms.port';
-import type { SmsJobData } from './sms-job.types';
+import { SMS_QUEUE } from './sms-queue.service';
+import type { NotificationSmsJobData, OtpSmsJobData } from './sms-job.types';
 
-@Processor('sms')
-export class SmsProcessor extends WorkerHost {
-  constructor(@Inject(SMS_PORT) private readonly smsPort: SmsPort) {
-    super();
+@Injectable()
+export class SmsProcessor implements OnModuleInit {
+  constructor(
+    @Inject(SMS_PORT) private readonly smsPort: SmsPort,
+    private readonly jobs: JobsService,
+  ) {}
+
+  onModuleInit(): void {
+    this.jobs.register(SMS_QUEUE, (job) => this.process(job));
   }
 
-  async process(job: Job<SmsJobData>): Promise<void> {
+  async process(job: JobPayload): Promise<void> {
     if (job.name === 'otp') {
-      const data = job.data as { phone: string; code: string };
+      const data = job.payload as OtpSmsJobData;
       await this.smsPort.sendOtp(data.phone, data.code);
       return;
     }
 
     if (job.name === 'notification') {
-      const data = job.data as {
-        phone: string;
-        templateId: string;
-        params: Record<string, string>;
-      };
+      const data = job.payload as NotificationSmsJobData;
       await this.smsPort.sendNotification(
         data.phone,
         data.templateId,

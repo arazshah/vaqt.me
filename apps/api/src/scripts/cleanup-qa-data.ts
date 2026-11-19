@@ -1,4 +1,4 @@
-// Removes QA/manual-testing leftovers from the local dev Postgres + Redis.
+// Removes QA/manual-testing leftovers from the local dev Postgres.
 //
 // Detection: a user is a candidate only if its phone starts with
 // TEST_PHONE_PREFIX — the range test-support/test-db.ts reserves for throwaway
@@ -7,9 +7,8 @@
 // session you are driving right now isn't swept mid-run.
 //
 // Cards, links, services, availability and bookings cascade with the user;
-// sessions, verification codes and audit logs don't, so they are deleted
-// explicitly (in the same transaction).
-import Redis from 'ioredis';
+// sessions, verification codes, audit logs and the short-lived keys
+// (OTP, rate limits) don't, so they are deleted explicitly (same transaction).
 import { prisma } from '@vaqt/db';
 import { maskPhone } from '../common/utils/mask-phone';
 import { TEST_PHONE_PREFIX } from '../test-support/test-db';
@@ -69,7 +68,19 @@ export async function deleteCandidates(
 ): Promise<{ users: number; sessions: number }> {
   const ids = candidates.map((c) => c.id);
   const phones = candidates.map((c) => c.phone);
-  const [sessions, , , , users] = await prisma.$transaction([
+  const keyPatterns = candidates.flatMap((c) => [
+    `otp:pending-code:${c.phone}`,
+    `otp:invalidated-streak:${c.phone}`,
+    `otp:blocked:${c.phone}`,
+    `ratelimit:otp-resend:${c.phone}`,
+    `ratelimit:otp-phone-hour:${c.phone}`,
+    `ratelimit:otp-phone-day:${c.phone}`,
+    `verified-phone:${c.id}`,
+    `system-role:${c.id}`,
+  ]);
+  const [, , sessions, , , , users] = await prisma.$transaction([
+    prisma.kvEntry.deleteMany({ where: { key: { in: keyPatterns } } }),
+    prisma.rateEvent.deleteMany({ where: { key: { in: keyPatterns } } }),
     prisma.session.deleteMany({ where: { userId: { in: ids } } }),
     prisma.auditLog.deleteMany({ where: { actorId: { in: ids } } }),
     prisma.verificationCode.deleteMany({ where: { phone: { in: phones } } }),
@@ -80,24 +91,6 @@ export async function deleteCandidates(
     prisma.user.deleteMany({ where: { id: { in: ids } } }),
   ]);
   return { users: users.count, sessions: sessions.count };
-}
-
-export async function cleanupRedis(
-  candidates: CleanupCandidate[],
-  redis: Redis,
-  prefix: string,
-): Promise<number> {
-  const keys = candidates.flatMap((c) => [
-    `${prefix}otp:pending-code:${c.phone}`,
-    `${prefix}otp:invalidated-streak:${c.phone}`,
-    `${prefix}otp:blocked:${c.phone}`,
-    `${prefix}ratelimit:otp-resend:${c.phone}`,
-    `${prefix}ratelimit:otp-phone-hour:${c.phone}`,
-    `${prefix}ratelimit:otp-phone-day:${c.phone}`,
-    `${prefix}verified-phone:${c.id}`,
-    `${prefix}system-role:${c.id}`,
-  ]);
-  return keys.length === 0 ? 0 : redis.del(...keys);
 }
 
 export async function runCleanup(options: CleanupOptions): Promise<void> {
@@ -118,22 +111,6 @@ export async function runCleanup(options: CleanupOptions): Promise<void> {
   console.log(
     `[cleanup-qa-data] deleted ${String(counts.users)} user(s), ${String(counts.sessions)} session(s).`,
   );
-  const redisUrl = process.env.REDIS_URL;
-  if (redisUrl) {
-    const redis = new Redis(redisUrl);
-    try {
-      const removed = await cleanupRedis(
-        candidates,
-        redis,
-        process.env.REDIS_PREFIX ?? '',
-      );
-      console.log(`[cleanup-qa-data] removed ${String(removed)} Redis key(s).`);
-    } catch (error) {
-      console.warn('[cleanup-qa-data] Redis cleanup failed:', error);
-    } finally {
-      redis.disconnect();
-    }
-  }
 }
 
 export function parseCliArgs(argv: string[]): CleanupOptions {

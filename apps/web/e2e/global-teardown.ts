@@ -18,8 +18,6 @@ export default function globalTeardown(): void {
           DATABASE_URL:
             process.env.DATABASE_URL ??
             'postgresql://vaqt:vaqt@localhost:5432/vaqt',
-          REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6380',
-          REDIS_PREFIX: 'vaqt:e2e:',
         },
       },
     );

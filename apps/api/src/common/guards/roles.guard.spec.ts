@@ -2,18 +2,12 @@ import type { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { prisma, SystemRole, UserStatus } from '@vaqt/db';
 import { AppError } from '../errors/app-error';
-import { RedisService } from '../redis/redis.service';
+import { KvService } from '../kv/kv.service';
 import { fakeConfig } from '../../test-support/fake-config';
-import {
-  cleanupTestUser,
-  createTestUser,
-  randomTestRedisPrefix,
-} from '../../test-support/test-db';
+import { cleanupTestUser, createTestUser } from '../../test-support/test-db';
 import { AuthConfigService } from '../../auth/auth.config';
 import type { AuthenticatedRequest } from '../../auth/auth-request';
 import { RolesGuard } from './roles.guard';
-
-const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6380';
 
 function makeContext(userId: string | undefined): ExecutionContext {
   const request: Partial<AuthenticatedRequest> = userId
@@ -28,24 +22,20 @@ function makeContext(userId: string | undefined): ExecutionContext {
 
 describe('RolesGuard', () => {
   const createdUserIds: string[] = [];
-  let redis: RedisService;
+  let redis: KvService;
   let reflector: Reflector;
   let guard: RolesGuard;
 
   beforeEach(() => {
     const config = fakeConfig({
-      REDIS_URL,
-      REDIS_PREFIX: randomTestRedisPrefix(),
       VERIFIED_PHONE_CACHE_TTL_SECONDS: '30',
     });
-    redis = new RedisService(config);
+    redis = new KvService();
     reflector = new Reflector();
     guard = new RolesGuard(reflector, redis, new AuthConfigService(config));
   });
 
-  afterEach(async () => {
-    await redis.client.quit();
-  });
+  afterEach(async () => {});
 
   afterAll(async () => {
     for (const id of createdUserIds.splice(0)) {
@@ -120,7 +110,7 @@ describe('RolesGuard', () => {
       where: { id: userId },
       data: { status: UserStatus.SUSPENDED },
     });
-    await redis.client.del(redis.key('system-role', userId));
+    await redis.del(redis.key('system-role', userId));
     await expect(guard.canActivate(makeContext(userId))).rejects.toThrow(
       AppError,
     );
@@ -145,7 +135,7 @@ describe('RolesGuard', () => {
     // simulate the TTL having expired, since RolesGuard has no explicit
     // invalidation-on-write path — it relies purely on the 30s TTL, same
     // as RequireVerifiedPhoneGuard.
-    await redis.client.del(redis.key('system-role', userId));
+    await redis.del(redis.key('system-role', userId));
 
     await expect(guard.canActivate(makeContext(userId))).resolves.toBe(true);
   });

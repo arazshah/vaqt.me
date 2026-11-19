@@ -1,56 +1,45 @@
-import { fakeConfig } from '../../test-support/fake-config';
-import { randomTestRedisPrefix } from '../../test-support/test-db';
-import { RedisService } from '../../common/redis/redis.service';
+import { randomTestPhone } from '../../test-support/test-db';
+import { KvService } from '../../common/kv/kv.service';
 import { OtpPendingCodeStore } from './otp-pending-code.store';
 
-const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6380';
-
-function makeStore(): { store: OtpPendingCodeStore; redis: RedisService } {
-  const redis = new RedisService(
-    fakeConfig({ REDIS_URL, REDIS_PREFIX: randomTestRedisPrefix() }),
-  );
+function makeStore(): { store: OtpPendingCodeStore; redis: KvService } {
+  const redis = new KvService();
   return { store: new OtpPendingCodeStore(redis), redis };
 }
 
 describe('OtpPendingCodeStore', () => {
-  let redis: RedisService;
-
-  afterEach(async () => {
-    await redis.client.quit();
+  let phone: string;
+  beforeEach(() => {
+    phone = randomTestPhone();
   });
 
   it('set() then get() round-trips the code', async () => {
     const created = makeStore();
-    redis = created.redis;
-    await created.store.set('+989123456789', '12345', 60);
-    await expect(created.store.get('+989123456789')).resolves.toBe('12345');
+    await created.store.set(phone, '12345', 60);
+    await expect(created.store.get(phone)).resolves.toBe('12345');
   });
 
   it('set() with ttlSeconds <= 0 is a no-op (never writes to Redis)', async () => {
     const created = makeStore();
-    redis = created.redis;
-    await created.store.set('+989123456789', '12345', 0);
-    await expect(created.store.get('+989123456789')).resolves.toBeNull();
+    await created.store.set(phone, '12345', 0);
+    await expect(created.store.get(phone)).resolves.toBeNull();
   });
 
   it('set() with a negative ttlSeconds is also a no-op', async () => {
     const created = makeStore();
-    redis = created.redis;
-    await created.store.set('+989123456789', '12345', -5);
-    await expect(created.store.get('+989123456789')).resolves.toBeNull();
+    await created.store.set(phone, '12345', -5);
+    await expect(created.store.get(phone)).resolves.toBeNull();
   });
 
   it('get() returns null when nothing was ever set for the phone', async () => {
     const created = makeStore();
-    redis = created.redis;
-    await expect(created.store.get('+989120000000')).resolves.toBeNull();
+    await expect(created.store.get(randomTestPhone())).resolves.toBeNull();
   });
 
   it('clear() removes the stored code', async () => {
     const created = makeStore();
-    redis = created.redis;
-    await created.store.set('+989123456789', '12345', 60);
-    await created.store.clear('+989123456789');
-    await expect(created.store.get('+989123456789')).resolves.toBeNull();
+    await created.store.set(phone, '12345', 60);
+    await created.store.clear(phone);
+    await expect(created.store.get(phone)).resolves.toBeNull();
   });
 });
