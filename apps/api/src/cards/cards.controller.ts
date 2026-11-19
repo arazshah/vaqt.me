@@ -1,16 +1,37 @@
-import { Body, Controller, Get, Header, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  HttpCode,
+  Param,
+  Post,
+  Req,
+} from '@nestjs/common';
+import type { Request } from 'express';
 import { ZodValidationPipe } from 'nestjs-zod';
-import type { SetUsernameInput, UpdateCardInput } from '@vaqt/shared';
+import type {
+  CardStatsQueryInput,
+  RecordCardEventInput,
+  SetUsernameInput,
+  UpdateCardInput,
+} from '@vaqt/shared';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AccessTokenPayload } from '../auth/session/token.service';
 import { Public } from '../common/decorators/public.decorator';
+import { CardAnalyticsService } from './card-analytics.service';
 import { CardsService } from './cards.service';
+import { CardStatsDto } from './dto/card-stats.dto';
+import { RecordCardEventDto } from './dto/record-card-event.dto';
 import { SetUsernameDto } from './dto/set-username.dto';
 import { UpdateCardDto } from './dto/update-card.dto';
 
 @Controller('cards')
 export class CardsController {
-  constructor(private readonly cards: CardsService) {}
+  constructor(
+    private readonly cards: CardsService,
+    private readonly analytics: CardAnalyticsService,
+  ) {}
 
   // --- Owner (logged in). RPC-style @Post, same convention as the rest.
   // `me` is a reserved username, so these can never collide with /:username.
@@ -35,6 +56,14 @@ export class CardsController {
     return this.cards.setUsername(user.sub, body.username);
   }
 
+  @Post('me/stats')
+  stats(
+    @CurrentUser() user: AccessTokenPayload,
+    @Body(new ZodValidationPipe(CardStatsDto)) body: CardStatsQueryInput,
+  ) {
+    return this.analytics.stats(user.sub, body.days);
+  }
+
   // --- Anyone (QR scans, link opens). Read-only GETs, no auth.
   @Public()
   @Get(':username')
@@ -51,5 +80,20 @@ export class CardsController {
       username,
       `${origin}/${encodeURIComponent(username.toLowerCase())}`,
     );
+  }
+
+  // Fire-and-forget interaction beacon from the public card page. Always
+  // answers the same way, so it can't be used to probe usernames or limits.
+  @Public()
+  @Post(':username/event')
+  @HttpCode(200)
+  async recordEvent(
+    @Param('username') username: string,
+    @Body(new ZodValidationPipe(RecordCardEventDto))
+    body: RecordCardEventInput,
+    @Req() req: Request,
+  ) {
+    await this.analytics.record(username, body, req.ip ?? 'unknown');
+    return { ok: true };
   }
 }

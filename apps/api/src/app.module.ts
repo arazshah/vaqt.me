@@ -19,6 +19,7 @@ import { OffersModule } from './offers/offers.module';
 import { RequestsModule } from './requests/requests.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { SkillsModule } from './skills/skills.module';
+import { WalletModule } from './wallet/wallet.module';
 import { UsersModule } from './users/users.module';
 
 @Module({
@@ -41,6 +42,7 @@ import { UsersModule } from './users/users.module';
     BookingModule,
     MessengerModule,
     NotificationsModule,
+    WalletModule,
   ],
   controllers: [AppController],
   providers: [
