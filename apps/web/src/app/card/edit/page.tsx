@@ -17,6 +17,7 @@ import { AppShell } from '@/components/app-shell';
 import { CardPreview } from '@/components/domain/card-preview';
 import { CategoryPicker } from '@/components/domain/category-picker';
 import { LinkEditor } from '@/components/domain/link-editor';
+import { ContactLocationFields } from '@/components/domain/contact-location-fields';
 import { PhotoPicker } from '@/components/domain/photo-picker';
 import { TemplatePicker } from '@/components/domain/template-picker';
 import { CardWizard } from '@/components/domain/card-wizard';
@@ -230,6 +231,15 @@ export default function CardEditPage() {
               {t.bioCount(formatNumber(draft.bio.length))}
             </p>
           </div>
+          <section className="flex flex-col gap-3 border-t pt-4">
+            <h2 className="font-semibold">{t.contact.title}</h2>
+            <ContactLocationFields
+              contactPhone={draft.contactPhone}
+              address={draft.address}
+              location={draft.location}
+              onChange={patch}
+            />
+          </section>
           <label className="flex items-start gap-3 rounded-xl bg-muted/60 p-3">
             <Checkbox
               checked={draft.showPhone}

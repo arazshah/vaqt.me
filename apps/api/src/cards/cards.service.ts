@@ -6,6 +6,7 @@ import {
   CardCategorySchema,
   LinkKindSchema,
   type CardLinkView,
+  type GeoPoint,
   type MyCard,
   type PublicCard,
   type UpdateCardInput,
@@ -37,6 +38,15 @@ function toLinkViews(
           ]
         : [];
     });
+}
+
+function toLocation(
+  card:
+    { latitude: number | null; longitude: number | null } | null | undefined,
+): GeoPoint | null {
+  return card?.latitude != null && card.longitude != null
+    ? { lat: card.latitude, lng: card.longitude }
+    : null;
 }
 
 function toCategory(raw: string | null | undefined) {
@@ -84,8 +94,13 @@ export class CardsService {
       avatarUrl: user.avatarUrl,
       template: toTemplate(user.card?.template),
       category: toCategory(user.card?.category),
+      // The phone typed on purpose for the card wins; the account phone is
+      // only ever shown if the owner turned showPhone on.
       phone:
-        user.card?.showPhone && user.phone ? toLocalPhone(user.phone) : null,
+        user.card?.contactPhone ??
+        (user.card?.showPhone && user.phone ? toLocalPhone(user.phone) : null),
+      address: user.card?.address ?? null,
+      location: toLocation(user.card),
       links: toLinkViews(user.contactLinks),
       booking: await getPublicBookingInfo(user.id),
     };
@@ -105,8 +120,16 @@ export class CardsService {
     for (const link of card.links) {
       lines.push(`URL;TYPE=${link.kind}:${link.href}`);
     }
-    if (card.city)
-      lines.push(`ADR;TYPE=WORK:;;;${escapeVCard(card.city)};;;IR`);
+    if (card.address || card.city) {
+      lines.push(
+        `ADR;TYPE=WORK:;;${escapeVCard(card.address ?? '')};${escapeVCard(card.city ?? '')};;;IR`,
+      );
+    }
+    if (card.location) {
+      lines.push(
+        `GEO:${String(card.location.lat)};${String(card.location.lng)}`,
+      );
+    }
     lines.push(`NOTE:${escapeVCard(`کارت ویزیت آنلاین: ${cardUrl}`)}`);
     lines.push('END:VCARD');
     return lines.join('\r\n') + '\r\n';
@@ -127,25 +150,32 @@ export class CardsService {
       category: toCategory(user.card?.category),
       avatarUrl: user.avatarUrl,
       showPhone: user.card?.showPhone ?? false,
+      contactPhone: user.card?.contactPhone ?? null,
+      address: user.card?.address ?? null,
+      location: toLocation(user.card),
       links: toLinkViews(user.contactLinks),
     };
   }
 
   async update(userId: string, input: UpdateCardInput): Promise<MyCard> {
+    const fields = {
+      ...(input.template !== undefined && { template: input.template }),
+      ...(input.category !== undefined && { category: input.category }),
+      ...(input.showPhone !== undefined && { showPhone: input.showPhone }),
+      ...(input.contactPhone !== undefined && {
+        contactPhone: input.contactPhone,
+      }),
+      ...(input.address !== undefined && { address: input.address }),
+      ...(input.location !== undefined && {
+        latitude: input.location?.lat ?? null,
+        longitude: input.location?.lng ?? null,
+      }),
+    };
     await prisma.$transaction(async (tx) => {
       await tx.card.upsert({
         where: { userId },
-        create: {
-          userId,
-          ...(input.template !== undefined && { template: input.template }),
-          ...(input.category !== undefined && { category: input.category }),
-          ...(input.showPhone !== undefined && { showPhone: input.showPhone }),
-        },
-        update: {
-          ...(input.template !== undefined && { template: input.template }),
-          ...(input.category !== undefined && { category: input.category }),
-          ...(input.showPhone !== undefined && { showPhone: input.showPhone }),
-        },
+        create: { userId, ...fields },
+        update: fields,
       });
       if (input.links) {
         await tx.contactLink.deleteMany({ where: { userId } });

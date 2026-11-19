@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { normalizePhone } from '../utils/normalize-phone';
+import { normalizePhone, toLatinDigits } from '../utils/normalize-phone';
 import type { PublicBookingInfo } from './booking';
 
 // ---------------------------------------------------------------------------
@@ -216,7 +216,50 @@ export const contactLinkInputSchema = z
   });
 export type ContactLinkInput = z.infer<typeof contactLinkInputSchema>;
 
+// ---------------------------------------------------------------------------
+// Public contact info — a phone number the owner chooses to show (mobile OR
+// landline, so not limited to the +989 shape), a street address and a map pin.
+// ---------------------------------------------------------------------------
+
+/** Digits (Persian/Arabic accepted), optional leading +; 6–15 digits. */
+export function normalizeContactPhone(raw: string): string | null {
+  const cleaned = toLatinDigits(raw).replace(/[\s\-()]+/g, '');
+  return /^\+?\d{6,15}$/.test(cleaned) ? cleaned : null;
+}
+
+const contactPhoneSchema = z
+  .string()
+  .trim()
+  .max(30)
+  .transform((raw, ctx) => {
+    if (raw === '') return null;
+    const value = normalizeContactPhone(raw);
+    if (value === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'شماره تلفن معتبر نیست',
+      });
+      return z.NEVER;
+    }
+    return value;
+  });
+
+export const geoPointSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+});
+export type GeoPoint = z.infer<typeof geoPointSchema>;
+
 export const updateCardSchema = z.object({
+  contactPhone: contactPhoneSchema.nullable().optional(),
+  address: z
+    .string()
+    .trim()
+    .max(300)
+    .transform((v) => (v === '' ? null : v))
+    .nullable()
+    .optional(),
+  location: geoPointSchema.nullable().optional(),
   template: CardTemplateSchema.optional(),
   category: CardCategorySchema.nullable().optional(),
   showPhone: z.boolean().optional(),
@@ -252,6 +295,8 @@ export interface PublicCard {
   category: CardCategory | null;
   // Local 09xxxxxxxxx form, present ONLY when the owner turned showPhone on.
   phone: string | null;
+  address: string | null;
+  location: GeoPoint | null;
   links: CardLinkView[];
   booking: PublicBookingInfo;
 }
@@ -266,5 +311,8 @@ export interface MyCard {
   category: CardCategory | null;
   avatarUrl: string | null;
   showPhone: boolean;
+  contactPhone: string | null;
+  address: string | null;
+  location: GeoPoint | null;
   links: CardLinkView[];
 }

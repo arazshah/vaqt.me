@@ -21,6 +21,7 @@ import {
 } from '@vaqt/shared';
 
 import { BusinessCard } from '@/components/domain/business-card';
+import { LocationMap } from '@/components/domain/location-map';
 import { WalletActions } from '@/components/domain/wallet-actions';
 import { apiFetch } from '@/lib/api-client';
 import { trackCardEvent, vcardUrl } from '@/lib/card';
@@ -270,6 +271,52 @@ export function CardView({
                   </li>
                 ))}
               </ul>
+            </section>
+          ) : null}
+
+          {card.address || card.location || card.phone ? (
+            <section className="rounded-3xl border bg-card p-5">
+              <h2 className="mb-3 text-sm font-bold">{p.locationTitle}</h2>
+              {card.phone ? (
+                <a
+                  href={`tel:${card.phone}`}
+                  dir="ltr"
+                  className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground no-underline"
+                >
+                  <Phone className="size-4 text-primary" aria-hidden="true" />
+                  {card.phone}
+                </a>
+              ) : null}
+              {card.address ? (
+                <p className="mb-3 flex items-start gap-2 text-sm leading-7 text-muted-foreground">
+                  <MapPin
+                    className="mt-1.5 size-4 shrink-0 text-primary"
+                    aria-hidden="true"
+                  />
+                  <span className="whitespace-pre-line">{card.address}</span>
+                </p>
+              ) : null}
+              {card.location ? (
+                <>
+                  <LocationMap value={card.location} className="h-56" />
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <a
+                      href={`geo:${String(card.location.lat)},${String(card.location.lng)}?q=${String(card.location.lat)},${String(card.location.lng)}`}
+                      className="rounded-full border px-4 py-2 text-xs font-medium text-foreground no-underline hover:bg-muted"
+                    >
+                      {p.openInMaps}
+                    </a>
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${String(card.location.lat)},${String(card.location.lng)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-full border px-4 py-2 text-xs font-medium text-foreground no-underline hover:bg-muted"
+                    >
+                      {p.directions}
+                    </a>
+                  </div>
+                </>
+              ) : null}
             </section>
           ) : null}
 

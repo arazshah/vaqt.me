@@ -6,6 +6,8 @@ import {
   normalizeLinkValue,
   type CardCategory,
   type CardTemplate,
+  type GeoPoint,
+  normalizeContactPhone,
   type LinkKind,
   type MyCard,
 } from '@vaqt/shared';
@@ -55,6 +57,9 @@ export interface CardDraft {
   category: CardCategory | null;
   template: CardTemplate;
   showPhone: boolean;
+  contactPhone: string;
+  address: string;
+  location: GeoPoint | null;
   links: LinkDrafts;
   avatarUrl: string | null;
 }
@@ -68,6 +73,9 @@ const EMPTY: CardDraft = {
   category: null,
   template: 'tile',
   showPhone: false,
+  contactPhone: '',
+  address: '',
+  location: null,
   links: {},
   avatarUrl: null,
 };
@@ -82,6 +90,9 @@ function fromCard(card: MyCard): CardDraft {
     category: card.category,
     template: card.template,
     showPhone: card.showPhone,
+    contactPhone: card.contactPhone ?? '',
+    address: card.address ?? '',
+    location: card.location,
     links: Object.fromEntries(
       card.links.map((l) => [l.kind, fromStoredLink(l.kind, l.value)]),
     ),
@@ -128,7 +139,10 @@ export function useCardDraft(enabled: boolean, autosave: boolean) {
     const typed = draft.links[kind];
     if (typed?.trim() && !linkIsValid(kind, typed)) linkErrors[kind] = true;
   }
-  const hasLinkErrors = Object.keys(linkErrors).length > 0;
+  const phoneInvalid =
+    draft.contactPhone.trim() !== '' &&
+    normalizeContactPhone(draft.contactPhone) === null;
+  const hasLinkErrors = Object.keys(linkErrors).length > 0 || phoneInvalid;
 
   const save = useCallback(async (): Promise<boolean> => {
     if (hasLinkErrors) {
@@ -153,6 +167,9 @@ export function useCardDraft(enabled: boolean, autosave: boolean) {
         template: draft.template,
         category: draft.category,
         showPhone: draft.showPhone,
+        contactPhone: draft.contactPhone.trim() || null,
+        address: draft.address.trim() || null,
+        location: draft.location,
         links,
       });
       lastSaved.current = serialise(draft);
