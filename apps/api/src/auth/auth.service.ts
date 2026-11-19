@@ -1,15 +1,8 @@
-import { randomUUID } from 'node:crypto';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { prisma, OtpPurpose } from '@vaqt/db';
-import {
-  computeProfileCompleteness,
-  normalizePhone,
-  toPersianDigits,
-  RoleIntent,
-} from '@vaqt/shared';
+import { normalizePhone, toPersianDigits } from '@vaqt/shared';
 import { AppError } from '../common/errors/app-error';
 import { ErrorCode } from '../common/errors/error-codes';
-import { RedisService } from '../common/redis/redis.service';
 import { maskPhone } from '../common/utils/mask-phone';
 import { AuthConfigService } from './auth.config';
 import { AuditService } from './audit/audit.service';
@@ -24,16 +17,7 @@ import {
   type IssuedTokens,
 } from './session/session.service';
 import { SmsQueueService } from './sms/sms-queue.service';
-import {
-  toPrivateUser,
-  toPublicUser,
-  type PrivateUser,
-  type PublicUser,
-} from './user-view';
-
-const userWithSkills = {
-  include: { skills: { include: { skill: true } } },
-} as const;
+import { toPrivateUser, type PrivateUser } from './user-view';
 
 export interface OtpRequestResult {
   ok: true;
@@ -56,7 +40,6 @@ export class AuthService {
     private readonly sessions: SessionService,
     private readonly audit: AuditService,
     private readonly config: AuthConfigService,
-    private readonly redis: RedisService,
   ) {}
 
   async requestOtp(rawPhone: string, ip: string): Promise<OtpRequestResult> {
@@ -191,14 +174,7 @@ export class AuthService {
       meta: { phone: maskPhone(phone), ip: device.ip },
     });
 
-    const completeness = computeProfileCompleteness({
-      phoneVerified: user.phoneVerifiedAt !== null,
-      displayName: user.displayName,
-      bio: user.bio,
-      skillCount: user.skills.length,
-    });
-
-    return { user: toPrivateUser(user, completeness), tokens };
+    return { user: toPrivateUser(user), tokens };
   }
 
   async refresh(
@@ -239,43 +215,11 @@ export class AuthService {
   async getMe(userId: string): Promise<PrivateUser> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      ...userWithSkills,
     });
     if (!user) {
       throw new AppError(ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED);
     }
-    const completeness = computeProfileCompleteness({
-      phoneVerified: user.phoneVerifiedAt !== null,
-      displayName: user.displayName,
-      bio: user.bio,
-      skillCount: user.skills.length,
-    });
-    return toPrivateUser(user, completeness);
-  }
-
-  async updateRole(
-    userId: string,
-    roleIntent: RoleIntent,
-  ): Promise<PublicUser> {
-    const user = await prisma.user.update({
-      where: { id: userId },
-      data: { roleIntent },
-    });
-    return toPublicUser(user);
-  }
-
-  async createWsTicket(
-    userId: string,
-  ): Promise<{ ticket: string; expiresIn: number }> {
-    const ticket = randomUUID();
-    const expiresIn = this.config.wsTicketTtlSeconds;
-    await this.redis.client.set(
-      this.redis.key('ws-ticket', ticket),
-      userId,
-      'EX',
-      expiresIn,
-    );
-    return { ticket, expiresIn };
+    return toPrivateUser(user);
   }
 
   private requirePhone(rawPhone: string): string {
@@ -379,7 +323,6 @@ export class AuthService {
           phoneVerifiedAt: now,
           lastSeenAt: now,
         },
-        ...userWithSkills,
       });
     }
     return prisma.user.update({
@@ -388,7 +331,6 @@ export class AuthService {
         phoneVerifiedAt: existing.phoneVerifiedAt ?? now,
         lastSeenAt: now,
       },
-      ...userWithSkills,
     });
   }
 }

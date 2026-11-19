@@ -29,7 +29,6 @@ export class AuthConfigService {
   readonly accessTokenTtlSeconds: number;
   readonly refreshTokenTtlSeconds: number;
   readonly verifiedPhoneCacheTtlSeconds: number;
-  readonly wsTicketTtlSeconds: number;
 
   constructor(config: ConfigService) {
     this.otpTtlSeconds = num(config, 'OTP_TTL_SECONDS', 120);
@@ -61,6 +60,5 @@ export class AuthConfigService {
       'VERIFIED_PHONE_CACHE_TTL_SECONDS',
       30,
     );
-    this.wsTicketTtlSeconds = num(config, 'WS_TICKET_TTL_SECONDS', 60);
   }
 }

@@ -2,20 +2,13 @@ import 'reflect-metadata';
 import { RequestMethod } from '@nestjs/common';
 import { PATH_METADATA, METHOD_METADATA } from '@nestjs/common/constants';
 import { IS_PUBLIC_KEY } from './common/decorators/public.decorator';
-import { AdminController } from './admin/admin.controller';
 import { AdminSettingsController } from './admin/admin-settings.controller';
 import { AdminSetupController } from './admin/admin-setup.controller';
 import { AppController } from './app.controller';
 import { AuthController } from './auth/auth.controller';
 import { BookingController } from './booking/booking.controller';
 import { CardsController } from './cards/cards.controller';
-import { CategoriesController } from './categories/categories.controller';
-import { ConversationsController } from './conversations/conversations.controller';
 import { MessengerController } from './messenger/messenger.controller';
-import { OffersController } from './offers/offers.controller';
-import { RequestsController } from './requests/requests.controller';
-import { ReviewsController } from './reviews/reviews.controller';
-import { SkillsController } from './skills/skills.controller';
 import { WalletController } from './wallet/wallet.controller';
 import { UsersController } from './users/users.controller';
 
@@ -26,15 +19,8 @@ const CONTROLLERS: (new (...args: never[]) => unknown)[] = [
   AppController,
   AuthController,
   UsersController,
-  CategoriesController,
-  SkillsController,
-  AdminController,
   AdminSettingsController,
   AdminSetupController,
-  RequestsController,
-  OffersController,
-  ConversationsController,
-  ReviewsController,
   CardsController,
   BookingController,
   MessengerController,
@@ -117,7 +103,6 @@ const PUBLIC_ROUTE_ALLOWLIST: { method: string; path: string }[] = [
   { method: 'POST', path: '/auth/otp/request' },
   { method: 'POST', path: '/auth/otp/verify' },
   { method: 'POST', path: '/auth/refresh' },
-  { method: 'POST', path: '/requests/list' },
   { method: 'GET', path: '/cards/:username' },
   { method: 'GET', path: '/cards/:username/vcard' },
   { method: 'POST', path: '/cards/:username/event' },

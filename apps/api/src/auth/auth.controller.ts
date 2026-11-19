@@ -5,7 +5,6 @@ import {
   HttpCode,
   HttpStatus,
   Ip,
-  Patch,
   Post,
   Req,
   Res,
@@ -23,7 +22,6 @@ import { AuthConfigService } from './auth.config';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { RequestOtpDto } from './dto/request-otp.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
-import { UpdateRoleDto } from './dto/update-role.dto';
 import type { AccessTokenPayload } from './session/token.service';
 import type { DeviceContext } from './session/session.service';
 
@@ -119,19 +117,5 @@ export class AuthController {
   @Get('me')
   getMe(@CurrentUser() user: AccessTokenPayload) {
     return this.auth.getMe(user.sub);
-  }
-
-  @Patch('role')
-  updateRole(
-    @CurrentUser() user: AccessTokenPayload,
-    @Body() dto: UpdateRoleDto,
-  ) {
-    return this.auth.updateRole(user.sub, dto.roleIntent);
-  }
-
-  @Post('ws-ticket')
-  @HttpCode(HttpStatus.OK)
-  createWsTicket(@CurrentUser() user: AccessTokenPayload) {
-    return this.auth.createWsTicket(user.sub);
   }
 }

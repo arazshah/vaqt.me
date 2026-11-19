@@ -65,7 +65,6 @@ function makeAuthService(overrides: Record<string, string> = {}): {
     sessions,
     audit,
     authConfig,
-    redis,
   );
 
   return { service, redis, config: authConfig, smsQueue };
@@ -633,7 +632,6 @@ describe('AuthService', () => {
         fakeSessions as unknown as SessionService,
         new AuditService(),
         authConfig,
-        redis,
       );
 
       await expect(service.refresh('irrelevant', DEVICE)).rejects.toBe(boom);
@@ -706,7 +704,7 @@ describe('AuthService', () => {
     });
   });
 
-  describe('getMe / updateRole / createWsTicket', () => {
+  describe('getMe', () => {
     it('getMe returns the public user shape', async () => {
       const { service, redis } = makeAuthService();
       track(redis);
@@ -725,38 +723,6 @@ describe('AuthService', () => {
         service.getMe('does-not-exist'),
         ErrorCode.UNAUTHORIZED,
       );
-    });
-
-    it('updateRole persists and returns the new roleIntent', async () => {
-      const { service, redis } = makeAuthService();
-      track(redis);
-      const user = await createTestUser({});
-      createdUserIds.push(user.id);
-
-      const result = await service.updateRole(user.id, 'PROVIDER');
-      expect(result.roleIntent).toBe('PROVIDER');
-
-      const row = await prisma.user.findUnique({ where: { id: user.id } });
-      expect(row?.roleIntent).toBe('PROVIDER');
-    });
-
-    it('createWsTicket stores a redis entry mapping the ticket to the user with the configured TTL', async () => {
-      const { service, redis } = makeAuthService({
-        WS_TICKET_TTL_SECONDS: '60',
-      });
-      track(redis);
-      const user = await createTestUser({});
-      createdUserIds.push(user.id);
-
-      const { ticket, expiresIn } = await service.createWsTicket(user.id);
-      expect(expiresIn).toBe(60);
-
-      const stored = await redis.client.get(redis.key('ws-ticket', ticket));
-      expect(stored).toBe(user.id);
-
-      const ttl = await redis.client.ttl(redis.key('ws-ticket', ticket));
-      expect(ttl).toBeGreaterThan(0);
-      expect(ttl).toBeLessThanOrEqual(60);
     });
   });
 });

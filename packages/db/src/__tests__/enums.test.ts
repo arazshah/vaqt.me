@@ -6,24 +6,7 @@ import { describe, expect, it } from 'vitest';
 import * as PrismaClient from '../../generated/prisma/index.js';
 import * as Shared from '@vaqt/shared';
 
-const ENUM_NAMES = [
-  'RoleIntent',
-  'UserStatus',
-  'OtpPurpose',
-  'RequestMode',
-  'RequestStatus',
-  'Currency',
-  'OfferStatus',
-  'ConversationStatus',
-  'MessageType',
-  'ProductCode',
-  'OrderStatus',
-  'PaymentProvider',
-  'SubscriptionStatus',
-  'NotificationChannel',
-  'ReportStatus',
-  'SystemRole',
-] as const;
+const ENUM_NAMES = ['UserStatus', 'OtpPurpose', 'SystemRole'] as const;
 
 describe('enum parity between @vaqt/shared and Prisma schema', () => {
   it.each(ENUM_NAMES)('%s has identical values in both places', (name) => {

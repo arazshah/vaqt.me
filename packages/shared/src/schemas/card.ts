@@ -231,10 +231,7 @@ export interface PublicCard {
   // Local 09xxxxxxxxx form, present ONLY when the owner turned showPhone on.
   phone: string | null;
   links: CardLinkView[];
-  skills: string[];
   booking: PublicBookingInfo;
-  ratingAvg: number;
-  ratingCount: number;
 }
 
 export interface MyCard {

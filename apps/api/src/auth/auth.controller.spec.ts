@@ -21,8 +21,6 @@ function makeAuth(): jest.Mocked<AuthService> {
     logout: jest.fn(),
     logoutAll: jest.fn(),
     getMe: jest.fn(),
-    updateRole: jest.fn(),
-    createWsTicket: jest.fn(),
   } as unknown as jest.Mocked<AuthService>;
 }
 
@@ -144,22 +142,5 @@ describe('AuthController', () => {
     const controller = new AuthController(auth, config);
     await controller.getMe({ sub: 'u1', sid: 's1' });
     expect(auth.getMe).toHaveBeenCalledWith('u1');
-  });
-
-  it('updateRole delegates to AuthService.updateRole with the current user id and dto', async () => {
-    const auth = makeAuth();
-    const controller = new AuthController(auth, config);
-    await controller.updateRole(
-      { sub: 'u1', sid: 's1' },
-      { roleIntent: 'PROVIDER' },
-    );
-    expect(auth.updateRole).toHaveBeenCalledWith('u1', 'PROVIDER');
-  });
-
-  it('createWsTicket delegates to AuthService.createWsTicket with the current user id', async () => {
-    const auth = makeAuth();
-    const controller = new AuthController(auth, config);
-    await controller.createWsTicket({ sub: 'u1', sid: 's1' });
-    expect(auth.createWsTicket).toHaveBeenCalledWith('u1');
   });
 });
