@@ -4,3 +4,4 @@ export * from './booking';
 export * from './analytics';
 export * from './wallet';
 export * from './settings';
+export * from './password-auth';

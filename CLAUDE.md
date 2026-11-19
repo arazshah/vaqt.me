@@ -62,6 +62,14 @@ migrationها افزایشی‌اند و **هرگز ویرایش نمی‌شون
 - روت‌های API فقط `@Get`/`@Post` (RPC-style: `POST /x/update`). `GET` فقط برای خواندن عمومی با path param.
 - `origin-check` روی همه‌ی متدهای mutating (و `POST` ها)؛ فراخوانی Node-side باید هدر `Origin` بگذارد.
 
+### ورود با ایمیل (پیش‌فرض) و پیامک (خاموش)
+
+- حساب با ایمیل + رمز (`POST /auth/register|login`)؛ رمز با scrypt؛ `users.phone` اختیاری است.
+- ضداسپم ثبت‌نام: honeypot، توکن امضاشده‌ی زمان فرم (۳ ثانیه تا ۲ ساعت)، سقف ثبت‌نام per-IP، بلاک‌لیست ایمیل موقت. ورود: سقف per-IP و per-email.
+- ایمیل تأیید نمی‌شود (ارائه‌دهنده‌ی ایمیل نداریم)؛ در صورت راه‌اندازی، تأیید ایمیل اضافه شود.
+- مسیرهای OTP/پیامک حذف نشده‌اند؛ تا `SMS_LOGIN_ENABLED=true` پاسخ ۵۰۳ `SMS_LOGIN_DISABLED` می‌دهند. حساب‌های فقط‌ایمیل پیامک نمی‌گیرند.
+- ایمیل‌های `@qa.vaqt.test` را `cleanup:qa` پاک می‌کند.
+
 ### OTP و نشست
 
 - کد OTP با HMAC-SHA256 + `OTP_PEPPER` (نه bcrypt)، مقایسه با `timingSafeEqual`.

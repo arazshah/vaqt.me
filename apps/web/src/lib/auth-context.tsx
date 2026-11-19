@@ -18,6 +18,7 @@ export interface AuthUser {
   displayName: string;
   phoneVerified: boolean;
   maskedPhone: string;
+  email: string | null;
   systemRole: 'USER' | 'ADMIN';
 }
 

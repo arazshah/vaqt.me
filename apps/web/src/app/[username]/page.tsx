@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { normalizeSource } from '@vaqt/shared';
 
 import { fetchPublicCard } from '@/lib/card';
-import { WEB_ORIGIN } from '@/lib/site';
+import { getRequestOrigin } from '@/lib/site';
 import { fa } from '@/messages/fa';
 import { CardView } from './card-view';
 
@@ -38,11 +38,12 @@ export default async function CardPage({ params, searchParams }: PageProps) {
   const { src } = await searchParams;
   const card = await fetchPublicCard(username);
   if (!card) notFound();
+  const origin = await getRequestOrigin();
 
   return (
     <CardView
       card={card}
-      cardUrl={`${WEB_ORIGIN}/${card.username}`}
+      cardUrl={`${origin}/${card.username}`}
       source={normalizeSource(Array.isArray(src) ? src[0] : src)}
     />
   );

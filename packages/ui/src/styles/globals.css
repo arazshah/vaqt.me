@@ -4,37 +4,39 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Brand hue: 275 (indigo/violet) — matches the "وقت‌می" mark. Every
+  /* Brand hue: 188 (deep teal, with amber as the accent --brand-amber) — matches the card/story palette. Every
      semantic color below is tinted onto this hue instead of pure gray, so
      the app reads as one designed system rather than the shadcn defaults.
      Contrast for every text/background pair below is verified against
      WCAG AA (4.5:1) in globals.contrast.test.ts — do not change a value
      here without re-running that test. */
   --background: oklch(0.995 0.003 90);
-  --foreground: oklch(0.18 0.015 275);
+  --foreground: oklch(0.18 0.015 188);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.015 275);
+  --card-foreground: oklch(0.18 0.015 188);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.015 275);
-  --primary: oklch(0.47 0.18 275);
-  --primary-foreground: oklch(0.99 0.01 275);
-  --secondary: oklch(0.965 0.008 275);
-  --secondary-foreground: oklch(0.28 0.03 275);
-  --muted: oklch(0.965 0.008 275);
-  --muted-foreground: oklch(0.48 0.02 275);
-  --accent: oklch(0.94 0.02 275);
-  --accent-foreground: oklch(0.28 0.03 275);
+  --popover-foreground: oklch(0.18 0.015 188);
+  --primary: oklch(0.43 0.085 188);
+  --primary-foreground: oklch(0.99 0.01 188);
+  --secondary: oklch(0.965 0.008 188);
+  --secondary-foreground: oklch(0.28 0.03 188);
+  --muted: oklch(0.965 0.008 188);
+  --muted-foreground: oklch(0.48 0.02 188);
+  --accent: oklch(0.94 0.02 188);
+  --accent-foreground: oklch(0.28 0.03 188);
   --destructive: oklch(0.5 0.19 25);
-  --border: oklch(0.9 0.012 275);
-  --input: oklch(0.9 0.012 275);
-  --ring: oklch(0.65 0.14 275);
-  --chart-1: oklch(0.55 0.18 275);
+  --border: oklch(0.9 0.012 188);
+  --input: oklch(0.9 0.012 188);
+  --ring: oklch(0.62 0.1 188);
+  --chart-1: oklch(0.55 0.18 188);
   --chart-2: oklch(0.65 0.15 200);
   --chart-3: oklch(0.7 0.17 140);
   --chart-4: oklch(0.75 0.15 70);
   --chart-5: oklch(0.62 0.2 25);
   --radius: 0.75rem;
-  --shadow-color: 275 30% 20%;
+  --brand-amber: oklch(0.8 0.15 80);
+  --brand-amber-foreground: oklch(0.25 0.06 70);
+  --shadow-color: 188 30% 20%;
   --shadow-sm:
     0 1px 2px hsl(var(--shadow-color) / 0.06),
     0 1px 1px hsl(var(--shadow-color) / 0.04);
@@ -63,30 +65,30 @@
 }
 
 .dark {
-  --background: oklch(0.16 0.015 275);
-  --foreground: oklch(0.95 0.005 275);
-  --card: oklch(0.21 0.015 275);
-  --card-foreground: oklch(0.95 0.005 275);
-  --popover: oklch(0.21 0.015 275);
-  --popover-foreground: oklch(0.95 0.005 275);
-  --primary: oklch(0.82 0.09 275);
-  --primary-foreground: oklch(0.16 0.02 275);
-  --secondary: oklch(0.28 0.03 275);
-  --secondary-foreground: oklch(0.93 0.01 275);
-  --muted: oklch(0.28 0.03 275);
-  --muted-foreground: oklch(0.72 0.015 275);
-  --accent: oklch(0.32 0.04 275);
-  --accent-foreground: oklch(0.93 0.01 275);
+  --background: oklch(0.16 0.015 188);
+  --foreground: oklch(0.95 0.005 188);
+  --card: oklch(0.21 0.015 188);
+  --card-foreground: oklch(0.95 0.005 188);
+  --popover: oklch(0.21 0.015 188);
+  --popover-foreground: oklch(0.95 0.005 188);
+  --primary: oklch(0.8 0.1 182);
+  --primary-foreground: oklch(0.16 0.02 188);
+  --secondary: oklch(0.28 0.03 188);
+  --secondary-foreground: oklch(0.93 0.01 188);
+  --muted: oklch(0.28 0.03 188);
+  --muted-foreground: oklch(0.72 0.015 188);
+  --accent: oklch(0.32 0.04 188);
+  --accent-foreground: oklch(0.93 0.01 188);
   --destructive: oklch(0.72 0.19 25);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.6 0.13 275);
-  --chart-1: oklch(0.72 0.14 275);
+  --ring: oklch(0.6 0.1 188);
+  --chart-1: oklch(0.72 0.14 188);
   --chart-2: oklch(0.75 0.13 200);
   --chart-3: oklch(0.78 0.15 140);
   --chart-4: oklch(0.8 0.13 70);
   --chart-5: oklch(0.7 0.18 25);
-  --shadow-color: 275 60% 4%;
+  --shadow-color: 188 60% 4%;
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);

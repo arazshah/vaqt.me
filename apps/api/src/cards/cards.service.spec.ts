@@ -61,9 +61,9 @@ describe('CardsService (real Postgres)', () => {
 
       // Negative test on the raw JSON: neither phone form appears anywhere.
       const json = JSON.stringify(card);
-      const local = `0${user.phone.slice(3)}`;
+      const local = `0${(user.phone ?? '').slice(3)}`;
       expect(json).not.toContain(user.phone);
-      expect(json).not.toContain(user.phone.slice(3));
+      expect(json).not.toContain((user.phone ?? '').slice(3));
       expect(json).not.toContain(local);
       // Internal fields never leak.
       expect(json).not.toContain(user.id);
@@ -82,7 +82,7 @@ describe('CardsService (real Postgres)', () => {
       const user = await makeUser({ username });
       await service.update(user.id, { showPhone: true });
       expect((await service.getPublic(username)).phone).toBe(
-        `0${user.phone.slice(3)}`,
+        `0${(user.phone ?? '').slice(3)}`,
       );
       await service.update(user.id, { showPhone: false });
       expect((await service.getPublic(username)).phone).toBeNull();
@@ -137,6 +137,17 @@ describe('CardsService (real Postgres)', () => {
       expect(mine.links).toHaveLength(1);
     });
 
+    it('stores, changes and clears the professional category', async () => {
+      const user = await makeUser({ username: newUsername() });
+      expect((await service.getMine(user.id)).category).toBeNull();
+      const set = await service.update(user.id, { category: 'health' });
+      expect(set.category).toBe('health');
+      const other = await service.update(user.id, { template: 'night' });
+      expect(other.category).toBe('health');
+      const cleared = await service.update(user.id, { category: null });
+      expect(cleared.category).toBeNull();
+    });
+
     it('defaults a fresh user to the tile template with the phone hidden', async () => {
       const user = await makeUser();
       const mine = await service.getMine(user.id);
@@ -181,11 +192,11 @@ describe('CardsService (real Postgres)', () => {
       expect(v).toContain('URL;TYPE=ble:https://ble.ir/ali_n');
       expect(v).toContain('FN:علی\\; نیک‌پور\\, ج');
       expect(v).not.toContain('TEL');
-      expect(v).not.toContain(user.phone.slice(3));
+      expect(v).not.toContain((user.phone ?? '').slice(3));
 
       await service.update(user.id, { showPhone: true });
       expect(await service.getVCard(username, 'https://vaqt.me/x')).toContain(
-        `TEL;TYPE=CELL:0${user.phone.slice(3)}`,
+        `TEL;TYPE=CELL:0${(user.phone ?? '').slice(3)}`,
       );
     });
   });

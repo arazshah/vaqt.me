@@ -20,9 +20,12 @@ export interface CleanupOptions {
   olderThanMinutes: number;
 }
 
+export const QA_EMAIL_SUFFIX = '@qa.vaqt.test';
+
 export interface CleanupCandidate {
   id: string;
-  phone: string;
+  phone: string | null;
+  email?: string | null;
   displayName: string;
   createdAt: Date;
 }
@@ -56,10 +59,20 @@ export async function findCandidates(
   const cutoff = new Date(Date.now() - olderThanMinutes * 60_000);
   return prisma.user.findMany({
     where: {
-      phone: { startsWith: TEST_PHONE_PREFIX },
+      OR: [
+        { phone: { startsWith: TEST_PHONE_PREFIX } },
+        // e2e / QA accounts registered with email + password
+        { email: { endsWith: QA_EMAIL_SUFFIX } },
+      ],
       createdAt: { lte: cutoff },
     },
-    select: { id: true, phone: true, displayName: true, createdAt: true },
+    select: {
+      id: true,
+      phone: true,
+      email: true,
+      displayName: true,
+      createdAt: true,
+    },
   });
 }
 
@@ -67,14 +80,14 @@ export async function deleteCandidates(
   candidates: CleanupCandidate[],
 ): Promise<{ users: number; sessions: number }> {
   const ids = candidates.map((c) => c.id);
-  const phones = candidates.map((c) => c.phone);
+  const phones = candidates.flatMap((c) => (c.phone ? [c.phone] : []));
   const keyPatterns = candidates.flatMap((c) => [
-    `otp:pending-code:${c.phone}`,
-    `otp:invalidated-streak:${c.phone}`,
-    `otp:blocked:${c.phone}`,
-    `ratelimit:otp-resend:${c.phone}`,
-    `ratelimit:otp-phone-hour:${c.phone}`,
-    `ratelimit:otp-phone-day:${c.phone}`,
+    `otp:pending-code:${c.phone ?? ''}`,
+    `otp:invalidated-streak:${c.phone ?? ''}`,
+    `otp:blocked:${c.phone ?? ''}`,
+    `ratelimit:otp-resend:${c.phone ?? ''}`,
+    `ratelimit:otp-phone-hour:${c.phone ?? ''}`,
+    `ratelimit:otp-phone-day:${c.phone ?? ''}`,
     `verified-phone:${c.id}`,
     `system-role:${c.id}`,
   ]);
@@ -103,7 +116,9 @@ export async function runCleanup(options: CleanupOptions): Promise<void> {
     `[cleanup-qa-data] ${options.execute ? 'EXECUTE' : 'DRY RUN'} — ${String(candidates.length)} candidate user(s)`,
   );
   for (const c of candidates) {
-    console.log(`  - ${c.id}  ${maskPhone(c.phone)}  "${c.displayName}"`);
+    console.log(
+      `  - ${c.id}  ${c.phone ? maskPhone(c.phone) : (c.email ?? '')}  "${c.displayName}"`,
+    );
   }
   if (!options.execute || candidates.length === 0) return;
 

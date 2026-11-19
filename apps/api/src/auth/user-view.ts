@@ -22,6 +22,7 @@ export interface PublicUser {
 // the caller's own permission level.
 export interface PrivateUser extends PublicUser {
   maskedPhone: string;
+  email: string | null;
   status: User['status'];
   systemRole: User['systemRole'];
 }
@@ -44,7 +45,8 @@ export function toPublicUser(user: User): PublicUser {
 export function toPrivateUser(user: User): PrivateUser {
   return {
     ...toPublicUser(user),
-    maskedPhone: maskPhone(user.phone),
+    maskedPhone: user.phone ? maskPhone(user.phone) : '',
+    email: user.email,
     status: user.status,
     systemRole: user.systemRole,
   };

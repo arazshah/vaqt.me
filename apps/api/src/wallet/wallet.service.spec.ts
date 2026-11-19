@@ -57,7 +57,7 @@ describe('WalletService (real Postgres + Redis)', () => {
     const json = JSON.stringify(list);
     const phone = (await prisma.user.findUniqueOrThrow({ where: { id: a.id } }))
       .phone;
-    expect(json).not.toContain(phone.slice(3));
+    expect(json).not.toContain((phone ?? '').slice(3));
     expect(list[0]).not.toHaveProperty('id');
   });
 

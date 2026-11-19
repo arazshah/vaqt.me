@@ -35,7 +35,9 @@ function loadBooking(id: string) {
     where: { id },
     include: {
       provider: { select: { id: true, phone: true, displayName: true } },
-      booker: { select: { id: true, phone: true, displayName: true } },
+      booker: {
+        select: { id: true, phone: true, email: true, displayName: true },
+      },
     },
   });
 }
@@ -84,7 +86,9 @@ export class NotificationDispatcher {
       minutes: b.durationMinutes,
       when: formatWhen(b.startAt),
       note: b.note,
-      phone: toLocalPhone(b.booker.phone),
+      phone: b.booker.phone
+        ? toLocalPhone(b.booker.phone)
+        : (b.booker.email ?? ''),
     });
     await this.notifyProvider(
       b,
@@ -235,6 +239,7 @@ export class NotificationDispatcher {
       this.logger.warn(`provider sms cap reached for ${b.providerId}`);
       return;
     }
+    if (!b.provider.phone) return; // email-only account: no SMS channel
     await this.sendSms(b.provider.phone, smsKey, {
       NAME: b.bookerName,
       TIME: formatWhen(b.startAt),
@@ -245,6 +250,7 @@ export class NotificationDispatcher {
     b: BookingWithPeople,
     key: SmsTemplateKey,
   ): Promise<void> {
+    if (!b.booker.phone) return; // email-only account: no SMS channel
     await this.sendSms(b.booker.phone, key, {
       NAME: b.provider.displayName,
       SERVICE: b.serviceName,

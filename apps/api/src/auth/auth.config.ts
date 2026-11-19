@@ -29,6 +29,8 @@ export class AuthConfigService {
   readonly accessTokenTtlSeconds: number;
   readonly refreshTokenTtlSeconds: number;
   readonly verifiedPhoneCacheTtlSeconds: number;
+  readonly registerIpHourlyLimit: number;
+  readonly registerIpDailyLimit: number;
 
   constructor(config: ConfigService) {
     this.otpTtlSeconds = num(config, 'OTP_TTL_SECONDS', 120);
@@ -55,6 +57,12 @@ export class AuthConfigService {
       'JWT_REFRESH_TTL_SECONDS',
       30 * 24 * 60 * 60,
     );
+    this.registerIpHourlyLimit = num(
+      config,
+      'RATE_LIMIT_REGISTER_IP_HOURLY',
+      5,
+    );
+    this.registerIpDailyLimit = num(config, 'RATE_LIMIT_REGISTER_IP_DAILY', 15);
     this.verifiedPhoneCacheTtlSeconds = num(
       config,
       'VERIFIED_PHONE_CACHE_TTL_SECONDS',

@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,6 +16,7 @@ import { Label } from '@vaqt/ui/components/ui/label';
 import { Skeleton } from '@vaqt/ui/components/ui/skeleton';
 
 import { AppShell } from '@/components/app-shell';
+import { NeedCardState } from '@/components/domain/empty-state';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -132,12 +132,7 @@ export default function BookingSettingsPage() {
   if (!hasUsername) {
     return (
       <AppShell>
-        <div className="flex flex-col items-start gap-3">
-          <p>{t.needUsername}</p>
-          <Button asChild>
-            <Link href="/card/edit">{t.goToCard}</Link>
-          </Button>
-        </div>
+        <NeedCardState text={t.needUsername} action={t.goToCard} />
       </AppShell>
     );
   }
@@ -230,13 +225,13 @@ export default function BookingSettingsPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <div className="flex w-full flex-col gap-6">
         <div>
           <h1 className="text-2xl font-semibold">{t.title}</h1>
           <p className="text-sm text-muted-foreground">{t.subtitle}</p>
         </div>
 
-        <section className="flex items-center gap-2 rounded-xl border bg-card p-4">
+        <section className="flex items-center gap-2 rounded-3xl border bg-card p-5">
           <Checkbox
             id="enabled"
             checked={enabled}
@@ -247,7 +242,7 @@ export default function BookingSettingsPage() {
           <Label htmlFor="enabled">{t.enabled}</Label>
         </section>
 
-        <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+        <section className="flex flex-col gap-3 rounded-3xl border bg-card p-5">
           <div>
             <h2 className="font-semibold">{t.servicesTitle}</h2>
             <p className="text-xs text-muted-foreground">{t.servicesHelp}</p>
@@ -352,7 +347,7 @@ export default function BookingSettingsPage() {
           ) : null}
         </section>
 
-        <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+        <section className="flex flex-col gap-3 rounded-3xl border bg-card p-5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-semibold">{t.rulesTitle}</h2>
             <Button
@@ -434,7 +429,7 @@ export default function BookingSettingsPage() {
           ))}
         </section>
 
-        <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+        <section className="flex flex-col gap-3 rounded-3xl border bg-card p-5">
           <h2 className="font-semibold">{t.ruleTitle}</h2>
           <div className="flex flex-wrap gap-4">
             <div className="flex flex-col gap-1.5">
@@ -472,7 +467,7 @@ export default function BookingSettingsPage() {
           </div>
         </section>
 
-        <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
+        <section className="flex flex-col gap-3 rounded-3xl border bg-card p-5">
           <div>
             <h2 className="font-semibold">{t.leaveTitle}</h2>
             <p className="text-xs text-muted-foreground">{t.leaveHelp}</p>

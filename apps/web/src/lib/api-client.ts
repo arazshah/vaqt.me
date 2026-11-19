@@ -55,11 +55,13 @@ type SafeRequestInit = Omit<RequestInit, 'headers'> & {
 // client-side, never from a Next.js Server Component (see CLAUDE.md bond
 // on the origin-check bug found in this PR).
 function rawRequest(path: string, init?: SafeRequestInit): Promise<Response> {
+  // multipart bodies need the browser to set the boundary itself
+  const isForm = init?.body instanceof FormData;
   return fetch(`${BASE_URL}/api/v1${path}`, {
     ...init,
     credentials: 'include',
     headers: {
-      'Content-Type': 'application/json',
+      ...(isForm ? {} : { 'Content-Type': 'application/json' }),
       ...init?.headers,
     },
   });

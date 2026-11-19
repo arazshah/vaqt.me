@@ -27,7 +27,8 @@ const PER_HOUR_MS = 3_600_000;
 
 type DbTx = Prisma.TransactionClient;
 
-function toLocalPhone(canonical: string): string {
+function toLocalPhone(canonical: string | null): string {
+  if (!canonical) return '';
   return canonical.startsWith('+98') ? `0${canonical.slice(3)}` : canonical;
 }
 
@@ -339,7 +340,7 @@ export class BookingService {
       },
       orderBy: { startAt: 'asc' },
       take: 200,
-      include: { booker: { select: { phone: true } } },
+      include: { booker: { select: { phone: true, email: true } } },
     });
     return rows.map((b) => ({
       id: b.id,
@@ -350,6 +351,7 @@ export class BookingService {
       durationMinutes: b.durationMinutes,
       bookerName: b.bookerName,
       bookerPhone: toLocalPhone(b.booker.phone),
+      bookerEmail: b.booker.email,
       note: b.note,
       createdAt: b.createdAt.toISOString(),
     }));

@@ -6,6 +6,7 @@ import { AdminSettingsController } from './admin/admin-settings.controller';
 import { AdminSetupController } from './admin/admin-setup.controller';
 import { AppController } from './app.controller';
 import { AuthController } from './auth/auth.controller';
+import { PasswordAuthController } from './auth/password-auth.controller';
 import { BookingController } from './booking/booking.controller';
 import { CardsController } from './cards/cards.controller';
 import { MessengerController } from './messenger/messenger.controller';
@@ -18,6 +19,7 @@ import { UsersController } from './users/users.controller';
 const CONTROLLERS: (new (...args: never[]) => unknown)[] = [
   AppController,
   AuthController,
+  PasswordAuthController,
   UsersController,
   AdminSettingsController,
   AdminSetupController,
@@ -103,6 +105,10 @@ const PUBLIC_ROUTE_ALLOWLIST: { method: string; path: string }[] = [
   { method: 'POST', path: '/auth/otp/request' },
   { method: 'POST', path: '/auth/otp/verify' },
   { method: 'POST', path: '/auth/refresh' },
+  { method: 'GET', path: '/auth/methods' },
+  { method: 'GET', path: '/auth/register-token' },
+  { method: 'POST', path: '/auth/register' },
+  { method: 'POST', path: '/auth/login' },
   { method: 'GET', path: '/cards/:username' },
   { method: 'GET', path: '/cards/:username/vcard' },
   { method: 'POST', path: '/cards/:username/event' },

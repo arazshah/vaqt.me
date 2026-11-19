@@ -1,446 +1,423 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  CARD_TEMPLATES,
-  QR_CHANNELS,
-  qrSource,
-  type QrChannel,
-  LINK_KINDS,
-  normalizeLinkValue,
-  type CardTemplate,
-  type LinkKind,
-  type MyCard,
-} from '@vaqt/shared';
+import { Check, ExternalLink, Loader2, Share2 } from 'lucide-react';
 
 import { Button } from '@vaqt/ui/components/ui/button';
-import { Checkbox } from '@vaqt/ui/components/ui/checkbox';
 import { Input } from '@vaqt/ui/components/ui/input';
 import { Label } from '@vaqt/ui/components/ui/label';
 import { Skeleton } from '@vaqt/ui/components/ui/skeleton';
 import { Textarea } from '@vaqt/ui/components/ui/textarea';
+import { Checkbox } from '@vaqt/ui/components/ui/checkbox';
+import { formatNumber, type LinkKind } from '@vaqt/shared';
 
 import { AppShell } from '@/components/app-shell';
-import { BusinessCard } from '@/components/domain/business-card';
-import { QrCode } from '@/components/domain/qr-code';
-import { ApiError, apiFetch } from '@/lib/api-client';
+import { CardPreview } from '@/components/domain/card-preview';
+import { CategoryPicker } from '@/components/domain/category-picker';
+import { LinkEditor } from '@/components/domain/link-editor';
+import { PhotoPicker } from '@/components/domain/photo-picker';
+import { TemplatePicker } from '@/components/domain/template-picker';
+import { CardWizard } from '@/components/domain/card-wizard';
 import { useAuth } from '@/lib/auth-context';
-import { downloadDataUrl, qrPngDataUrl } from '@/lib/qr';
-import { WEB_ORIGIN } from '@/lib/site';
+import { useOrigin } from '@/lib/use-origin';
+import { useCardDraft, type SaveState } from '@/lib/use-card-draft';
 import { fa } from '@/messages/fa';
 
-type LinkDrafts = Partial<Record<LinkKind, string>>;
-type Status = { kind: 'ok' | 'error'; text: string } | null;
+const t = fa.editor;
+type Tab = 'profile' | 'links' | 'look';
 
-const t = fa.cardEditPage;
-
-function post<T>(path: string, body: unknown): Promise<T> {
-  return apiFetch<T>(path, { method: 'POST', body: JSON.stringify(body) });
+function SaveBadge({
+  state,
+  message,
+}: {
+  state: SaveState;
+  message: string | null;
+}) {
+  if (state === 'idle') return null;
+  const text =
+    state === 'saving'
+      ? t.autosave.saving
+      : state === 'saved'
+        ? t.autosave.saved
+        : state === 'dirty'
+          ? t.autosave.dirty
+          : (message ?? t.autosave.error);
+  return (
+    <span
+      role="status"
+      className={`flex items-center gap-1.5 text-xs ${
+        state === 'error' ? 'text-destructive' : 'text-muted-foreground'
+      }`}
+    >
+      {state === 'saving' ? (
+        <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+      ) : state === 'saved' ? (
+        <Check className="size-3.5 text-primary" aria-hidden="true" />
+      ) : null}
+      {text}
+    </span>
+  );
 }
 
 export default function CardEditPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const origin = useOrigin();
+  const form = useCardDraft(!!user, true);
+  const { draft, patch } = form;
 
-  const [loaded, setLoaded] = useState(false);
-  const [loadFailed, setLoadFailed] = useState(false);
-  const [username, setUsername] = useState<string | null>(null);
-  const [usernameDraft, setUsernameDraft] = useState('');
-  const [displayName, setDisplayName] = useState('');
-  const [headline, setHeadline] = useState('');
-  const [bio, setBio] = useState('');
-  const [city, setCity] = useState('');
-  const [template, setTemplate] = useState<CardTemplate>('tile');
-  const [showPhone, setShowPhone] = useState(false);
-  const [links, setLinks] = useState<LinkDrafts>({});
-  const [channel, setChannel] = useState<QrChannel>('card');
-  const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<Status>(null);
-  const [usernameStatus, setUsernameStatus] = useState<Status>(null);
-
-  const applyCard = useCallback((card: MyCard) => {
-    setUsername(card.username);
-    setUsernameDraft(card.username ?? '');
-    setDisplayName(card.displayName);
-    setHeadline(card.headline ?? '');
-    setBio(card.bio ?? '');
-    setCity(card.city ?? '');
-    setTemplate(card.template);
-    setShowPhone(card.showPhone);
-    setLinks(Object.fromEntries(card.links.map((l) => [l.kind, l.value])));
-  }, []);
+  const [tab, setTab] = useState<Tab>('profile');
+  const [mobileView, setMobileView] = useState<'edit' | 'preview'>('edit');
+  // decided once, right after load: a card without an address is a new card
+  const [wizard, setWizard] = useState<boolean | null>(null);
+  const [addr, setAddr] = useState('');
+  const [addrMsg, setAddrMsg] = useState<{ ok: boolean; text: string } | null>(
+    null,
+  );
+  const [addrOpen, setAddrOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
   }, [loading, user, router]);
 
   useEffect(() => {
-    if (!user) return;
-    apiFetch<MyCard>('/cards/me', { method: 'POST', body: '{}' })
-      .then((card) => {
-        applyCard(card);
-        setLoaded(true);
-      })
-      .catch(() => {
-        setLoadFailed(true);
-      });
-  }, [user, applyCard]);
+    if (form.loaded && wizard === null) setWizard(!draft.username);
+  }, [form.loaded, wizard, draft.username]);
 
-  if (loading || !user || (!loaded && !loadFailed)) {
+  useEffect(() => {
+    setAddr(draft.username ?? '');
+  }, [draft.username]);
+
+  if (
+    loading ||
+    !user ||
+    (!form.loaded && !form.loadFailed) ||
+    (form.loaded && wizard === null)
+  ) {
     return (
       <AppShell>
-        <Skeleton className="h-96 w-full max-w-3xl" />
+        <Skeleton className="h-96 w-full" />
       </AppShell>
     );
   }
-  if (loadFailed) {
+  if (form.loadFailed) {
     return (
       <AppShell>
-        <p className="text-destructive">{t.loadError}</p>
+        <p className="text-destructive">{fa.cardEditPage.loadError}</p>
       </AppShell>
     );
   }
 
-  const cardUrl = username ? `${WEB_ORIGIN}/${username}` : null;
-  const displayUrl = cardUrl ? cardUrl.replace(/^https?:\/\//, '') : null;
-
-  async function saveUsername() {
-    setUsernameStatus(null);
-    try {
-      const card = await post<MyCard>('/cards/me/username', {
-        username: usernameDraft,
-      });
-      applyCard(card);
-      setUsernameStatus({ kind: 'ok', text: t.usernameSaved });
-    } catch (err) {
-      setUsernameStatus({
-        kind: 'error',
-        text: err instanceof ApiError ? err.message : t.saveError,
-      });
-    }
+  // First visit: guide step by step instead of showing every field at once.
+  if (wizard) {
+    return (
+      <AppShell>
+        <CardWizard
+          form={form}
+          onDone={() => {
+            setWizard(false);
+          }}
+        />
+      </AppShell>
+    );
   }
 
-  async function save() {
-    setStatus(null);
-    const linkList: { kind: LinkKind; value: string }[] = [];
-    for (const kind of LINK_KINDS) {
-      const raw = (links[kind] ?? '').trim();
-      if (!raw) continue;
-      if (normalizeLinkValue(kind, raw) === null) {
-        setStatus({ kind: 'error', text: t.invalidLink(t.linkLabels[kind]) });
-        return;
-      }
-      linkList.push({ kind, value: raw });
-    }
-    setSaving(true);
-    try {
-      await post('/users/me/update', {
-        displayName,
-        headline: headline.trim() || null,
-        bio: bio.trim() || null,
-        city: city.trim() || null,
-      });
-      const card = await post<MyCard>('/cards/me/update', {
-        template,
-        showPhone,
-        links: linkList,
-      });
-      applyCard(card);
-      setStatus({ kind: 'ok', text: t.saved });
-    } catch (err) {
-      setStatus({
-        kind: 'error',
-        text: err instanceof ApiError ? err.message : t.saveError,
-      });
-    } finally {
-      setSaving(false);
-    }
+  const host = origin.replace(/^https?:\/\//, '');
+  const cardUrl =
+    draft.username && origin ? `${origin}/${draft.username}` : null;
+  const linkKinds = Object.entries(draft.links)
+    .filter(([, v]) => v.trim() !== '')
+    .map(([k]) => k as LinkKind);
+  const initial = Array.from(draft.displayName.trim())[0] ?? '';
+
+  async function changeAddress() {
+    setAddrMsg(null);
+    const err = await form.saveUsername(addr.trim().toLowerCase());
+    setAddrMsg({ ok: !err, text: err ?? t.addressSaved });
   }
 
-  async function copyLink() {
-    if (!cardUrl) return;
-    try {
-      await navigator.clipboard.writeText(cardUrl);
-      setStatus({ kind: 'ok', text: t.copied });
-    } catch {
-      setStatus({ kind: 'error', text: cardUrl });
-    }
-  }
+  const tabs: [Tab, string][] = [
+    ['profile', t.tabs.profile],
+    ['links', t.tabs.links],
+    ['look', t.tabs.look],
+  ];
 
-  return (
-    <AppShell>
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
-        <div className="flex min-w-0 flex-col gap-6">
-          <div>
-            <h1 className="text-2xl font-semibold">{t.title}</h1>
-            <p className="text-sm text-muted-foreground">{t.subtitle}</p>
-          </div>
+  const editor = (
+    <div className="flex min-w-0 flex-col gap-4 rounded-3xl border bg-card p-4 sm:p-6">
+      <div role="tablist" className="flex gap-1 rounded-xl bg-muted p-1">
+        {tabs.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={tab === id}
+            onClick={() => {
+              setTab(id);
+            }}
+            className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+              tab === id ? 'bg-card shadow-sm' : 'text-muted-foreground'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-          <section className="flex flex-col gap-2 rounded-xl border bg-card p-4">
-            <h2 className="font-semibold">{t.usernameTitle}</h2>
-            <div className="flex items-center gap-2" dir="ltr">
-              <span className="text-muted-foreground">vaqt.me/</span>
-              <Input
-                id="username"
-                value={usernameDraft}
-                onChange={(e) => {
-                  setUsernameDraft(e.target.value.toLowerCase());
-                }}
-                maxLength={30}
-                autoCapitalize="none"
-                spellCheck={false}
-                aria-describedby="username-help"
-              />
-              <Button type="button" onClick={() => void saveUsername()}>
-                {t.usernameSave}
-              </Button>
-            </div>
-            <p id="username-help" className="text-xs text-muted-foreground">
-              {t.usernameHelp}
-              {username ? ` ${t.usernameChangeWarning}` : ''}
-            </p>
-            {usernameStatus ? (
-              <p
-                role="status"
-                className={
-                  usernameStatus.kind === 'ok'
-                    ? 'text-sm text-primary'
-                    : 'text-sm text-destructive'
-                }
-              >
-                {usernameStatus.text}
-              </p>
-            ) : null}
-          </section>
-
-          <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-            <h2 className="font-semibold">{t.profileTitle}</h2>
+      {tab === 'profile' ? (
+        <div className="flex flex-col gap-4">
+          <PhotoPicker
+            avatarUrl={draft.avatarUrl}
+            initial={initial}
+            onUpload={form.uploadAvatar}
+            onRemove={form.removeAvatar}
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="displayName">{t.displayName}</Label>
               <Input
                 id="displayName"
-                value={displayName}
-                onChange={(e) => {
-                  setDisplayName(e.target.value);
-                }}
+                value={draft.displayName}
                 maxLength={50}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="headline">{t.headline}</Label>
-              <Input
-                id="headline"
-                value={headline}
                 onChange={(e) => {
-                  setHeadline(e.target.value);
+                  patch({ displayName: e.target.value });
                 }}
-                placeholder={t.headlinePlaceholder}
-                maxLength={120}
               />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="city">{t.city}</Label>
               <Input
                 id="city"
-                value={city}
-                onChange={(e) => {
-                  setCity(e.target.value);
-                }}
+                value={draft.city}
                 maxLength={80}
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="bio">{t.bio}</Label>
-              <Textarea
-                id="bio"
-                value={bio}
                 onChange={(e) => {
-                  setBio(e.target.value);
+                  patch({ city: e.target.value });
                 }}
-                maxLength={1000}
-                rows={4}
               />
             </div>
-          </section>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="headline">{t.headline}</Label>
+            <Input
+              id="headline"
+              value={draft.headline}
+              maxLength={120}
+              placeholder={
+                draft.category
+                  ? fa.categories[draft.category].headline
+                  : undefined
+              }
+              onChange={(e) => {
+                patch({ headline: e.target.value });
+              }}
+            />
+            <p className="text-xs text-muted-foreground">{t.headlineHelp}</p>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="bio">{t.bio}</Label>
+            <Textarea
+              id="bio"
+              value={draft.bio}
+              rows={5}
+              maxLength={1000}
+              placeholder={t.bioPlaceholder}
+              onChange={(e) => {
+                patch({ bio: e.target.value });
+              }}
+            />
+            <p className="text-end text-xs text-muted-foreground">
+              {t.bioCount(formatNumber(draft.bio.length))}
+            </p>
+          </div>
+          <label className="flex items-start gap-3 rounded-xl bg-muted/60 p-3">
+            <Checkbox
+              checked={draft.showPhone}
+              onCheckedChange={(v) => {
+                patch({ showPhone: v === true });
+              }}
+            />
+            <span className="flex flex-col">
+              <b className="text-sm">{t.phoneTitle}</b>
+              <span className="text-xs text-muted-foreground">
+                {t.phoneHelp}
+              </span>
+            </span>
+          </label>
+        </div>
+      ) : null}
 
-          <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-            <h2 className="font-semibold">{t.templateTitle}</h2>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {CARD_TEMPLATES.map((tpl) => (
-                <button
-                  key={tpl}
+      {tab === 'links' ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">{t.linksIntro}</p>
+          <LinkEditor
+            links={draft.links}
+            errors={form.linkErrors}
+            onChange={(links) => {
+              patch({ links });
+            }}
+          />
+        </div>
+      ) : null}
+
+      {tab === 'look' ? (
+        <div className="flex flex-col gap-6">
+          <section className="flex flex-col gap-2">
+            <h2 className="font-semibold">{t.category}</h2>
+            <p className="text-xs text-muted-foreground">{t.categoryHelp}</p>
+            <CategoryPicker
+              value={draft.category}
+              onChange={(category) => {
+                patch({ category });
+              }}
+            />
+          </section>
+          <section className="flex flex-col gap-2">
+            <h2 className="font-semibold">{t.cardStyle}</h2>
+            <p className="text-xs text-muted-foreground">{t.cardStyleHelp}</p>
+            <TemplatePicker
+              value={draft.template}
+              displayName={draft.displayName}
+              headline={draft.headline}
+              onChange={(template) => {
+                patch({ template });
+              }}
+            />
+          </section>
+          <section className="flex flex-col gap-2">
+            <h2 className="font-semibold">{t.address}</h2>
+            {!addrOpen ? (
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/60 p-3">
+                <span dir="ltr" className="truncate text-sm font-medium">
+                  {host}/{draft.username}
+                </span>
+                <Button
                   type="button"
-                  aria-pressed={template === tpl}
+                  size="sm"
+                  variant="outline"
                   onClick={() => {
-                    setTemplate(tpl);
+                    setAddrOpen(true);
                   }}
-                  className={`rounded-lg border p-2 text-sm transition-colors ${
-                    template === tpl
-                      ? 'border-primary bg-primary/10'
-                      : 'hover:border-primary'
-                  }`}
                 >
-                  {t.templates[tpl]}
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <section className="flex flex-col gap-2 rounded-xl border bg-card p-4">
-            <h2 className="font-semibold">{t.phoneTitle}</h2>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="showPhone"
-                checked={showPhone}
-                onCheckedChange={(v) => {
-                  setShowPhone(v === true);
-                }}
-              />
-              <Label htmlFor="showPhone">{t.showPhone}</Label>
-            </div>
-            <p className="text-xs text-muted-foreground">{t.phoneHelp}</p>
-          </section>
-
-          <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-            <div>
-              <h2 className="font-semibold">{t.linksTitle}</h2>
-              <p className="text-xs text-muted-foreground">{t.linksHelp}</p>
-            </div>
-            {LINK_KINDS.map((kind) => (
-              <div key={kind} className="flex flex-col gap-1.5">
-                <Label htmlFor={`link-${kind}`}>{t.linkLabels[kind]}</Label>
-                <Input
-                  id={`link-${kind}`}
-                  dir="ltr"
-                  value={links[kind] ?? ''}
-                  onChange={(e) => {
-                    setLinks((prev) => ({ ...prev, [kind]: e.target.value }));
-                  }}
-                  maxLength={300}
-                  autoCapitalize="none"
-                  spellCheck={false}
-                />
+                  {t.addressChange}
+                </Button>
               </div>
-            ))}
+            ) : (
+              <>
+                <div className="flex items-center gap-2" dir="ltr">
+                  <span className="text-sm text-muted-foreground">{host}/</span>
+                  <Input
+                    value={addr}
+                    maxLength={30}
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    onChange={(e) => {
+                      setAddr(e.target.value.toLowerCase());
+                    }}
+                  />
+                  <Button type="button" onClick={() => void changeAddress()}>
+                    {t.addressSave}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {t.addressHelp} {t.addressWarn}
+                </p>
+                {addrMsg ? (
+                  <p
+                    role="status"
+                    className={`text-sm ${addrMsg.ok ? 'text-primary' : 'text-destructive'}`}
+                  >
+                    {addrMsg.text}
+                  </p>
+                ) : null}
+              </>
+            )}
           </section>
+        </div>
+      ) : null}
+    </div>
+  );
 
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              size="lg"
-              disabled={saving}
-              onClick={() => void save()}
-            >
-              {saving ? t.saving : t.save}
-            </Button>
-            {status ? (
-              <p
-                role="status"
-                className={
-                  status.kind === 'ok'
-                    ? 'text-sm text-primary'
-                    : 'text-sm text-destructive'
-                }
-              >
-                {status.text}
-              </p>
+  const preview = (
+    <aside className="flex flex-col gap-3 lg:sticky lg:top-8 lg:self-start">
+      <div>
+        <h2 className="text-sm font-semibold">{t.previewTitle}</h2>
+        <p className="text-xs text-muted-foreground">{t.previewHint}</p>
+      </div>
+      <div className="mx-auto w-full max-w-xs">
+        <CardPreview
+          displayName={draft.displayName}
+          headline={draft.headline}
+          city={draft.city}
+          category={draft.category}
+          avatarUrl={draft.avatarUrl}
+          linkKinds={linkKinds}
+        />
+      </div>
+    </aside>
+  );
+
+  return (
+    <AppShell wide>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-col gap-0.5">
+            <h1 className="text-xl font-bold">{t.title}</h1>
+            <SaveBadge state={form.saveState} message={form.message} />
+          </div>
+          <div className="flex gap-2">
+            {cardUrl ? (
+              <>
+                <Button asChild size="sm" variant="outline">
+                  <Link href={`/${draft.username ?? ''}`}>
+                    <ExternalLink aria-hidden="true" />
+                    {t.openCard}
+                  </Link>
+                </Button>
+                <Button asChild size="sm">
+                  <Link href="/card/print">
+                    <Share2 aria-hidden="true" />
+                    {t.shareNow}
+                  </Link>
+                </Button>
+              </>
             ) : null}
           </div>
         </div>
 
-        <aside className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-24 lg:self-start">
-          <BusinessCard
-            template={template}
-            displayName={displayName || ' '}
-            headline={headline || null}
-            displayUrl={displayUrl}
-            qrValue={cardUrl}
-            phone={null}
-            city={city || null}
-          />
-          <section className="flex flex-col gap-3 rounded-xl border bg-card p-4">
-            <h2 className="font-semibold">{t.shareTitle}</h2>
-            {cardUrl ? (
-              <>
-                <div className="flex flex-col gap-1">
-                  <b className="text-sm">{t.qrChannelTitle}</b>
-                  <p className="text-xs text-muted-foreground">
-                    {t.qrChannelHelp}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {QR_CHANNELS.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        aria-pressed={channel === c}
-                        onClick={() => {
-                          setChannel(c);
-                        }}
-                        className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${
-                          channel === c
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'hover:border-primary'
-                        }`}
-                      >
-                        {t.qrChannels[c]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="rounded-lg border bg-white p-2 leading-none [&_canvas]:size-28">
-                    <QrCode
-                      value={`${cardUrl}?src=${qrSource(channel)}`}
-                      label={displayUrl ?? ''}
-                    />
-                  </div>
-                  <p dir="ltr" className="break-all text-start font-medium">
-                    {displayUrl}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => void copyLink()}
-                  >
-                    {t.copyLink}
-                  </Button>
-                  <Button asChild variant="outline">
-                    <Link href={`/${username ?? ''}`}>{t.openCard}</Link>
-                  </Button>
-                  <Button asChild variant="outline">
-                    <Link href="/card/booking">{t.bookingSettingsLink}</Link>
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      downloadDataUrl(
-                        qrPngDataUrl(`${cardUrl}?src=${qrSource(channel)}`),
-                        `qr-${username ?? 'card'}-${channel}.png`,
-                      );
-                    }}
-                  >
-                    {t.downloadQr}
-                  </Button>
-                  <Button asChild variant="outline">
-                    <Link href="/card/print">{t.printLink}</Link>
-                  </Button>
-                  <Button asChild variant="outline">
-                    <Link href="/card/stats">{t.statsLink}</Link>
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">{t.needUsername}</p>
-            )}
-          </section>
-        </aside>
+        <div className="flex gap-1 rounded-xl bg-muted p-1 lg:hidden">
+          {(
+            [
+              ['edit', t.editTab],
+              ['preview', t.previewTab],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => {
+                setMobileView(id);
+              }}
+              aria-pressed={mobileView === id}
+              className={`flex-1 rounded-lg px-3 py-1.5 text-sm ${
+                mobileView === id
+                  ? 'bg-card shadow-sm'
+                  : 'text-muted-foreground'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className={mobileView === 'edit' ? '' : 'hidden lg:block'}>
+            {editor}
+          </div>
+          <div className={mobileView === 'preview' ? '' : 'hidden lg:block'}>
+            {preview}
+          </div>
+        </div>
       </div>
     </AppShell>
   );

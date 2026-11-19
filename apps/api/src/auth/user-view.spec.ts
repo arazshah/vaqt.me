@@ -5,6 +5,8 @@ function makeUser(overrides: Partial<User> = {}): User {
   return {
     id: 'user-1',
     phone: '+989121234567',
+    email: null,
+    passwordHash: null,
     username: null,
     phoneVerifiedAt: new Date('2026-01-01T00:00:00Z'),
     displayName: 'کاربر تست',
@@ -23,6 +25,19 @@ function makeUser(overrides: Partial<User> = {}): User {
     ...overrides,
   };
 }
+
+describe('toPrivateUser (email-only account)', () => {
+  it('has an empty maskedPhone and exposes the email only to the owner view', () => {
+    const owner = toPrivateUser(
+      makeUser({ phone: null, email: 'me@example.com' }),
+    );
+    expect(owner.maskedPhone).toBe('');
+    expect(owner.email).toBe('me@example.com');
+    expect(
+      JSON.stringify(toPublicUser(makeUser({ email: 'me@example.com' }))),
+    ).not.toContain('me@example.com');
+  });
+});
 
 describe('toPublicUser', () => {
   it('never includes the phone number, under any key', () => {

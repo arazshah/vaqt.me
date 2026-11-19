@@ -86,7 +86,7 @@ export function OtpForm({ onSuccess }: { onSuccess?: () => void } = {}) {
       );
       await refetch();
       if (onSuccess) onSuccess();
-      else router.push('/card/edit');
+      else router.push('/card');
     } catch (error) {
       setServerError(
         error instanceof ApiError ? error.message : fa.loginPage.genericError,

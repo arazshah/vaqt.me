@@ -45,11 +45,12 @@ export class RequireVerifiedPhoneGuard implements CanActivate {
     } else {
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { phoneVerifiedAt: true, status: true },
+        select: { phoneVerifiedAt: true, passwordHash: true, status: true },
       });
       verified =
         !!user &&
-        user.phoneVerifiedAt !== null &&
+        // a verified phone OR an email+password account (SMS login is off)
+        (user.phoneVerifiedAt !== null || user.passwordHash !== null) &&
         user.status === UserStatus.ACTIVE;
       await this.kv.set(
         cacheKey,

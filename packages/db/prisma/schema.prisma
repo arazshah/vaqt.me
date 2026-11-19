@@ -57,7 +57,12 @@ enum SystemRole {
 
 model User {
   id                 String       @id @default(cuid())
-  phone              String       @unique
+  // Null for accounts created with email + password (SMS login is optional).
+  phone              String?      @unique
+  // Lowercased; null for phone-only accounts.
+  email              String?      @unique
+  // scrypt hash (see PasswordService); never leaves the API.
+  passwordHash       String?
   // Public card address vaqt.me/<username>; lowercase, null until claimed.
   username           String?      @unique
   phoneVerifiedAt    DateTime?
@@ -159,6 +164,8 @@ model Card {
   // One of CARD_TEMPLATES in @vaqt/shared (validated there, not a DB enum,
   // so adding a template needs no migration).
   template       String   @default("tile")
+  // One of CARD_CATEGORIES in @vaqt/shared; null = not chosen yet.
+  category       String?
   // Owner consent to publish the phone number on the public card.
   showPhone      Boolean  @default(false)
   // Booking switch and rules (hours/leave days live in their own tables).

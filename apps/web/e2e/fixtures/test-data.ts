@@ -19,3 +19,9 @@ export const E2E_OTP_CODE = process.env.DEV_FIXED_OTP ?? '11223';
 export function randomUsername(): string {
   return `e2e${String(Date.now()).slice(-8)}${String(Math.floor(Math.random() * 100))}`;
 }
+
+// Matches QA_EMAIL_SUFFIX in apps/api/src/scripts/cleanup-qa-data.ts so the
+// `cleanup:qa` teardown removes accounts created by this suite.
+export function randomTestEmail(): string {
+  return `e2e${String(Date.now()).slice(-8)}${String(Math.floor(Math.random() * 1e4))}@qa.vaqt.test`;
+}

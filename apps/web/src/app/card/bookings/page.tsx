@@ -31,7 +31,7 @@ function BookingRow({
 }) {
   const upcoming = new Date(booking.startAt).getTime() > Date.now();
   return (
-    <li className="flex flex-col gap-2 rounded-xl border bg-card p-4">
+    <li className="flex flex-col gap-2 rounded-3xl border bg-card p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <b>{booking.bookerName}</b>
         <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs">
@@ -50,14 +50,24 @@ function BookingRow({
         </p>
       ) : null}
       <p className="text-sm text-muted-foreground">
-        {t.phone}:{' '}
-        <a
-          dir="ltr"
-          className="font-medium text-foreground"
-          href={`tel:${booking.bookerPhone}`}
-        >
-          {booking.bookerPhone}
-        </a>
+        {booking.bookerPhone ? t.phone : t.email}:{' '}
+        {booking.bookerPhone ? (
+          <a
+            dir="ltr"
+            className="font-medium text-foreground"
+            href={`tel:${booking.bookerPhone}`}
+          >
+            {booking.bookerPhone}
+          </a>
+        ) : (
+          <a
+            dir="ltr"
+            className="font-medium text-foreground"
+            href={`mailto:${booking.bookerEmail ?? ''}`}
+          >
+            {booking.bookerEmail}
+          </a>
+        )}
       </p>
       {upcoming && booking.status === 'PENDING' ? (
         <div className="flex gap-2">
@@ -178,7 +188,7 @@ export default function BookingsPage() {
 
   return (
     <AppShell>
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+      <div className="flex w-full flex-col gap-6">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold">{t.title}</h1>
           <Button asChild variant="outline" size="sm">

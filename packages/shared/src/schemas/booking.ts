@@ -145,7 +145,9 @@ export interface ProviderBookingView {
   bookerName: string;
   // Local 09… number. Shown to the provider only: the booker gave it (and
   // verified it by SMS code) in order to be contacted about this booking.
+  /** Empty when the booker signed up with email only. */
   bookerPhone: string;
+  bookerEmail: string | null;
   note: string | null;
   createdAt: string;
 }
