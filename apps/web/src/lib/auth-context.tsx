@@ -20,6 +20,8 @@ export interface AuthUser {
   maskedPhone: string;
   email: string | null;
   systemRole: 'USER' | 'ADMIN';
+  /** Signed in with a temporary password that must be replaced first. */
+  mustChangePassword?: boolean;
 }
 
 interface AuthContextValue {

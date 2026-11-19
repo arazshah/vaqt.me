@@ -56,15 +56,18 @@ enum SystemRole {
 // ---------------------------------------------------------------------------
 
 model User {
-  id                 String       @id @default(cuid())
+  id                 String     @id @default(cuid())
   // Null for accounts created with email + password (SMS login is optional).
-  phone              String?      @unique
+  phone              String?    @unique
   // Lowercased; null for phone-only accounts.
-  email              String?      @unique
+  email              String?    @unique
   // scrypt hash (see PasswordService); never leaves the API.
   passwordHash       String?
+  // Set on a temporary password (the built-in "admin" account): the owner
+  // must choose a new one before using anything that needs a role.
+  mustChangePassword Boolean    @default(false)
   // Public card address vaqt.me/<username>; lowercase, null until claimed.
-  username           String?      @unique
+  username           String?    @unique
   phoneVerifiedAt    DateTime?
   displayName        String
   avatarUrl          String?
@@ -75,26 +78,26 @@ model User {
   bio                String?
   headline           String?
   city               String?
-  timezone           String       @default("Asia/Tehran")
-  systemRole         SystemRole   @default(USER)
-  status             UserStatus   @default(ACTIVE)
+  timezone           String     @default("Asia/Tehran")
+  systemRole         SystemRole @default(USER)
+  status             UserStatus @default(ACTIVE)
   lastSeenAt         DateTime?
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
-  auditLogs               AuditLog[]
-  sessions                Session[]
-  card                    Card?
-  contactLinks            ContactLink[]
-  serviceTypes            ServiceType[]
-  availabilityRules       AvailabilityRule[]
-  availabilityExceptions  AvailabilityException[]
-  bookingsAsProvider      Booking[]               @relation("BookingProvider")
-  bookingsAsBooker        Booking[]               @relation("BookingBooker")
-  messengerBindings       MessengerBinding[]
-  cardEvents              CardEvent[]
-  savedCards              SavedCard[]             @relation("WalletOwner")
-  savedByOthers           SavedCard[]             @relation("WalletCard")
+  auditLogs              AuditLog[]
+  sessions               Session[]
+  card                   Card?
+  contactLinks           ContactLink[]
+  serviceTypes           ServiceType[]
+  availabilityRules      AvailabilityRule[]
+  availabilityExceptions AvailabilityException[]
+  bookingsAsProvider     Booking[]               @relation("BookingProvider")
+  bookingsAsBooker       Booking[]               @relation("BookingBooker")
+  messengerBindings      MessengerBinding[]
+  cardEvents             CardEvent[]
+  savedCards             SavedCard[]             @relation("WalletOwner")
+  savedByOthers          SavedCard[]             @relation("WalletCard")
 
   @@index([status])
   @@map("users")
@@ -158,31 +161,31 @@ model AuditLog {
 
 // One online business card per user (vaqt.me/<username>).
 model Card {
-  id             String   @id @default(cuid())
-  userId         String   @unique
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   // One of CARD_TEMPLATES in @vaqt/shared (validated there, not a DB enum,
   // so adding a template needs no migration).
-  template       String   @default("tile")
+  template         String   @default("tile")
   // One of CARD_CATEGORIES in @vaqt/shared; null = not chosen yet.
-  category       String?
+  category         String?
   // Owner consent to publish the phone number on the public card.
-  showPhone      Boolean  @default(false)
+  showPhone        Boolean  @default(false)
   // Public contact info typed in by the owner (so publishing it IS consent):
   // a phone (mobile or landline), a street address and a map pin.
-  contactPhone   String?
-  address        String?
-  latitude       Float?
-  longitude      Float?
+  contactPhone     String?
+  address          String?
+  latitude         Float?
+  longitude        Float?
   // CARD_FIELDS (in @vaqt/shared) the owner chose NOT to print on the
   // business card; stored as the hidden list so new fields default to shown.
   hiddenCardFields String[] @default([])
   // Booking switch and rules (hours/leave days live in their own tables).
-  bookingEnabled Boolean  @default(false)
-  minNoticeHours Int      @default(2)
-  maxDaysAhead   Int      @default(30)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  bookingEnabled   Boolean  @default(false)
+  minNoticeHours   Int      @default(2)
+  maxDaysAhead     Int      @default(30)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@map("cards")
 }
@@ -356,6 +359,18 @@ model KvEntry {
 
   @@index([expiresAt])
   @@map("kv_entries")
+}
+
+// Uploaded files (avatars) kept in Postgres rather than on a container disk,
+// so they survive redeploys exactly like the rest of the data. Keys are
+// random (avatars/<uuid>.jpg) and never reused, so they cache forever.
+model StoredFile {
+  key         String   @id
+  contentType String
+  data        Bytes
+  createdAt   DateTime @default(now())
+
+  @@map("stored_files")
 }
 
 // One row per rate-limit hit (sliding window). `at` is epoch milliseconds.

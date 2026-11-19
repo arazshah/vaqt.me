@@ -90,6 +90,7 @@ export function BusinessCard({
   interactive = true,
 }: BusinessCardProps) {
   const [flipped, setFlipped] = useState(initialFlipped);
+  const [photoFailed, setPhotoFailed] = useState(false);
   const t = fa.cardPage;
   const initial = Array.from(displayName.trim())[0] ?? '';
   const show = (f: CardField) => !fields || fields.includes(f);
@@ -139,7 +140,7 @@ export function BusinessCard({
   if (shown.length === 0 && displayUrl) {
     shown.push({ key: 'url', icon: <Globe />, text: displayUrl, ltr: true });
   }
-  const photo = avatarUrl && show('avatar') ? avatarUrl : null;
+  const photo = avatarUrl && show('avatar') && !photoFailed ? avatarUrl : null;
 
   return (
     <div className="bc-stage">
@@ -161,7 +162,13 @@ export function BusinessCard({
             <span className="bc-frame" aria-hidden="true" />
             <span className="bc-id" aria-hidden="true">
               {photo ? (
-                <img src={photo} alt="" />
+                <img
+                  src={photo}
+                  alt=""
+                  onError={() => {
+                    setPhotoFailed(true);
+                  }}
+                />
               ) : (
                 <span className="bc-mono">{initial}</span>
               )}

@@ -3,6 +3,7 @@ import { prisma, OtpPurpose } from '@vaqt/db';
 import {
   normalizePhone,
   toPersianDigits,
+  type ChangePasswordInput,
   type LoginInput,
   type RegisterInput,
 } from '@vaqt/shared';
@@ -63,6 +64,19 @@ export class AuthService {
   ): Promise<VerifyOtpResult> {
     const { user, tokens } = await this.passwordAuth.login(input, device);
     return { user: toPrivateUser(user), tokens };
+  }
+
+  async changePassword(
+    userId: string,
+    sessionId: string,
+    input: ChangePasswordInput,
+  ): Promise<PrivateUser> {
+    const user = await this.passwordAuth.changePassword(
+      userId,
+      sessionId,
+      input,
+    );
+    return toPrivateUser(user);
   }
 
   async requestOtp(rawPhone: string, ip: string): Promise<OtpRequestResult> {

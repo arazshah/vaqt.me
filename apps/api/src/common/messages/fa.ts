@@ -32,6 +32,8 @@ export const errorMessagesFa: Record<ErrorCode, string> = {
   SMS_LOGIN_DISABLED:
     'ورود با پیامک فعلاً غیرفعال است. با ایمیل و رمز عبور وارد شوید.',
   INVALID_CREDENTIALS: 'ایمیل یا رمز عبور درست نیست.',
+  PASSWORD_CHANGE_REQUIRED: 'اول رمز عبور موقت را عوض کنید.',
+  WRONG_PASSWORD: 'رمز عبور فعلی درست نیست.',
   EMAIL_TAKEN: 'با این ایمیل قبلاً ثبت‌نام شده است. وارد شوید.',
   EMAIL_NOT_ALLOWED: 'این نوع ایمیل (موقت) پذیرفته نمی‌شود. ایمیل دیگری بدهید.',
   REGISTRATION_REJECTED:

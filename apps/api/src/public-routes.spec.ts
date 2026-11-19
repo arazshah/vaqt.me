@@ -3,7 +3,6 @@ import { RequestMethod } from '@nestjs/common';
 import { PATH_METADATA, METHOD_METADATA } from '@nestjs/common/constants';
 import { IS_PUBLIC_KEY } from './common/decorators/public.decorator';
 import { AdminSettingsController } from './admin/admin-settings.controller';
-import { AdminSetupController } from './admin/admin-setup.controller';
 import { AppController } from './app.controller';
 import { AuthController } from './auth/auth.controller';
 import { PasswordAuthController } from './auth/password-auth.controller';
@@ -12,6 +11,7 @@ import { CardsController } from './cards/cards.controller';
 import { MessengerController } from './messenger/messenger.controller';
 import { WalletController } from './wallet/wallet.controller';
 import { UsersController } from './users/users.controller';
+import { UploadsController } from './storage/uploads.controller';
 
 // Every controller registered in the app — kept in sync manually so a new
 // controller can't slip in unreviewed. If you add a controller, add it
@@ -22,11 +22,11 @@ const CONTROLLERS: (new (...args: never[]) => unknown)[] = [
   PasswordAuthController,
   UsersController,
   AdminSettingsController,
-  AdminSetupController,
   CardsController,
   BookingController,
   MessengerController,
   WalletController,
+  UploadsController,
 ];
 
 const METHOD_NAMES: Record<number, string> = {
@@ -112,12 +112,11 @@ const PUBLIC_ROUTE_ALLOWLIST: { method: string; path: string }[] = [
   { method: 'GET', path: '/cards/:username' },
   { method: 'GET', path: '/cards/:username/vcard' },
   { method: 'POST', path: '/cards/:username/event' },
-  { method: 'POST', path: '/admin/setup/status' },
-  { method: 'POST', path: '/admin/setup/claim' },
   { method: 'GET', path: '/booking/by-token/:token' },
   { method: 'POST', path: '/booking/cancel-by-token' },
   { method: 'GET', path: '/booking/:username/availability' },
   { method: 'POST', path: '/messenger/bale/webhook/:secret' },
+  { method: 'GET', path: '/uploads/avatars/:name' },
 ];
 
 describe('public route allowlist', () => {

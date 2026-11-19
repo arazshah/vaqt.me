@@ -145,13 +145,6 @@ export interface SettingView {
   source: 'panel' | 'env' | 'default' | 'none';
 }
 
-export const setupClaimSchema = z.object({
-  token: z.string().trim().min(16).max(200),
-  phone: z.string().trim().min(10).max(20),
-  displayName: z.string().trim().min(2).max(50).optional(),
-});
-export type SetupClaimInput = z.infer<typeof setupClaimSchema>;
-
 export const smsTestSchema = z.object({
   phone: z.string().trim().min(10).max(20),
 });

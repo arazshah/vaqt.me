@@ -50,6 +50,7 @@ import { RequireOwnershipGuard } from './guards/require-ownership.guard';
     TokenService,
     AuditService,
     SessionService,
+    PasswordService,
   ],
 })
 export class AuthModule {}

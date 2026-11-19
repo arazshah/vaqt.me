@@ -79,13 +79,15 @@ export function PasswordForm({
     }
     setPending(true);
     try {
-      await apiFetch(
+      const res = await apiFetch<{ user?: { mustChangePassword?: boolean } }>(
         mode === 'login' ? '/auth/login' : '/auth/register',
         { method: 'POST', body: JSON.stringify(parsed.data) },
         { redirectOnAuthFailure: false },
       );
       await refetch();
-      if (onSuccess) onSuccess();
+      // A temporary password (the built-in admin) must be replaced first.
+      if (res.user?.mustChangePassword) router.push('/admin/password');
+      else if (onSuccess) onSuccess();
       else router.push('/card');
     } catch (err) {
       setError(
@@ -120,10 +122,11 @@ export function PasswordForm({
         <Label htmlFor="auth-email">{t.email}</Label>
         <Input
           id="auth-email"
-          type="email"
+          // Login also accepts the built-in admin's login name ("admin").
+          type={mode === 'login' ? 'text' : 'email'}
           dir="ltr"
           inputMode="email"
-          autoComplete="email"
+          autoComplete={mode === 'login' ? 'username' : 'email'}
           autoCapitalize="none"
           spellCheck={false}
           value={email}

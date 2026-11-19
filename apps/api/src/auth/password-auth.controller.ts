@@ -12,13 +12,17 @@ import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { ZodValidationPipe } from 'nestjs-zod';
 import {
+  changePasswordSchema,
   loginSchema,
   registerSchema,
   type AuthMethods,
+  type ChangePasswordInput,
   type LoginInput,
   type RegisterInput,
 } from '@vaqt/shared';
 import { Public } from '../common/decorators/public.decorator';
+import { CurrentUser } from './decorators/current-user.decorator';
+import type { AccessTokenPayload } from './session/token.service';
 import { AuthConfigService } from './auth.config';
 import { setAuthCookies } from './auth-cookies';
 import { isSmsLoginEnabled } from './guards/sms-login-enabled.guard';
@@ -81,6 +85,18 @@ export class PasswordAuthController {
       deviceContext(req),
     );
     setAuthCookies(res, tokens, this.authConfig);
+    return { user };
+  }
+
+  /** Signed-in users only (no @Public): change the account's password. */
+  @Post('password/change')
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @CurrentUser() current: AccessTokenPayload,
+    @Body(new ZodValidationPipe(changePasswordSchema))
+    body: ChangePasswordInput,
+  ) {
+    const user = await this.auth.changePassword(current.sub, current.sid, body);
     return { user };
   }
 }

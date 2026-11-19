@@ -26,6 +26,8 @@ const API_ENV = {
     process.env.JWT_REFRESH_SECRET ?? 'e2e-jwt-refresh-secret-0123456789abcdef',
   DEV_FIXED_OTP: process.env.DEV_FIXED_OTP ?? '11223',
   SMS_PROVIDER: 'mock',
+  // Known temporary password for the built-in "admin" account.
+  ADMIN_INITIAL_PASSWORD: 'E2eTemp12345',
   RATE_LIMIT_PHONE_HOURLY: '1000',
   RATE_LIMIT_PHONE_DAILY: '1000',
   RATE_LIMIT_IP_HOURLY: '1000',

@@ -31,11 +31,32 @@ export const registerSchema = z
   });
 export type RegisterInput = z.infer<typeof registerSchema>;
 
+/**
+ * Login name of the built-in administrator account. It is stored in the
+ * email column but is not an email, so no sign-up can ever claim it.
+ */
+export const ADMIN_LOGIN = 'admin';
+
 export const loginSchema = z.object({
-  email: emailSchema,
+  // An email, or the built-in admin's login name.
+  email: z.union([
+    z.string().trim().toLowerCase().pipe(z.literal(ADMIN_LOGIN)),
+    emailSchema,
+  ]),
   password: z.string().min(1).max(128),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1).max(128),
+    newPassword: passwordSchema,
+  })
+  .refine((v) => v.newPassword !== v.currentPassword, {
+    message: 'رمز جدید باید با رمز فعلی فرق داشته باشد',
+    path: ['newPassword'],
+  });
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 export interface AuthMethods {
   password: boolean;

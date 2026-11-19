@@ -4,7 +4,7 @@
 > درخواست/پیشنهاد، چت، پرداخت، AI) عمداً حذف شد؛ در تاریخچه‌ی git (تا کامیت
 > `6aad4c0`) موجود است.
 
-**آخرین به‌روزرسانی:** ۲۰۲۶-۱۱-۱۹ — سبک‌سازی کامل: کد و جدول‌های بازار حذف شد.
+**آخرین به‌روزرسانی:** ۲۰۲۶-۱۱-۱۹ — آواتار در Postgres، حساب داخلی admin، ۱۶ طرح کارت (هر دسته یک طرح).
 
 ## محصول
 
@@ -35,11 +35,12 @@ vCard، آمار) · `booking` (اسلات، رزرو، لغو با توکن) ·
 `messenger` (ربات بله) · `wallet` (کیف کارت/تبادل) · `settings` (تنظیمات زمان اجرا) ·
 `admin` (setup اولین مدیر + تنظیمات) · `storage` (دیسک/S3).
 
-### مدل‌های دیتابیس (۱۷ جدول)
+### مدل‌های دیتابیس (۱۸ جدول)
 
 `User` `Session` `VerificationCode` `AuditLog` `Card` `ContactLink` `ServiceType`
 `AvailabilityRule` `AvailabilityException` `Booking` `MessengerBinding` `CardEvent`
-`SavedCard` `AppSetting` `KvEntry` `RateEvent` `Job`. بدون Redis: کلید/مقدار موقت، rate limit و صف کارها همه روی Postgres هستند. migrationها: `init` + افزایشی. یک migration تمیز `init` (قبل از اولین استقرار یکی شد؛ از این به بعد
+`SavedCard` `AppSetting` `KvEntry` `RateEvent` `Job` `StoredFile`. آواتارها در `StoredFile` (Postgres) ذخیره
+و از `GET /uploads/avatars/:name` سرو می‌شوند (`STORAGE_PROVIDER=db`، پیش‌فرض) — دیسک کانتینر با Deploy از بین می‌رود. بدون Redis: کلید/مقدار موقت، rate limit و صف کارها همه روی Postgres هستند. migrationها: `init` + افزایشی. یک migration تمیز `init` (قبل از اولین استقرار یکی شد؛ از این به بعد
 migrationها افزایشی‌اند و **هرگز ویرایش نمی‌شوند**).
 
 ## قواعد سخت (نقض‌شان باگ امنیتی/محصولی است)
@@ -102,7 +103,9 @@ migrationها افزایشی‌اند و **هرگز ویرایش نمی‌شون
 در production ارائه‌دهنده‌ها پیش‌فرض `disabled`. تنظیمات: sms.ir، الگوهای پیامک، ربات بله
 (+ دکمه‌ی اتصال/ثبت وبهوک و پیامک آزمایشی). مقدار محرمانه هرگز به پنل برنمی‌گردد.
 **`APP_SECRET` را هرگز عوض نکنید** (تنظیمات رمزشده و OTP/JWT از آن مشتق‌اند).
-اولین مدیر: تا ADMIN نباشد، هر بوت یک توکن یک‌بارمصرف در لاگ api چاپ می‌شود → `/admin/setup`.
+مدیر: حساب داخلی با نام ورود `admin` (در ستون email، که هیچ ثبت‌نامی نمی‌تواند بگیرد). تا رمزش عوض نشده
+(`mustChangePassword`)، هر بوت یک رمز موقت تازه در لاگ api چاپ می‌شود (یا `ADMIN_INITIAL_PASSWORD`)؛
+`RolesGuard` تا تغییر رمز (`POST /auth/password/change`) پاسخ `PASSWORD_CHANGE_REQUIRED` می‌دهد.
 تا پیامک راه نیفتاده `POST /auth/otp/request` ⇒ ۵۰۳ `SMS_NOT_CONFIGURED`.
 
 ## اعلان‌ها

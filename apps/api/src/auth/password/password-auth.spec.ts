@@ -37,6 +37,7 @@ const service = new PasswordAuthService(
   ),
   audit,
   authConfig,
+  new KvService(),
 );
 
 const emails: string[] = [];
@@ -197,6 +198,65 @@ describe('PasswordAuthService (real Postgres)', () => {
       service.login({ email, password: 'Passw0rdOK' }, device('g-ok')),
     ).rejects.toMatchObject({
       response: { code: ErrorCode.TOO_MANY_ATTEMPTS },
+    });
+  });
+
+  describe('changePassword', () => {
+    async function signedIn(tag: string) {
+      const email = newEmail();
+      await service.register(
+        { email, password: 'Passw0rdOK', formToken: oldToken() },
+        device(`cp-r-${tag}`),
+      );
+      const first = await service.login(
+        { email, password: 'Passw0rdOK' },
+        device(`cp-a-${tag}`),
+      );
+      const other = await service.login(
+        { email, password: 'Passw0rdOK' },
+        device(`cp-b-${tag}`),
+      );
+      const sessions = await prisma.session.findMany({
+        where: { userId: first.user.id },
+        orderBy: { createdAt: 'asc' },
+      });
+      return { email, user: first.user, other, sessions };
+    }
+
+    it('rejects a wrong current password', async () => {
+      const { user, sessions } = await signedIn('w');
+      await expect(
+        service.changePassword(user.id, sessions[0]?.id ?? '', {
+          currentPassword: 'nope-1234',
+          newPassword: 'NewPassw0rd',
+        }),
+      ).rejects.toMatchObject({ response: { code: ErrorCode.WRONG_PASSWORD } });
+    });
+
+    it('sets the new password, clears mustChangePassword and signs out other sessions', async () => {
+      const { email, user, sessions } = await signedIn('ok');
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { mustChangePassword: true },
+      });
+      const keep = sessions[0]?.id ?? '';
+      const updated = await service.changePassword(user.id, keep, {
+        currentPassword: 'Passw0rdOK',
+        newPassword: 'NewPassw0rd',
+      });
+      expect(updated.mustChangePassword).toBe(false);
+      const live = await prisma.session.findMany({
+        where: { userId: user.id, revokedAt: null },
+      });
+      expect(live.map((s) => s.id)).toEqual([keep]);
+      await expect(
+        service.login({ email, password: 'Passw0rdOK' }, device('cp-old')),
+      ).rejects.toMatchObject({
+        response: { code: ErrorCode.INVALID_CREDENTIALS },
+      });
+      await expect(
+        service.login({ email, password: 'NewPassw0rd' }, device('cp-new')),
+      ).resolves.toBeDefined();
     });
   });
 });

@@ -7,6 +7,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     phone: '+989121234567',
     email: null,
     passwordHash: null,
+    mustChangePassword: false,
     username: null,
     phoneVerifiedAt: new Date('2026-01-01T00:00:00Z'),
     displayName: 'کاربر تست',

@@ -1,181 +1,99 @@
-import { randomUUID } from 'node:crypto';
 import { prisma } from '@vaqt/db';
+import { ADMIN_LOGIN } from '@vaqt/shared';
 import { AuditService } from '../auth/audit/audit.service';
-import type { SessionService } from '../auth/session/session.service';
-import { ErrorCode } from '../common/errors/error-codes';
+import { PasswordService } from '../auth/password/password.service';
 import { KvService } from '../common/kv/kv.service';
 import { fakeConfig } from '../test-support/fake-config';
 import { AdminSetupService } from './admin-setup.service';
-import { randomTestPhone } from '../test-support/test-db';
 
-const DEVICE = { userAgent: 'jest', ip: randomUUID() };
+// The "admin" account is a single global row, so these tests own it: they
+// run serially in this file and remove it afterwards.
+describe('AdminSetupService — built-in admin account (real Postgres)', () => {
+  const passwords = new PasswordService();
+  const make = (env: Record<string, string> = {}) =>
+    new AdminSetupService(
+      passwords,
+      new AuditService(),
+      new KvService(),
+      fakeConfig({ WEB_ORIGIN: 'https://vaqt.me', ...env }),
+    );
 
-function phone(): string {
-  return randomTestPhone();
-}
-const local = (p: string) => `0${p.slice(3)}`;
-
-// The "no admin exists yet" precondition is global state, and roles.guard.spec
-// creates real ADMIN users, so wait for any such leftovers to go away first.
-async function waitForNoAdmin(): Promise<void> {
-  const deadline = Date.now() + 20_000;
-  while (Date.now() < deadline) {
-    if ((await prisma.user.count({ where: { systemRole: 'ADMIN' } })) === 0)
-      return;
-    await new Promise((r) => setTimeout(r, 250));
+  async function adminRow() {
+    return prisma.user.findUnique({ where: { email: ADMIN_LOGIN } });
   }
-  throw new Error('another suite left an ADMIN user behind');
-}
+  async function removeAdmin() {
+    const row = await adminRow();
+    if (!row) return;
+    await prisma.session.deleteMany({ where: { userId: row.id } });
+    await prisma.auditLog.deleteMany({ where: { entityId: row.id } });
+    await prisma.user.delete({ where: { id: row.id } });
+  }
 
-describe('AdminSetupService (real Postgres + Redis)', () => {
-  const created: string[] = [];
-  let redis: KvService;
-  let service: AdminSetupService;
-  const sessions = {
-    createSession: jest
-      .fn()
-      .mockResolvedValue({ accessToken: 'a', refreshToken: 'r' }),
-  } as unknown as SessionService;
+  beforeEach(removeAdmin);
+  afterAll(removeAdmin);
 
-  beforeEach(async () => {
-    await waitForNoAdmin();
-    redis = new KvService();
-    service = new AdminSetupService(
-      redis,
-      new AuditService(),
-      fakeConfig({ WEB_ORIGIN: 'https://vaqt.me' }),
-    );
-    jest.clearAllMocks();
-  });
-  afterEach(async () => {
-    // Do not leave an admin around for the next test or other suites.
-    await prisma.user.updateMany({
-      where: { id: { in: created } },
-      data: { systemRole: 'USER' },
-    });
-  });
-  afterAll(async () => {
-    await prisma.auditLog.deleteMany({ where: { actorId: { in: created } } });
-    await prisma.session.deleteMany({ where: { userId: { in: created } } });
-    await prisma.user.deleteMany({ where: { id: { in: created } } });
-    await prisma.$disconnect();
-  });
-
-  it('makes the phone the first admin when the one-time token matches, and logs them in', async () => {
-    const token = service.issueToken();
-    expect(await service.needsSetup()).toBe(true);
-    const p = phone();
-    const { userId } = await service.claim(
-      { token, phone: local(p), displayName: 'علی' },
-      DEVICE,
-      sessions,
-    );
-    created.push(userId);
-    const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
-    expect(user).toMatchObject({
-      phone: p,
+  it('creates the admin account with a temporary password that must be changed', async () => {
+    const temp = await make().ensureAdminAccount();
+    expect(temp).toMatch(/^[a-z0-9]{15}$/);
+    const row = await adminRow();
+    expect(row).toMatchObject({
       systemRole: 'ADMIN',
-      displayName: 'علی',
+      status: 'ACTIVE',
+      mustChangePassword: true,
     });
-    expect(user.phoneVerifiedAt).not.toBeNull();
-    expect(sessions.createSession).toHaveBeenCalledWith(userId, DEVICE);
-    const audit = await prisma.auditLog.findFirst({
-      where: { actorId: userId, action: 'admin.setup.claimed' },
-    });
-    expect(JSON.stringify(audit?.meta)).not.toContain(p.slice(3)); // phone is masked in the log
+    expect(await passwords.verify(temp ?? '', row?.passwordHash ?? null)).toBe(
+      true,
+    );
   });
 
-  it('promotes an already-registered user instead of creating a duplicate', async () => {
-    const p = phone();
-    const existing = await prisma.user.create({
-      data: { phone: p, displayName: 'کاربر قدیمی' },
-    });
-    created.push(existing.id);
-    const { userId } = await service.claim(
-      { token: service.issueToken(), phone: p },
-      DEVICE,
-      sessions,
+  it('issues a fresh temporary password on every boot until it is changed', async () => {
+    const first = await make().ensureAdminAccount();
+    const second = await make().ensureAdminAccount();
+    expect(second).not.toBe(first);
+    const row = await adminRow();
+    expect(await passwords.verify(first ?? '', row?.passwordHash ?? null)).toBe(
+      false,
     );
-    expect(userId).toBe(existing.id);
+  });
+
+  it('does nothing once the owner has chosen a password', async () => {
+    await make().ensureAdminAccount();
+    await prisma.user.update({
+      where: { email: ADMIN_LOGIN },
+      data: { mustChangePassword: false },
+    });
+    expect(await make().ensureAdminAccount()).toBeNull();
+  });
+
+  it('uses ADMIN_INITIAL_PASSWORD when it is strong enough', async () => {
+    await make({ ADMIN_INITIAL_PASSWORD: 'Start1234x' }).ensureAdminAccount();
+    const row = await adminRow();
     expect(
-      (await prisma.user.findUniqueOrThrow({ where: { id: userId } }))
-        .systemRole,
-    ).toBe('ADMIN');
+      await passwords.verify('Start1234x', row?.passwordHash ?? null),
+    ).toBe(true);
   });
 
-  it('rejects a wrong token and creates nothing; also when no token was ever issued', async () => {
-    service.issueToken();
-    const p = phone();
-    await expect(
-      service.claim({ token: 'x'.repeat(30), phone: p }, DEVICE, sessions),
-    ).rejects.toMatchObject({
-      response: { code: ErrorCode.SETUP_TOKEN_INVALID },
+  it('ignores a weak ADMIN_INITIAL_PASSWORD', async () => {
+    const temp = await make({
+      ADMIN_INITIAL_PASSWORD: 'admin',
+    }).ensureAdminAccount();
+    expect(temp).not.toBe('admin');
+    const row = await adminRow();
+    expect(await passwords.verify('admin', row?.passwordHash ?? null)).toBe(
+      false,
+    );
+  });
+
+  it('re-promotes and reactivates a demoted or suspended admin row on reset', async () => {
+    await make().ensureAdminAccount();
+    await prisma.user.update({
+      where: { email: ADMIN_LOGIN },
+      data: { systemRole: 'USER', status: 'SUSPENDED' },
     });
-    expect(await prisma.user.count({ where: { phone: p } })).toBe(0);
-    expect(sessions.createSession).not.toHaveBeenCalled();
-
-    const fresh = new AdminSetupService(
-      redis,
-      new AuditService(),
-      fakeConfig({}),
-    );
-    await expect(
-      fresh.claim({ token: 'x'.repeat(30), phone: p }, DEVICE, sessions),
-    ).rejects.toMatchObject({
-      response: { code: ErrorCode.SETUP_TOKEN_INVALID },
-    });
-  });
-
-  it('rejects an invalid phone number', async () => {
-    await expect(
-      service.claim(
-        { token: service.issueToken(), phone: '12345678901' },
-        DEVICE,
-        sessions,
-      ),
-    ).rejects.toMatchObject({ response: { code: ErrorCode.VALIDATION_ERROR } });
-  });
-
-  it('is single-use: the token dies after one success, and the endpoint disappears once an admin exists', async () => {
-    const token = service.issueToken();
-    const first = await service.claim(
-      { token, phone: phone() },
-      DEVICE,
-      sessions,
-    );
-    created.push(first.userId);
-    expect(await service.needsSetup()).toBe(false);
-    await expect(
-      service.claim({ token, phone: phone() }, DEVICE, sessions),
-    ).rejects.toMatchObject({ response: { code: ErrorCode.NOT_FOUND } });
-  });
-
-  it('lets only one of several simultaneous claims win', async () => {
-    const token = service.issueToken();
-    const phones = [phone(), phone(), phone(), phone()];
-    const results = await Promise.allSettled(
-      phones.map((p) => service.claim({ token, phone: p }, DEVICE, sessions)),
-    );
-    for (const r of results)
-      if (r.status === 'fulfilled') created.push(r.value.userId);
-    expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
-    expect(
-      await prisma.user.count({
-        where: { phone: { in: phones }, systemRole: 'ADMIN' },
-      }),
-    ).toBe(1);
-  });
-
-  it('throttles guessing from one address', async () => {
-    service.issueToken();
-    let last: unknown;
-    for (let i = 0; i < 11; i++) {
-      last = await service
-        .claim({ token: 'y'.repeat(30), phone: phone() }, DEVICE, sessions)
-        .catch((e: unknown) => e);
-    }
-    expect(last).toMatchObject({
-      response: { code: ErrorCode.TOO_MANY_ATTEMPTS },
+    await make().ensureAdminAccount();
+    expect(await adminRow()).toMatchObject({
+      systemRole: 'ADMIN',
+      status: 'ACTIVE',
     });
   });
 });
