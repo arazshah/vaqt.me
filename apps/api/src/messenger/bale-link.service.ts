@@ -1,8 +1,8 @@
 import { randomInt } from 'crypto';
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { prisma } from '@vaqt/db';
 import { RedisService } from '../common/redis/redis.service';
+import { SettingsService } from '../settings/settings.service';
 
 export const BALE_PLATFORM = 'bale';
 const LINK_CODE_TTL_SECONDS = 600;
@@ -20,7 +20,7 @@ export interface BaleLinkOffer {
 export class BaleLinkService {
   constructor(
     private readonly redis: RedisService,
-    private readonly config: ConfigService,
+    private readonly settings: SettingsService,
   ) {}
 
   private codeKey(code: string): string {
@@ -39,7 +39,7 @@ export class BaleLinkService {
       'EX',
       LINK_CODE_TTL_SECONDS,
     );
-    const bot = this.config.get<string>('BALE_BOT_USERNAME');
+    const bot = await this.settings.get('bale.botUsername');
     return {
       code,
       url: bot ? `https://ble.ir/${bot}?start=${code}` : null,

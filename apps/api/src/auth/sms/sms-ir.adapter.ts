@@ -1,7 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { maskPhone } from '../../common/utils/mask-phone';
 import type { SmsPort, SmsSendResult } from './sms.port';
+
+/** Anything that can look up a string setting (ConfigService, or the admin-panel values). */
+export interface SmsIrConfig {
+  get(key: string): string | undefined;
+}
 
 const SMSIR_VERIFY_ENDPOINT = 'https://api.sms.ir/v1/send/verify';
 
@@ -22,9 +26,9 @@ export class SmsIrAdapter implements SmsPort {
   private readonly apiKey: string;
   private readonly otpTemplateId: string;
 
-  constructor(config: ConfigService) {
-    const apiKey = config.get<string>('SMSIR_API_KEY');
-    const otpTemplateId = config.get<string>('SMSIR_VERIFY_TEMPLATE_ID');
+  constructor(config: SmsIrConfig) {
+    const apiKey = config.get('SMSIR_API_KEY');
+    const otpTemplateId = config.get('SMSIR_VERIFY_TEMPLATE_ID');
     if (!apiKey || !otpTemplateId) {
       throw new Error(
         'SMSIR_API_KEY and SMSIR_VERIFY_TEMPLATE_ID must be set when SMS_PROVIDER=smsir',

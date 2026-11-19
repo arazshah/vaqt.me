@@ -4,6 +4,7 @@ import { prisma } from '@vaqt/db';
 import { SmsQueueService } from '../auth/sms/sms-queue.service';
 import { RedisService } from '../common/redis/redis.service';
 import { BaleLinkService } from '../messenger/bale-link.service';
+import { SettingsService } from '../settings/settings.service';
 import { baleMessagesFa } from '../messenger/messenger.messages.fa';
 import {
   MESSENGER_PORT,
@@ -15,6 +16,14 @@ import {
   type SmsTemplateKey,
 } from './notification.messages.fa';
 import type { NotificationEvent } from './notification.types';
+
+const SMS_TEMPLATE_SETTING: Record<SmsTemplateKey, string> = {
+  BOOKING_NEW_FOR_PROVIDER: 'sms.template.bookingNewForProvider',
+  BOOKING_CONFIRMED: 'sms.template.bookingConfirmed',
+  BOOKING_REJECTED: 'sms.template.bookingRejected',
+  BOOKING_CANCELED_BY_PROVIDER: 'sms.template.bookingCanceledByProvider',
+  BOOKING_REMINDER: 'sms.template.bookingReminder',
+};
 
 const PROVIDER_SMS_DAILY_CAP = 10;
 const HOUR_MS = 3_600_000;
@@ -41,6 +50,7 @@ export class NotificationDispatcher {
     private readonly sms: SmsQueueService,
     private readonly redis: RedisService,
     private readonly config: ConfigService,
+    private readonly settings: SettingsService,
   ) {}
 
   async handle(event: NotificationEvent): Promise<void> {
@@ -56,7 +66,7 @@ export class NotificationDispatcher {
         await this.onCreated(booking);
         break;
       case 'booking.decided':
-        this.onDecided(booking);
+        await this.onDecided(booking);
         break;
       case 'booking.canceled':
         await this.onCanceled(booking, event.by);
@@ -89,7 +99,7 @@ export class NotificationDispatcher {
     );
   }
 
-  private onDecided(b: BookingWithPeople): void {
+  private async onDecided(b: BookingWithPeople): Promise<void> {
     const key: SmsTemplateKey | null =
       b.status === 'CONFIRMED'
         ? 'BOOKING_CONFIRMED'
@@ -97,7 +107,7 @@ export class NotificationDispatcher {
           ? 'BOOKING_REJECTED'
           : null;
     if (!key) return;
-    this.smsBooker(b, key);
+    await this.smsBooker(b, key);
   }
 
   private async onCanceled(
@@ -105,7 +115,7 @@ export class NotificationDispatcher {
     by: 'booker' | 'provider',
   ): Promise<void> {
     if (by === 'provider') {
-      this.smsBooker(b, 'BOOKING_CANCELED_BY_PROVIDER');
+      await this.smsBooker(b, 'BOOKING_CANCELED_BY_PROVIDER');
       return;
     }
     await this.notifyProvider(
@@ -158,7 +168,7 @@ export class NotificationDispatcher {
       });
       if (claimed.count === 1) {
         const b = await loadBooking(c.id);
-        if (b) this.smsBooker(b, 'BOOKING_REMINDER');
+        if (b) await this.smsBooker(b, 'BOOKING_REMINDER');
         r24++;
       }
     }
@@ -181,7 +191,7 @@ export class NotificationDispatcher {
       if (claimed.count === 1 && !tooLate) {
         const b = await loadBooking(c.id);
         if (b) {
-          this.smsBooker(b, 'BOOKING_REMINDER');
+          await this.smsBooker(b, 'BOOKING_REMINDER');
           await this.notifyProvider(
             b,
             texts.baleReminder({
@@ -226,14 +236,17 @@ export class NotificationDispatcher {
       this.logger.warn(`provider sms cap reached for ${b.providerId}`);
       return;
     }
-    this.sendSms(b.provider.phone, smsKey, {
+    await this.sendSms(b.provider.phone, smsKey, {
       NAME: b.bookerName,
       TIME: formatWhen(b.startAt),
     });
   }
 
-  private smsBooker(b: BookingWithPeople, key: SmsTemplateKey): void {
-    this.sendSms(b.booker.phone, key, {
+  private async smsBooker(
+    b: BookingWithPeople,
+    key: SmsTemplateKey,
+  ): Promise<void> {
+    await this.sendSms(b.booker.phone, key, {
       NAME: b.provider.displayName,
       SERVICE: b.serviceName,
       TIME: formatWhen(b.startAt),
@@ -241,18 +254,20 @@ export class NotificationDispatcher {
     });
   }
 
-  private sendSms(
+  private async sendSms(
     phone: string,
     key: SmsTemplateKey,
     params: Record<string, string>,
-  ): void {
+  ): Promise<void> {
     const templateId =
-      this.config.get<string>(`SMS_TEMPLATE_${key}`) ??
+      (await this.settings.get(SMS_TEMPLATE_SETTING[key])) ??
       (process.env.NODE_ENV === 'production' ? null : key.toLowerCase());
     if (!templateId) {
-      this.logger.warn(`SMS_TEMPLATE_${key} is not set; skipping sms`);
+      this.logger.warn(
+        `sms template for ${key} is not set in the admin panel; skipping sms`,
+      );
       return;
     }
-    void this.sms.enqueueNotification({ phone, templateId, params });
+    await this.sms.enqueueNotification({ phone, templateId, params });
   }
 }

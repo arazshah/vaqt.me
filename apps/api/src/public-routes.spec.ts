@@ -3,6 +3,8 @@ import { RequestMethod } from '@nestjs/common';
 import { PATH_METADATA, METHOD_METADATA } from '@nestjs/common/constants';
 import { IS_PUBLIC_KEY } from './common/decorators/public.decorator';
 import { AdminController } from './admin/admin.controller';
+import { AdminSettingsController } from './admin/admin-settings.controller';
+import { AdminSetupController } from './admin/admin-setup.controller';
 import { AppController } from './app.controller';
 import { AuthController } from './auth/auth.controller';
 import { BookingController } from './booking/booking.controller';
@@ -27,6 +29,8 @@ const CONTROLLERS: (new (...args: never[]) => unknown)[] = [
   CategoriesController,
   SkillsController,
   AdminController,
+  AdminSettingsController,
+  AdminSetupController,
   RequestsController,
   OffersController,
   ConversationsController,
@@ -117,6 +121,8 @@ const PUBLIC_ROUTE_ALLOWLIST: { method: string; path: string }[] = [
   { method: 'GET', path: '/cards/:username' },
   { method: 'GET', path: '/cards/:username/vcard' },
   { method: 'POST', path: '/cards/:username/event' },
+  { method: 'POST', path: '/admin/setup/status' },
+  { method: 'POST', path: '/admin/setup/claim' },
   { method: 'GET', path: '/booking/by-token/:token' },
   { method: 'POST', path: '/booking/cancel-by-token' },
   { method: 'GET', path: '/booking/:username/availability' },

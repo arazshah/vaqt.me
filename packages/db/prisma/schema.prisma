@@ -744,3 +744,16 @@ model SavedCard {
   @@index([ownerId, createdAt])
   @@map("saved_cards")
 }
+
+// Runtime configuration edited from the admin panel (SMS provider, Bale bot,
+// SMS templates...). Secret values are stored encrypted (AES-256-GCM, key
+// derived from APP_SECRET); the panel never reads them back.
+model AppSetting {
+  key         String   @id
+  value       String
+  isSecret    Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+
+  @@map("app_settings")
+}

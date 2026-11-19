@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { createOriginCheckMiddleware } from './common/middleware/origin-check.middleware';
+import { deriveMissingSecrets } from './settings/derive-secrets';
 import { validateEnvOrExit } from './env-validation';
 
 async function bootstrap() {
@@ -16,6 +17,8 @@ async function bootstrap() {
   // module system regardless of source order, so this can't be "above the
   // imports" — it just needs to run before NestFactory.create(), which it
   // does.)
+  // One APP_SECRET can stand in for the OTP pepper and both JWT secrets.
+  deriveMissingSecrets(process.env);
   validateEnvOrExit();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);

@@ -18,6 +18,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { OffersModule } from './offers/offers.module';
 import { RequestsModule } from './requests/requests.module';
 import { ReviewsModule } from './reviews/reviews.module';
+import { SettingsModule } from './settings/settings.module';
 import { SkillsModule } from './skills/skills.module';
 import { WalletModule } from './wallet/wallet.module';
 import { UsersModule } from './users/users.module';
@@ -29,6 +30,7 @@ import { UsersModule } from './users/users.module';
     }),
     RedisModule,
     BullRedisModule,
+    SettingsModule,
     AuthModule,
     UsersModule,
     CategoriesModule,

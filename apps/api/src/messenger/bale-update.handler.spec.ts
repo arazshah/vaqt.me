@@ -6,6 +6,8 @@ import { ErrorCode } from '../common/errors/error-codes';
 import { RedisService } from '../common/redis/redis.service';
 import { fakeConfig } from '../test-support/fake-config';
 import { randomTestRedisPrefix } from '../test-support/test-db';
+import { SettingsService } from '../settings/settings.service';
+import { MemorySettingsStore } from '../settings/settings.store';
 import { BaleLinkService } from './bale-link.service';
 import { BaleUpdateHandler } from './bale-update.handler';
 import { MessengerController } from './messenger.controller';
@@ -39,7 +41,10 @@ describe('Bale linking and webhook (real Postgres + Redis)', () => {
     const cfg = config();
     redis = new RedisService(cfg);
     messenger = new MockMessengerAdapter();
-    links = new BaleLinkService(redis, cfg);
+    links = new BaleLinkService(
+      redis,
+      new SettingsService(cfg, new MemorySettingsStore()),
+    );
     handler = new BaleUpdateHandler(links, new BookingService(), messenger);
   });
 
@@ -248,7 +253,11 @@ describe('Bale linking and webhook (real Postgres + Redis)', () => {
   describe('webhook endpoint secret', () => {
     it('404s on a wrong secret without touching the handler, and accepts the right one', async () => {
       const spy = jest.spyOn(handler, 'handle').mockResolvedValue();
-      const controller = new MessengerController(links, handler, config());
+      const controller = new MessengerController(
+        links,
+        handler,
+        new SettingsService(config(), new MemorySettingsStore()),
+      );
       await expect(controller.webhook('nope', {})).rejects.toMatchObject({
         response: { code: ErrorCode.NOT_FOUND },
         status: HttpStatus.NOT_FOUND,
@@ -264,7 +273,7 @@ describe('Bale linking and webhook (real Postgres + Redis)', () => {
       const controller = new MessengerController(
         links,
         handler,
-        fakeConfig({}),
+        new SettingsService(fakeConfig({}), new MemorySettingsStore()),
       );
       await expect(controller.webhook('', {})).rejects.toMatchObject({
         status: HttpStatus.NOT_FOUND,
