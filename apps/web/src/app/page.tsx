@@ -1,115 +1,103 @@
-'use client';
+import type { Metadata } from 'next';
 
-import Link from 'next/link';
-import { CARD_CATEGORIES } from '@vaqt/shared';
-
-import { Button } from '@vaqt/ui/components/ui/button';
-
-import { AppShell } from '@/components/app-shell';
-import { CardPreview } from '@/components/domain/card-preview';
-import { CATEGORY_THEMES } from '@/lib/card-themes';
-import { useAuth } from '@/lib/auth-context';
+import { Features } from '@/components/landing/features';
+import { Hero } from '@/components/landing/hero';
+import { Marquee } from '@/components/landing/marquee';
+import { Faq, FinalCta, Steps, Visitors } from '@/components/landing/rest';
+import { Showcase } from '@/components/landing/showcase';
+import { SiteShell } from '@/components/site/site-shell';
 import { fa } from '@/messages/fa';
 
 const L = fa.landing;
 
-export default function HomePage() {
-  const { user, loading } = useAuth();
+export const metadata: Metadata = {
+  title: 'وقت من — کارت ویزیت آنلاین و رزرو وقت رایگان',
+  description:
+    'کارت ویزیت زنده با QR، ذخیره‌ی مخاطب و رزرو وقت با تأیید خودتان؛ رایگان، فارسی و روی سرور ایرانی. به‌جای شماره، لینکت را بده.',
+};
 
+function Heading({
+  id,
+  kicker,
+  title,
+  text,
+}: {
+  id?: string;
+  kicker: string;
+  title: string;
+  text?: string;
+}) {
   return (
-    <AppShell>
-      <section className="grid items-center gap-10 py-8 lg:grid-cols-[1.1fr_0.9fr] lg:py-16">
-        <div className="flex flex-col items-start gap-5">
-          <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
-            {fa.homePage.heroEyebrow}
-          </span>
-          <h1 className="text-4xl font-extrabold leading-tight sm:text-6xl">
-            {fa.homePage.heroTitle}
-          </h1>
-          <p className="max-w-xl text-lg leading-8 text-muted-foreground">
-            {fa.homePage.heroSubtitle}
-          </p>
-          <div className="flex flex-wrap items-center gap-3">
-            {!loading && (
-              <Button asChild size="lg" className="h-12 px-8 text-base">
-                <Link href={user ? '/card' : '/login'}>
-                  {user ? fa.homePage.ctaMyCard : fa.homePage.ctaStart}
-                </Link>
-              </Button>
-            )}
-            <span className="text-sm text-muted-foreground">{L.free}</span>
+    <div className="lp-reveal mb-10 flex flex-col items-start" id={id}>
+      <span className="lp-kicker">{kicker}</span>
+      <h2 className="lp-h2">{title}</h2>
+      {text ? <p className="lp-lead">{text}</p> : null}
+    </div>
+  );
+}
+
+const WRAP = 'mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8';
+
+export default function HomePage() {
+  return (
+    <SiteShell>
+      <Hero />
+      <Marquee />
+
+      <section id="professions" className="lp-section scroll-mt-16">
+        <div className={WRAP}>
+          <Heading
+            kicker={fa.site.nav.professions}
+            title={L.showcase.title}
+            text={L.showcase.text}
+          />
+          <Showcase />
+        </div>
+      </section>
+
+      <section id="features" className="lp-section scroll-mt-16 bg-muted/30">
+        <div className={WRAP}>
+          <Heading
+            kicker={fa.site.nav.features}
+            title={L.features.title}
+            text={L.features.subtitle}
+          />
+          <Features />
+        </div>
+      </section>
+
+      <section id="how" className="lp-section scroll-mt-16">
+        <div className={WRAP}>
+          <Heading
+            kicker={fa.site.nav.how}
+            title={L.stepsTitle}
+            text={L.stepsSubtitle}
+          />
+          <Steps />
+        </div>
+      </section>
+
+      <section className="lp-section bg-[var(--lp-soft)]">
+        <div className={WRAP}>
+          <Visitors />
+        </div>
+      </section>
+
+      <section id="faq" className="lp-section scroll-mt-16">
+        <div className={`${WRAP} grid gap-10 lg:grid-cols-[0.8fr_1.2fr]`}>
+          <div className="lp-reveal flex flex-col items-start">
+            <span className="lp-kicker">{fa.site.nav.faq}</span>
+            <h2 className="lp-h2">{L.faq.title}</h2>
           </div>
-        </div>
-
-        <div className="relative mx-auto w-full max-w-xs">
-          <div
-            className="absolute -inset-6 -z-10 rounded-[3rem] opacity-20 blur-2xl"
-            style={{ background: 'linear-gradient(135deg, #16a394, #f2b84b)' }}
-            aria-hidden="true"
-          />
-          <CardPreview
-            displayName={L.demoName}
-            headline={L.demoHeadline}
-            city={L.demoCity}
-            category="health"
-            avatarUrl={null}
-            linkKinds={['ble', 'whatsapp', 'instagram', 'linkedin']}
-          />
+          <Faq />
         </div>
       </section>
 
-      <section className="flex flex-col gap-4 py-10">
-        <div>
-          <h2 className="text-2xl font-bold">{L.professionsTitle}</h2>
-          <p className="text-muted-foreground">{L.professionsText}</p>
-        </div>
-        <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
-          {CARD_CATEGORIES.map((c) => {
-            const th = CATEGORY_THEMES[c];
-            return (
-              <li
-                key={c}
-                className="rounded-full px-4 py-2 text-sm font-medium"
-                style={{
-                  background: `linear-gradient(135deg, ${th.from}, ${th.to})`,
-                  color: '#fff',
-                }}
-              >
-                {fa.categories[c].label}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      <section className="flex flex-col gap-6 py-10">
-        <h2 className="text-2xl font-bold">{L.stepsTitle}</h2>
-        <ol className="m-0 grid list-none gap-4 p-0 sm:grid-cols-3">
-          {L.steps.map(([n, title, text]) => (
-            <li
-              key={n}
-              className="flex flex-col gap-2 rounded-3xl border bg-card p-6"
-            >
-              <span className="flex size-10 items-center justify-center rounded-2xl bg-primary text-lg font-bold text-primary-foreground">
-                {n}
-              </span>
-              <b>{title}</b>
-              <p className="m-0 text-sm leading-7 text-muted-foreground">
-                {text}
-              </p>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section className="my-6 grid gap-6 rounded-[2rem] bg-primary p-8 text-primary-foreground sm:items-center">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-2xl font-bold">{L.forVisitors}</h2>
-          <p className="m-0 max-w-xl leading-8 opacity-90">
-            {L.forVisitorsText}
-          </p>
+      <section className="pb-20">
+        <div className={WRAP}>
+          <FinalCta />
         </div>
       </section>
-    </AppShell>
+    </SiteShell>
   );
 }
