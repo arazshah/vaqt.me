@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Contact, Phone } from 'lucide-react';
+import { CalendarClock, Contact, Phone } from 'lucide-react';
 import { VPN_LINK_KINDS, type LinkKind, type PublicCard } from '@vaqt/shared';
 import { formatNumber } from '@vaqt/shared';
 
@@ -55,7 +55,18 @@ export function CardView({
         />
 
         <div className="flex gap-2 [&>*]:flex-1">
-          <Button asChild>
+          {card.booking.enabled ? (
+            <Button asChild variant="default">
+              <Link href={`/${card.username}/book`}>
+                <CalendarClock aria-hidden="true" />
+                {t.bookNow}
+              </Link>
+            </Button>
+          ) : null}
+          <Button
+            asChild
+            variant={card.booking.enabled ? 'outline' : 'default'}
+          >
             <a href={vcardUrl(card.username)} download>
               <Contact aria-hidden="true" />
               {t.saveContact}

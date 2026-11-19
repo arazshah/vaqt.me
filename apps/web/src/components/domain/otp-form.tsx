@@ -34,7 +34,7 @@ const codeSchema = z.object({
   code: z.string().regex(/^\d{4,8}$/, fa.loginPage.codeInvalid),
 });
 
-export function OtpForm() {
+export function OtpForm({ onSuccess }: { onSuccess?: () => void } = {}) {
   const router = useRouter();
   const { refetch } = useAuth();
   const [step, setStep] = useState<'phone' | 'code'>('phone');
@@ -85,7 +85,8 @@ export function OtpForm() {
         { redirectOnAuthFailure: false },
       );
       await refetch();
-      router.push('/requests');
+      if (onSuccess) onSuccess();
+      else router.push('/card/edit');
     } catch (error) {
       setServerError(
         error instanceof ApiError ? error.message : fa.loginPage.genericError,

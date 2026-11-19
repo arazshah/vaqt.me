@@ -16,6 +16,9 @@ export default function robots(): MetadataRoute.Robots {
       // this authenticated route (see lib/seo/request-summary.ts).
       disallow: [
         '/card/edit',
+        '/card/booking',
+        '/card/bookings',
+        '/b/',
         '/requests/new',
         '/conversations',
         '/conversations/*',

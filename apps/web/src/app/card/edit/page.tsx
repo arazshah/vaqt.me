@@ -378,6 +378,9 @@ export default function CardEditPage() {
                   <Button asChild variant="outline">
                     <Link href={`/${username ?? ''}`}>{t.openCard}</Link>
                   </Button>
+                  <Button asChild variant="outline">
+                    <Link href="/card/booking">{t.bookingSettingsLink}</Link>
+                  </Button>
                 </div>
               </>
             ) : (
