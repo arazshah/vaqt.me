@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
-import sharp from 'sharp';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { prisma } from '@vaqt/db';
 import { AppError } from '../common/errors/app-error';
 import { ErrorCode } from '../common/errors/error-codes';
 import { STORAGE_PORT, type StoragePort } from '../storage/storage.port';
 import { detectImageMime } from './image-magic-bytes';
+import { loadSharp, type SharpFn } from './load-sharp';
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const MAIN_SIZE = 400;
@@ -21,8 +21,23 @@ export interface AvatarUploadResult {
 }
 
 @Injectable()
-export class AvatarService {
+export class AvatarService implements OnModuleInit {
+  private readonly logger = new Logger(AvatarService.name);
+
   constructor(@Inject(STORAGE_PORT) private readonly storage: StoragePort) {}
+
+  /** Warns at boot (never fails it) if image processing can't run here. */
+  async onModuleInit(): Promise<void> {
+    try {
+      await loadSharp();
+    } catch (error) {
+      this.logger.error(
+        'image library (sharp) cannot load on this machine — avatar uploads are disabled. ' +
+          'On a VM, set the CPU type to "host" (x86-64-v2 or newer).',
+        error instanceof Error ? error.message.split('\n')[0] : error,
+      );
+    }
+  }
 
   async uploadAvatar(
     userId: string,
@@ -42,6 +57,13 @@ export class AvatarService {
       throw new AppError(ErrorCode.VALIDATION_ERROR, 400, {
         details: { reason: 'UNSUPPORTED_FILE_TYPE' },
       });
+    }
+
+    let sharp: SharpFn;
+    try {
+      sharp = await loadSharp();
+    } catch {
+      throw new AppError(ErrorCode.IMAGE_PROCESSING_UNAVAILABLE, 503);
     }
 
     // sharp's default output never carries over source EXIF/ICC/GPS

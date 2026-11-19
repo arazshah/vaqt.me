@@ -16,6 +16,8 @@ export const errorMessagesFa: Record<ErrorCode, string> = {
   PHONE_NOT_VERIFIED: 'برای این عملیات باید شماره موبایل خود را تأیید کنید.',
   FORBIDDEN: 'اجازه‌ی دسترسی به این بخش را ندارید.',
   NOT_FOUND: 'مورد درخواستی یافت نشد.',
+  IMAGE_PROCESSING_UNAVAILABLE:
+    'آپلود تصویر روی این سرور فعلاً در دسترس نیست. بعداً دوباره تلاش کنید.',
   USERNAME_TAKEN: 'این نام کاربری قبلاً گرفته شده است. نام دیگری انتخاب کنید.',
   BOOKING_DISABLED: 'این متخصص فعلاً رزرو وقت را فعال نکرده است.',
   SLOT_UNAVAILABLE: 'این زمان دیگر در دسترس نیست. زمان دیگری انتخاب کنید.',
