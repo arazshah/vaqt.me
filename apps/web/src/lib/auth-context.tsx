@@ -21,6 +21,7 @@ export interface AuthUser {
   roleIntent: string;
   phoneVerified: boolean;
   maskedPhone: string;
+  systemRole: 'USER' | 'ADMIN';
   completeness: ProfileCompleteness;
 }
 

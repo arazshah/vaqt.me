@@ -42,6 +42,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link href="/wallet" className={navLinkClass}>
                   {fa.appShell.nav.wallet}
                 </Link>
+                {user.systemRole === 'ADMIN' ? (
+                  <Link href="/admin/settings" className={navLinkClass}>
+                    {fa.appShell.nav.admin}
+                  </Link>
+                ) : null}
                 <span className="hidden text-sm text-muted-foreground sm:inline">
                   {user.displayName}
                 </span>

@@ -37,6 +37,8 @@ export const errorMessagesFa: Record<ErrorCode, string> = {
   BOOKING_NOT_CANCELLABLE: 'این رزرو دیگر قابل لغو نیست.',
   OWN_CARD_BOOKING_FORBIDDEN: 'نمی‌توانید برای کارت خودتان رزرو کنید.',
   WALLET_OWN_CARD: 'کارت خودتان را نمی‌توانید در کیف کارت ذخیره کنید.',
+  SMS_NOT_CONFIGURED:
+    'ارسال پیامک هنوز راه‌اندازی نشده است. کمی بعد دوباره تلاش کنید.',
   SETUP_TOKEN_INVALID:
     'توکن راه‌اندازی درست نیست. آن را از لاگ سرور (خطی که با «ADMIN SETUP TOKEN» شروع می‌شود) کپی کنید.',
   TOO_MANY_ATTEMPTS: 'تلاش‌های زیادی انجام شده. کمی بعد دوباره امتحان کنید.',

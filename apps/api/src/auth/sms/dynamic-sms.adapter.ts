@@ -56,6 +56,11 @@ export class DynamicSmsAdapter implements SmsPort {
     return null;
   }
 
+  /** False when nothing could be sent right now (disabled, missing key, mock in production). */
+  async isConfigured(): Promise<boolean> {
+    return (await this.resolve()) !== null;
+  }
+
   async sendOtp(phone: string, code: string): Promise<SmsSendResult> {
     const adapter = await this.resolve();
     if (!adapter) {

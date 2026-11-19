@@ -10,6 +10,7 @@ import {
   Req,
   Res,
   UnauthorizedException,
+  UseGuards,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
@@ -17,6 +18,7 @@ import type { Request, Response } from 'express';
 import { Public } from '../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
 import { setAuthCookies, clearAuthCookies } from './auth-cookies';
+import { SmsConfiguredGuard } from './guards/sms-configured.guard';
 import { AuthConfigService } from './auth.config';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { RequestOtpDto } from './dto/request-otp.dto';
@@ -51,6 +53,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @UseGuards(SmsConfiguredGuard)
   @Post('otp/request')
   @HttpCode(HttpStatus.OK)
   requestOtp(@Body() dto: RequestOtpDto, @Ip() ip: string) {

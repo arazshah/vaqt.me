@@ -20,6 +20,8 @@ export default function robots(): MetadataRoute.Robots {
         '/card/stats',
         '/card/print',
         '/wallet',
+        '/admin',
+        '/admin/*',
         '/card/bookings',
         '/b/',
         '/requests/new',

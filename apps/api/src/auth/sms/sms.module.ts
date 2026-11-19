@@ -21,10 +21,11 @@ import { SmsProcessor } from './sms.processor';
   ],
   providers: [
     // Provider and credentials come from the admin panel at call time.
-    { provide: SMS_PORT, useClass: DynamicSmsAdapter },
+    DynamicSmsAdapter,
+    { provide: SMS_PORT, useExisting: DynamicSmsAdapter },
     SmsQueueService,
     SmsProcessor,
   ],
-  exports: [SmsQueueService, SMS_PORT],
+  exports: [SmsQueueService, SMS_PORT, DynamicSmsAdapter],
 })
 export class SmsModule {}
