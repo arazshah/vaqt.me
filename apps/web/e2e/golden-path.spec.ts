@@ -25,7 +25,7 @@ test('card → booking → manual approval', async ({ browser }) => {
   const specialistCtx = await browser.newContext();
   const specialist = await specialistCtx.newPage();
   await loginWithOtp(specialist, randomTestPhone());
-  await expect(specialist).toHaveURL(/\/card\/edit$/);
+  await expect(specialist).toHaveURL(/\/card$/);
   await setUpBookableCard(specialist, username, serviceName);
 
   // --- Visitor: the public card shows the booking button
@@ -64,4 +64,47 @@ test('card → booking → manual approval', async ({ browser }) => {
 
   await specialistCtx.close();
   await visitorCtx.close();
+});
+
+// First run: a brand-new user is guided step by step (address → about →
+// photo/category → links → look) and ends with a shareable public card whose
+// link uses the fixed linkedin.com/in/ prefix.
+test('new user: guided card setup → public card', async ({ browser }) => {
+  const username = randomUsername();
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await loginWithOtp(page, randomTestPhone());
+  await expect(page).toHaveURL(/\/card$/);
+
+  await page.getByRole('link', { name: 'شروع ساخت کارت' }).click();
+  await page.getByPlaceholder('your-name').fill(username);
+  await page.getByRole('button', { name: 'ادامه' }).click();
+
+  await page.getByLabel('نام و نام خانوادگی').fill('دکتر آزمایشی');
+  await page.getByLabel('عنوان شغلی').fill('متخصص پوست');
+  await page.getByRole('button', { name: 'ادامه' }).click();
+
+  await page.getByRole('radio', { name: 'سلامت و پزشکی' }).click();
+  await page.getByRole('button', { name: 'ادامه' }).click();
+
+  await page.getByRole('button', { name: 'افزودن راه ارتباطی' }).click();
+  await page.getByRole('button', { name: 'لینکدین' }).click();
+  await page.getByRole('textbox', { name: 'لینکدین' }).fill('e2e-user');
+  await page.getByRole('button', { name: 'ادامه' }).click();
+
+  await page.getByRole('button', { name: 'ساخت کارت' }).click();
+  await expect(page.getByText('کارتتان آماده است')).toBeVisible();
+
+  const visitor = await (await browser.newContext()).newPage();
+  await visitor.goto(`/${username}`);
+  await expect(
+    visitor.getByRole('heading', { name: 'دکتر آزمایشی' }),
+  ).toBeVisible();
+  await expect(visitor.getByRole('link', { name: /لینکدین/ })).toHaveAttribute(
+    'href',
+    'https://www.linkedin.com/in/e2e-user',
+  );
+  // QR/URL on the page must be the real origin, never a localhost default
+  // baked in for the browser bundle.
+  await expect(visitor.getByText(`/${username}`).first()).toBeVisible();
 });
