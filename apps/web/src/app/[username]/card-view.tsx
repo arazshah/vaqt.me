@@ -56,6 +56,8 @@ export function CardView({
   const viewed = useRef(false);
   const [copied, setCopied] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  // A missing image file shows the initial instead of a broken picture.
+  const [avatarFailed, setAvatarFailed] = useState(false);
   const [nextSlot, setNextSlot] = useState<string | null>(null);
   const firstServiceId = card.booking.services.at(0)?.id;
   const bookingOn = card.booking.enabled;
@@ -172,11 +174,14 @@ export function CardView({
               aria-hidden="true"
             />
             <div className="-mt-12 flex flex-col items-center gap-1 px-5 pb-6 text-center">
-              {card.avatarUrl ? (
+              {card.avatarUrl && !avatarFailed ? (
                 <img
                   src={card.avatarUrl}
                   alt=""
                   className="size-24 rounded-full border-4 border-card object-cover shadow-md"
+                  onError={() => {
+                    setAvatarFailed(true);
+                  }}
                 />
               ) : (
                 <span

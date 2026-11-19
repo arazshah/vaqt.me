@@ -8,6 +8,7 @@ import { LINK_META } from '@/lib/link-meta';
 import { fa } from '@/messages/fa';
 import { QrCode } from './qr-code';
 import './business-card.css';
+import './business-card-categories.css';
 
 const QR_INK: Record<CardTemplate, string> = {
   tile: '#0b5c55',
@@ -16,6 +17,16 @@ const QR_INK: Record<CardTemplate, string> = {
   kahi: '#3b2a14',
   marble: '#0f3d33',
   aurora: '#2a1458',
+  clinic: '#0b5f60',
+  justice: '#45101b',
+  calm: '#2f4437',
+  notebook: '#1d2f6f',
+  terminal: '#0a0e13',
+  studio: '#1b2f8a',
+  bloom: '#5f3838',
+  skyline: '#0d2138',
+  executive: '#1c1f24',
+  pulse: '#070708',
 };
 
 /** Rows that fit on the back of an 85×55 mm card next to the QR. */
@@ -79,6 +90,7 @@ export function BusinessCard({
   interactive = true,
 }: BusinessCardProps) {
   const [flipped, setFlipped] = useState(initialFlipped);
+  const [photoFailed, setPhotoFailed] = useState(false);
   const t = fa.cardPage;
   const initial = Array.from(displayName.trim())[0] ?? '';
   const show = (f: CardField) => !fields || fields.includes(f);
@@ -128,7 +140,7 @@ export function BusinessCard({
   if (shown.length === 0 && displayUrl) {
     shown.push({ key: 'url', icon: <Globe />, text: displayUrl, ltr: true });
   }
-  const photo = avatarUrl && show('avatar') ? avatarUrl : null;
+  const photo = avatarUrl && show('avatar') && !photoFailed ? avatarUrl : null;
 
   return (
     <div className="bc-stage">
@@ -150,7 +162,13 @@ export function BusinessCard({
             <span className="bc-frame" aria-hidden="true" />
             <span className="bc-id" aria-hidden="true">
               {photo ? (
-                <img src={photo} alt="" />
+                <img
+                  src={photo}
+                  alt=""
+                  onError={() => {
+                    setPhotoFailed(true);
+                  }}
+                />
               ) : (
                 <span className="bc-mono">{initial}</span>
               )}

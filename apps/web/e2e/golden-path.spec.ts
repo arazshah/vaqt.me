@@ -92,7 +92,12 @@ test('new user: guided card setup → public card', async ({ browser }) => {
   await page.getByRole('textbox', { name: 'لینکدین' }).fill('e2e-user');
   await page.getByRole('button', { name: 'ادامه' }).click();
 
-  // Pick one of the six designs and keep the website off the printed card.
+  // Choosing «health» pre-selects the design made for it…
+  await expect(page.getByRole('radio', { name: 'درمانگاه' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  // …but any design can be picked, and the website kept off the card.
   await page.getByRole('radio', { name: 'مرمر' }).click();
   await expect(page.getByRole('radio', { name: 'مرمر' })).toHaveAttribute(
     'aria-checked',

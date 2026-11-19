@@ -101,6 +101,21 @@ describe('RolesGuard', () => {
     ).rejects.toThrow(AppError);
   });
 
+  it('keeps an admin with a temporary password out until it is changed', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockReturnValue([SystemRole.ADMIN]);
+    const userId = await makeUser(SystemRole.ADMIN);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { mustChangePassword: true },
+    });
+    await redis.del(redis.key('system-role', userId));
+    await expect(guard.canActivate(makeContext(userId))).rejects.toMatchObject({
+      response: { code: 'PASSWORD_CHANGE_REQUIRED' },
+    });
+  });
+
   it('rejects a suspended admin (status gate applies regardless of role)', async () => {
     jest
       .spyOn(reflector, 'getAllAndOverride')

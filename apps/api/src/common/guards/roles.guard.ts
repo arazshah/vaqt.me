@@ -16,6 +16,7 @@ import { REQUIRED_ROLES_KEY } from '../decorators/roles.decorator';
 
 interface CachedRoleState {
   systemRole: SystemRole;
+  mustChangePassword?: boolean;
 }
 
 /**
@@ -50,27 +51,37 @@ export class RolesGuard implements CanActivate {
     const cacheKey = this.kv.key('system-role', userId);
     const cached = await this.kv.get(cacheKey);
 
-    let systemRole: SystemRole;
+    let state: CachedRoleState;
     if (cached !== null) {
-      systemRole = (JSON.parse(cached) as CachedRoleState).systemRole;
+      state = JSON.parse(cached) as CachedRoleState;
     } else {
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { systemRole: true, status: true },
+        select: { systemRole: true, status: true, mustChangePassword: true },
       });
       if (!user || user.status !== UserStatus.ACTIVE) {
         throw new AppError(ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
       }
-      systemRole = user.systemRole;
+      state = {
+        systemRole: user.systemRole,
+        mustChangePassword: user.mustChangePassword,
+      };
       await this.kv.set(
         cacheKey,
-        JSON.stringify({ systemRole } satisfies CachedRoleState),
+        JSON.stringify(state),
         this.authConfig.verifiedPhoneCacheTtlSeconds,
       );
     }
 
-    if (!requiredRoles.includes(systemRole)) {
+    if (!requiredRoles.includes(state.systemRole)) {
       throw new AppError(ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
+    }
+    // A temporary password opens nothing role-gated until it is replaced.
+    if (state.mustChangePassword === true) {
+      throw new AppError(
+        ErrorCode.PASSWORD_CHANGE_REQUIRED,
+        HttpStatus.FORBIDDEN,
+      );
     }
 
     return true;

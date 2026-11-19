@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { formatNumber, type LinkKind } from '@vaqt/shared';
+import { CATEGORY_TEMPLATE, formatNumber, type LinkKind } from '@vaqt/shared';
 
 import { Button } from '@vaqt/ui/components/ui/button';
 import { Input } from '@vaqt/ui/components/ui/input';
@@ -227,7 +227,13 @@ export function CardWizard({
                 <CategoryPicker
                   value={draft.category}
                   onChange={(category) => {
-                    patch({ category });
+                    // A new card starts on the design made for its field.
+                    patch({
+                      category,
+                      ...(category && {
+                        template: CATEGORY_TEMPLATE[category],
+                      }),
+                    });
                   }}
                 />
               </div>
@@ -257,6 +263,7 @@ export function CardWizard({
 
           {step === 'look' ? (
             <TemplatePicker
+              category={draft.category}
               value={draft.template}
               sample={cardSample(draft, origin)}
               fields={draft.cardFields}

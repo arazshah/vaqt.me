@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   BarChart3,
   CalendarCheck,
@@ -67,6 +68,14 @@ export function AppShell({
 }) {
   const { user, loading, logout } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
+  const mustChange = user?.mustChangePassword === true;
+  // A temporary password opens nothing else until it is replaced.
+  useEffect(() => {
+    if (mustChange && pathname !== '/admin/password') {
+      router.replace('/admin/password');
+    }
+  }, [mustChange, pathname, router]);
   const inPanel = !!user && PANEL_PREFIXES.some((p) => pathname.startsWith(p));
 
   if (inPanel) {

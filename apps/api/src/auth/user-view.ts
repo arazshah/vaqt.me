@@ -25,6 +25,8 @@ export interface PrivateUser extends PublicUser {
   email: string | null;
   status: User['status'];
   systemRole: User['systemRole'];
+  /** Signed in with a temporary password that must be replaced first. */
+  mustChangePassword: boolean;
 }
 
 export function toPublicUser(user: User): PublicUser {
@@ -49,5 +51,6 @@ export function toPrivateUser(user: User): PrivateUser {
     email: user.email,
     status: user.status,
     systemRole: user.systemRole,
+    mustChangePassword: user.mustChangePassword,
   };
 }

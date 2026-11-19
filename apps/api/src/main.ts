@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { RequestMethod } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -52,15 +53,20 @@ async function bootstrap() {
     createOriginCheckMiddleware(webOrigin, ['/api/v1/messenger/bale/webhook/']),
   );
 
-  // فقط برای LocalDiskAdapter در dev — در production آواتارها از S3/Arvan سرو می‌شوند
-  if ((process.env.STORAGE_PROVIDER ?? 'local') === 'local') {
+  // Files written by LocalDiskAdapter (and avatars uploaded before uploads
+  // moved into Postgres) are served straight from disk; anything not found
+  // there falls through to UploadsController, which reads stored_files.
+  if ((process.env.STORAGE_PROVIDER ?? 'db') !== 's3') {
     const uploadsRoot =
       process.env.LOCAL_STORAGE_DIR || join(process.cwd(), 'uploads');
     app.useStaticAssets(uploadsRoot, { prefix: '/uploads' });
   }
 
   // Global prefix
-  app.setGlobalPrefix('api/v1');
+  // /uploads stays at the root: the web app proxies it here unchanged.
+  app.setGlobalPrefix('api/v1', {
+    exclude: [{ path: 'uploads/(.*)', method: RequestMethod.GET }],
+  });
 
   // No global ValidationPipe here — every route validates explicitly.
   // AuthController is the one holdout still using class-validator DTOs

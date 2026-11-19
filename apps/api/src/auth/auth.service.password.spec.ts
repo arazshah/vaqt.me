@@ -7,6 +7,7 @@ const user = {
   phone: null,
   email: 'a@b.co',
   passwordHash: 'scrypt$x',
+  mustChangePassword: false,
   username: null,
   phoneVerifiedAt: null,
   displayName: 'a',
@@ -29,6 +30,7 @@ function make() {
   const passwordAuth = {
     register: jest.fn().mockResolvedValue({ user, tokens }),
     login: jest.fn().mockResolvedValue({ user, tokens }),
+    changePassword: jest.fn().mockResolvedValue(user),
   };
   const service = new AuthService(
     {} as never,
@@ -62,5 +64,14 @@ describe('AuthService password wrappers', () => {
     const res = await service.loginWithPassword(input, device);
     expect(passwordAuth.login).toHaveBeenCalledWith(input, device);
     expect(res.user.email).toBe('a@b.co');
+  });
+
+  it('changePassword returns the private view, never the hash', async () => {
+    const { service, passwordAuth } = make();
+    const input = { currentPassword: 'old-1234', newPassword: 'NewPassw0rd' };
+    const res = await service.changePassword('u1', 's1', input);
+    expect(passwordAuth.changePassword).toHaveBeenCalledWith('u1', 's1', input);
+    expect(res).toMatchObject({ email: 'a@b.co', mustChangePassword: false });
+    expect(JSON.stringify(res)).not.toContain('scrypt');
   });
 });

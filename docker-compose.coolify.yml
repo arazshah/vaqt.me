@@ -17,7 +17,7 @@ services:
       args:
         # Empty = the browser calls the same domain; `web` proxies /api and
         # /uploads to `api` over the internal network.
-        NEXT_PUBLIC_API_URL: ""
+        NEXT_PUBLIC_API_URL: ''
         API_INTERNAL_URL: http://api:3001
     environment:
       # Makes Coolify route the domain you assign to this service to port 3000.
@@ -32,7 +32,8 @@ services:
         condition: service_started
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1"]
+      test:
+        ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1']
       interval: 30s
       timeout: 5s
       retries: 3
@@ -51,10 +52,16 @@ services:
       - APP_SECRET=${SERVICE_PASSWORD_64_APPSECRET}
       - DATABASE_URL=postgresql://vaqt:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/vaqt
       - WEB_ORIGIN=${SERVICE_URL_WEB}
-      - STORAGE_PROVIDER=local
+      # Avatars live in Postgres (stored_files): they survive redeploys with
+      # the rest of the data. The disk volume is kept only to keep serving
+      # files uploaded before that change.
+      - STORAGE_PROVIDER=db
       - LOCAL_STORAGE_DIR=/data/uploads
       # Avatar URLs are served through the web domain (/uploads is proxied).
       - LOCAL_STORAGE_PUBLIC_URL=${SERVICE_URL_WEB}/uploads
+      # Optional: the built-in "admin" account's first temporary password.
+      # Unset = a random one is printed in this service's log.
+      - ADMIN_INITIAL_PASSWORD=${ADMIN_INITIAL_PASSWORD:-}
     volumes:
       - uploads:/data/uploads
     depends_on:
@@ -62,7 +69,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3001/api/v1/health >/dev/null || exit 1"]
+      test:
+        [
+          'CMD-SHELL',
+          'wget -qO- http://127.0.0.1:3001/api/v1/health >/dev/null || exit 1',
+        ]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -78,7 +89,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U vaqt -d vaqt"]
+      test: ['CMD-SHELL', 'pg_isready -U vaqt -d vaqt']
       interval: 10s
       timeout: 5s
       retries: 10

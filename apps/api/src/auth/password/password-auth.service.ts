@@ -1,8 +1,13 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { prisma, Prisma, type User } from '@vaqt/db';
-import type { LoginInput, RegisterInput } from '@vaqt/shared';
+import type {
+  ChangePasswordInput,
+  LoginInput,
+  RegisterInput,
+} from '@vaqt/shared';
 import { AppError } from '../../common/errors/app-error';
 import { ErrorCode } from '../../common/errors/error-codes';
+import { KvService } from '../../common/kv/kv.service';
 import { AuditService } from '../audit/audit.service';
 import { AuthConfigService } from '../auth.config';
 import { RateLimitService } from '../rate-limit/rate-limit.service';
@@ -32,6 +37,7 @@ export class PasswordAuthService {
     private readonly sessions: SessionService,
     private readonly audit: AuditService,
     private readonly config: AuthConfigService,
+    private readonly kv: KvService,
   ) {}
 
   async register(
@@ -159,5 +165,59 @@ export class PasswordAuthService {
       meta: { ip, method: 'password' },
     });
     return { user: updated, tokens };
+  }
+
+  /**
+   * Replaces the caller's password after checking the current one. Clears
+   * mustChangePassword (the built-in admin's temporary password) and signs
+   * out every other session of this account.
+   */
+  async changePassword(
+    userId: string,
+    sessionId: string,
+    input: ChangePasswordInput,
+  ): Promise<User> {
+    const window = await this.rateLimit.checkSlidingWindow(
+      'password-change',
+      userId,
+      LOGIN_PER_EMAIL_WINDOW,
+      LOGIN_WINDOW_SECONDS,
+    );
+    if (!window.allowed) {
+      throw new AppError(
+        ErrorCode.TOO_MANY_ATTEMPTS,
+        HttpStatus.TOO_MANY_REQUESTS,
+        { retryAfterSeconds: window.retryAfterSeconds },
+      );
+    }
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const ok = await this.passwords.verify(
+      input.currentPassword,
+      user?.passwordHash ?? null,
+    );
+    if (!user || !ok) {
+      throw new AppError(ErrorCode.WRONG_PASSWORD, HttpStatus.BAD_REQUEST);
+    }
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: await this.passwords.hash(input.newPassword),
+        mustChangePassword: false,
+      },
+    });
+    await prisma.session.updateMany({
+      where: { userId, revokedAt: null, id: { not: sessionId } },
+      data: { revokedAt: new Date() },
+    });
+    // RolesGuard caches the role state; drop it so admin access opens now.
+    await this.kv.del(this.kv.key('system-role', userId));
+    await this.audit.log({
+      actorId: userId,
+      action: 'auth.password.changed',
+      entityType: 'User',
+      entityId: userId,
+      severity: 'high',
+    });
+    return updated;
   }
 }

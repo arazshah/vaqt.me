@@ -4,6 +4,8 @@ import { Check } from 'lucide-react';
 import {
   CARD_FIELDS,
   CARD_TEMPLATES,
+  CATEGORY_TEMPLATE,
+  type CardCategory,
   type CardField,
   type CardTemplate,
 } from '@vaqt/shared';
@@ -32,7 +34,9 @@ export function TemplatePicker({
   sample,
   fields,
   onFieldsChange,
+  category = null,
 }: {
+  category?: CardCategory | null;
   value: CardTemplate;
   onChange: (t: CardTemplate) => void;
   sample: Sample;
@@ -43,6 +47,64 @@ export function TemplatePicker({
   const names = fa.cardEditPage.templates;
   const notes = fa.cardEditPage.templateNotes;
   const displayName = sample.displayName || t.displayName;
+  const suggested = category ? CATEGORY_TEMPLATE[category] : null;
+
+  const renderGrid = (list: readonly CardTemplate[], label: string) => (
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+    >
+      {list.map((tpl) => {
+        const active = value === tpl;
+        return (
+          <div
+            key={tpl}
+            role="radio"
+            aria-checked={active}
+            aria-label={names[tpl]}
+            tabIndex={0}
+            onClick={() => {
+              onChange(tpl);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onChange(tpl);
+              }
+            }}
+            className={`relative cursor-pointer rounded-2xl border-2 p-2 transition-colors ${
+              active
+                ? 'border-primary bg-primary/5'
+                : 'border-transparent hover:border-border'
+            }`}
+          >
+            <div className="pointer-events-none">
+              <BusinessCard
+                template={tpl}
+                {...sample}
+                displayName={displayName}
+                qrValue={null}
+                fields={fields}
+                interactive={false}
+              />
+            </div>
+            <p className="mt-2 text-center text-sm font-semibold">
+              {names[tpl]}
+            </p>
+            <p className="text-center text-[11px] leading-4 text-muted-foreground">
+              {notes[tpl]}
+            </p>
+            {active ? (
+              <span className="absolute -top-2 -end-2 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+                <Check className="size-4" aria-hidden="true" />
+              </span>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -61,60 +123,23 @@ export function TemplatePicker({
         </p>
       </div>
 
-      <div
-        role="radiogroup"
-        aria-label={t.cardStyle}
-        className="grid grid-cols-2 gap-3 sm:grid-cols-3"
-      >
-        {CARD_TEMPLATES.map((tpl) => {
-          const active = value === tpl;
-          return (
-            <div
-              key={tpl}
-              role="radio"
-              aria-checked={active}
-              aria-label={names[tpl]}
-              tabIndex={0}
-              onClick={() => {
-                onChange(tpl);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onChange(tpl);
-                }
-              }}
-              className={`relative cursor-pointer rounded-2xl border-2 p-2 transition-colors ${
-                active
-                  ? 'border-primary bg-primary/5'
-                  : 'border-transparent hover:border-border'
-              }`}
-            >
-              <div className="pointer-events-none">
-                <BusinessCard
-                  template={tpl}
-                  {...sample}
-                  displayName={displayName}
-                  qrValue={null}
-                  fields={fields}
-                  interactive={false}
-                />
-              </div>
-              <p className="mt-2 text-center text-sm font-semibold">
-                {names[tpl]}
-              </p>
-              <p className="text-center text-[11px] leading-4 text-muted-foreground">
-                {notes[tpl]}
-              </p>
-              {active ? (
-                <span className="absolute -top-2 -end-2 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
-                  <Check className="size-4" aria-hidden="true" />
-                </span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
+      {suggested ? (
+        <section className="flex flex-col gap-2">
+          <h3 className="text-sm font-semibold">{fa.cardEditPage.suggested}</h3>
+          {renderGrid([suggested], fa.cardEditPage.suggested)}
+        </section>
+      ) : null}
+      <section className="flex flex-col gap-2">
+        {suggested ? (
+          <h3 className="text-sm font-semibold">
+            {fa.cardEditPage.allDesigns}
+          </h3>
+        ) : null}
+        {renderGrid(
+          CARD_TEMPLATES.filter((x) => x !== suggested),
+          t.cardStyle,
+        )}
+      </section>
 
       {fields && onFieldsChange ? (
         <section className="flex flex-col gap-2">
