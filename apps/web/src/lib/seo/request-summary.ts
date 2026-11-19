@@ -1,5 +1,5 @@
 import type { RequestMode } from '@vaqt/shared';
-import { BASE_URL } from '@/lib/api-client';
+import { SERVER_BASE_URL } from '@/lib/api-client';
 import { WEB_ORIGIN } from '@/lib/site';
 import { fa } from '@/messages/fa';
 
@@ -31,7 +31,7 @@ export async function fetchPublicRequestSummary(
   id: string,
 ): Promise<PublicRequestSummary | null> {
   try {
-    const res = await fetch(`${BASE_URL}/api/v1/requests/list`, {
+    const res = await fetch(`${SERVER_BASE_URL}/api/v1/requests/list`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Origin: WEB_ORIGIN },
       body: JSON.stringify({ id, limit: 1 }),

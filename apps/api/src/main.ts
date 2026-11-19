@@ -24,6 +24,15 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.enableShutdownHooks();
 
+  // In production the API is only reachable through the web container, which
+  // forwards the real client address (set by the reverse proxy in front) in
+  // X-Forwarded-For. Trust exactly that one hop; without it every visitor
+  // would share the web container's IP and the per-IP rate limits would be
+  // one shared bucket. Not enabled in dev, where clients could spoof it.
+  if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+  }
+
   // Explicit, not relying on Nest's default — ConversationsGateway
   // (conversations.gateway.ts) needs Socket.IO attached to this same HTTP
   // server so the WS upgrade shares the port the REST API already listens

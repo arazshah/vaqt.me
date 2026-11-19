@@ -1,0 +1,96 @@
+# Production stack for Coolify ("Docker Compose" build pack, file location:
+# /docker-compose.coolify.yml). See docs/DEPLOY-COOLIFY.md.
+#
+# You configure ONE thing in Coolify: the domain of the `web` service.
+# Everything else is generated or wired here:
+#   - SERVICE_PASSWORD_* / SERVICE_PASSWORD_64_*  Coolify generates them once
+#     and keeps them across redeploys (database password, APP_SECRET).
+#   - SERVICE_URL_WEB  becomes the https URL of the domain you set on `web`.
+# Anything operational (SMS, Bale bot, templates) is edited later in the app's
+# own admin panel, not here.
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Empty = the browser calls the same domain; `web` proxies /api and
+        # /uploads to `api` over the internal network.
+        NEXT_PUBLIC_API_URL: ""
+        API_INTERNAL_URL: http://api:3001
+    environment:
+      # Makes Coolify route the domain you assign to this service to port 3000.
+      - SERVICE_URL_WEB_3000
+      - WEB_ORIGIN=${SERVICE_URL_WEB}
+      - API_INTERNAL_URL=http://api:3001
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/ >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      # One generated secret; the OTP pepper and JWT secrets are derived from
+      # it, and it also encrypts the secrets saved in the admin panel. Do not
+      # change it after first start (saved secrets would become unreadable).
+      - APP_SECRET=${SERVICE_PASSWORD_64_APPSECRET}
+      - DATABASE_URL=postgresql://vaqt:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/vaqt
+      - REDIS_URL=redis://redis:6379
+      - WEB_ORIGIN=${SERVICE_URL_WEB}
+      - STORAGE_PROVIDER=local
+      - LOCAL_STORAGE_DIR=/data/uploads
+      # Avatar URLs are served through the web domain (/uploads is proxied).
+      - LOCAL_STORAGE_PUBLIC_URL=${SERVICE_URL_WEB}/uploads
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    # No published ports: the API is reachable only through `web`.
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=vaqt
+      - POSTGRES_PASSWORD=${SERVICE_PASSWORD_POSTGRES}
+      - POSTGRES_DB=vaqt
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vaqt -d vaqt"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:

@@ -23,10 +23,14 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS builder
 WORKDIR /app
 # NEXT_PUBLIC_* vars are inlined into the client bundle at build time, not
-# read at container start — must be passed as --build-arg, not just a
-# runtime `docker run -e`. Bake in the real API URL for your environment.
-ARG NEXT_PUBLIC_API_URL=http://localhost:3001
+# read at container start. Empty (the default) = the browser calls the same
+# origin, and this server proxies /api and /uploads to the API container
+# (next.config.ts rewrites). Pass a full URL only for a split-domain setup.
+ARG NEXT_PUBLIC_API_URL=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+# Where the proxy (and server-side fetches) reach the API inside the network.
+ARG API_INTERNAL_URL=http://api:3001
+ENV API_INTERNAL_URL=$API_INTERNAL_URL
 # @vaqt/web... = this package plus everything it depends on (@vaqt/shared,
 # @vaqt/ui) — turbo's dependsOn graph (see turbo.json) builds them first.
 RUN pnpm exec turbo run build --filter=@vaqt/web...
@@ -35,6 +39,9 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+ARG API_INTERNAL_URL=http://api:3001
+ENV API_INTERNAL_URL=$API_INTERNAL_URL
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
 
