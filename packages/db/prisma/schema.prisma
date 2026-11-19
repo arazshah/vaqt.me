@@ -324,3 +324,48 @@ model AppSetting {
 
   @@map("app_settings")
 }
+
+// ---------------------------------------------------------------------------
+// Replaces Redis: short-lived keys, rate-limit events and background jobs all
+// live in Postgres (one less moving part to deploy and back up).
+// ---------------------------------------------------------------------------
+
+// Key/value with optional expiry: OTP pending codes, Bale link codes, daily
+// caps, short caches, failed-attempt streaks. Expired rows are ignored on
+// read and purged periodically.
+model KvEntry {
+  key       String    @id
+  value     String
+  expiresAt DateTime?
+
+  @@index([expiresAt])
+  @@map("kv_entries")
+}
+
+// One row per rate-limit hit (sliding window). `at` is epoch milliseconds.
+model RateEvent {
+  id  BigInt @id @default(autoincrement())
+  key String
+  at  BigInt
+
+  @@index([key, at])
+  @@map("rate_events")
+}
+
+// Background jobs (SMS, notifications). Claimed with FOR UPDATE SKIP LOCKED.
+model Job {
+  id          String    @id @default(cuid())
+  queue       String
+  name        String
+  payload     Json
+  status      String    @default("PENDING") // PENDING | RUNNING | FAILED
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  runAt       DateTime  @default(now())
+  lockedAt    DateTime?
+  lastError   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([queue, status, runAt])
+  @@map("jobs")
+}

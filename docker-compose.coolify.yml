@@ -47,7 +47,6 @@ services:
       # change it after first start (saved secrets would become unreadable).
       - APP_SECRET=${SERVICE_PASSWORD_64_APPSECRET}
       - DATABASE_URL=postgresql://vaqt:${SERVICE_PASSWORD_POSTGRES}@postgres:5432/vaqt
-      - REDIS_URL=redis://redis:6379
       - WEB_ORIGIN=${SERVICE_URL_WEB}
       - STORAGE_PROVIDER=local
       - LOCAL_STORAGE_DIR=/data/uploads
@@ -57,8 +56,6 @@ services:
       - uploads:/data/uploads
     depends_on:
       postgres:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     restart: unless-stopped
     # No published ports: the API is reachable only through `web`.
@@ -78,19 +75,6 @@ services:
       retries: 10
     restart: unless-stopped
 
-  redis:
-    image: redis:7-alpine
-    command: ["redis-server", "--appendonly", "yes"]
-    volumes:
-      - redisdata:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-    restart: unless-stopped
-
 volumes:
   pgdata:
-  redisdata:
   uploads:

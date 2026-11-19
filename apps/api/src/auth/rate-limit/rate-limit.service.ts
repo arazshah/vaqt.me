@@ -1,6 +1,5 @@
-import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
-import { RedisService } from '../../common/redis/redis.service';
+import { KvService } from '../../common/kv/kv.service';
 import { AuthConfigService } from '../auth.config';
 
 export interface SlidingWindowResult {
@@ -18,7 +17,7 @@ const STREAK_KEY_TTL_SECONDS = 24 * 60 * 60;
 @Injectable()
 export class RateLimitService {
   constructor(
-    private readonly redis: RedisService,
+    private readonly kv: KvService,
     private readonly config: AuthConfigService,
   ) {}
 
@@ -34,20 +33,17 @@ export class RateLimitService {
     windowSeconds: number,
     now = Date.now(),
   ): Promise<SlidingWindowResult> {
-    const key = this.redis.key('ratelimit', scope, identifier);
-    const member = `${String(now)}:${randomUUID()}`;
+    const key = this.kv.key('ratelimit', scope, identifier);
     const windowMs = windowSeconds * 1000;
 
-    const [allowed, retryAfterSeconds] = await this.redis.client.slidingWindow(
+    const [allowed, retryAfterSeconds] = await this.kv.slidingWindow(
       key,
       now,
       windowMs,
-      member,
       limit,
-      windowSeconds,
     );
 
-    return { allowed: allowed === 1, retryAfterSeconds };
+    return { allowed, retryAfterSeconds };
   }
 
   async checkResendCooldown(
@@ -110,19 +106,17 @@ export class RateLimitService {
   }
 
   async recordInvalidatedCode(phone: string): Promise<InvalidatedStreakResult> {
-    const streakKey = this.redis.key('otp', 'invalidated-streak', phone);
-    const streak = await this.redis.client.incr(streakKey);
-    await this.redis.client.expire(streakKey, STREAK_KEY_TTL_SECONDS);
+    const streakKey = this.kv.key('otp', 'invalidated-streak', phone);
+    const streak = await this.kv.increment(
+      streakKey,
+      STREAK_KEY_TTL_SECONDS,
+      true,
+    );
 
     if (streak >= this.config.invalidatedStreakBlockThreshold) {
-      await this.redis.client.del(streakKey);
-      const blockKey = this.redis.key('otp', 'blocked', phone);
-      await this.redis.client.set(
-        blockKey,
-        '1',
-        'EX',
-        this.config.blockSeconds,
-      );
+      await this.kv.del(streakKey);
+      const blockKey = this.kv.key('otp', 'blocked', phone);
+      await this.kv.set(blockKey, '1', this.config.blockSeconds);
       return { blocked: true, retryAfterSeconds: this.config.blockSeconds };
     }
 
@@ -130,15 +124,11 @@ export class RateLimitService {
   }
 
   async clearInvalidatedStreak(phone: string): Promise<void> {
-    await this.redis.client.del(
-      this.redis.key('otp', 'invalidated-streak', phone),
-    );
+    await this.kv.del(this.kv.key('otp', 'invalidated-streak', phone));
   }
 
   async getPhoneBlockRetryAfterSeconds(phone: string): Promise<number | null> {
-    const ttl = await this.redis.client.ttl(
-      this.redis.key('otp', 'blocked', phone),
-    );
+    const ttl = await this.kv.ttl(this.kv.key('otp', 'blocked', phone));
     return ttl > 0 ? ttl : null;
   }
 }

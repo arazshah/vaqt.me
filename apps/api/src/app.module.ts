@@ -9,8 +9,8 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { BookingModule } from './booking/booking.module';
 import { CardsModule } from './cards/cards.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
-import { BullRedisModule } from './common/redis/bull-redis.module';
-import { RedisModule } from './common/redis/redis.module';
+import { JobsModule } from './common/jobs/jobs.module';
+import { KvModule } from './common/kv/kv.module';
 import { MessengerModule } from './messenger/messenger.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SettingsModule } from './settings/settings.module';
@@ -22,8 +22,8 @@ import { UsersModule } from './users/users.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    RedisModule,
-    BullRedisModule,
+    KvModule,
+    JobsModule,
     SettingsModule,
     AuthModule,
     UsersModule,

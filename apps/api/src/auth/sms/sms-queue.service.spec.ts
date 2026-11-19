@@ -1,49 +1,48 @@
-import type { Queue } from 'bullmq';
+import type { JobsService } from '../../common/jobs/jobs.service';
 import { SmsQueueService } from './sms-queue.service';
 
 describe('SmsQueueService', () => {
-  function makeService(): {
-    service: SmsQueueService;
-    queue: jest.Mocked<Pick<Queue, 'add'>>;
-  } {
-    const queue = { add: jest.fn().mockResolvedValue(undefined) };
-    return { service: new SmsQueueService(queue as unknown as Queue), queue };
+  function makeService(enqueue = jest.fn().mockResolvedValue(undefined)) {
+    const jobs = { enqueue } as unknown as JobsService;
+    return { service: new SmsQueueService(jobs), enqueue };
   }
 
-  it('enqueueOtp adds an "otp" job with the given payload', async () => {
-    const { service, queue } = makeService();
+  it('enqueueOtp adds an "otp" job on the sms queue', async () => {
+    const { service, enqueue } = makeService();
     await service.enqueueOtp({ phone: '+989123456789', code: '12345' });
-    expect(queue.add).toHaveBeenCalledWith('otp', {
+    expect(enqueue).toHaveBeenCalledWith('sms', 'otp', {
       phone: '+989123456789',
       code: '12345',
     });
   });
 
-  it('enqueueNotification adds a "notification" job with the given payload', async () => {
-    const { service, queue } = makeService();
+  it('enqueueNotification adds a "notification" job on the sms queue', async () => {
+    const { service, enqueue } = makeService();
     await service.enqueueNotification({
       phone: '+989123456789',
       templateId: '42',
       params: { a: 'b' },
     });
-    expect(queue.add).toHaveBeenCalledWith('notification', {
+    expect(enqueue).toHaveBeenCalledWith('sms', 'notification', {
       phone: '+989123456789',
       templateId: '42',
       params: { a: 'b' },
     });
   });
 
-  it('enqueueOtp swallows a queue failure instead of throwing (must never block the HTTP response)', async () => {
-    const queue = { add: jest.fn().mockRejectedValue(new Error('redis down')) };
-    const service = new SmsQueueService(queue as unknown as Queue);
+  it('enqueueOtp swallows a queue failure (must never block the HTTP response)', async () => {
+    const { service } = makeService(
+      jest.fn().mockRejectedValue(new Error('db down')),
+    );
     await expect(
       service.enqueueOtp({ phone: '+989123456789', code: '12345' }),
     ).resolves.toBeUndefined();
   });
 
-  it('enqueueNotification swallows a queue failure instead of throwing', async () => {
-    const queue = { add: jest.fn().mockRejectedValue(new Error('redis down')) };
-    const service = new SmsQueueService(queue as unknown as Queue);
+  it('enqueueNotification swallows a queue failure', async () => {
+    const { service } = makeService(
+      jest.fn().mockRejectedValue(new Error('db down')),
+    );
     await expect(
       service.enqueueNotification({
         phone: '+989123456789',

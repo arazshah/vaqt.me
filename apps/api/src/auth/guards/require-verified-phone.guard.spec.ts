@@ -1,18 +1,12 @@
 import type { ExecutionContext } from '@nestjs/common';
 import { prisma, UserStatus } from '@vaqt/db';
-import { RedisService } from '../../common/redis/redis.service';
+import { KvService } from '../../common/kv/kv.service';
 import { AppError } from '../../common/errors/app-error';
 import { fakeConfig } from '../../test-support/fake-config';
-import {
-  cleanupTestUser,
-  createTestUser,
-  randomTestRedisPrefix,
-} from '../../test-support/test-db';
+import { cleanupTestUser, createTestUser } from '../../test-support/test-db';
 import { AuthConfigService } from '../auth.config';
 import type { AuthenticatedRequest } from '../auth-request';
 import { RequireVerifiedPhoneGuard } from './require-verified-phone.guard';
-
-const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6380';
 
 function makeContext(userId: string | undefined): ExecutionContext {
   const request: Partial<AuthenticatedRequest> = userId
@@ -27,22 +21,18 @@ function makeContext(userId: string | undefined): ExecutionContext {
 
 describe('RequireVerifiedPhoneGuard', () => {
   const createdUserIds: string[] = [];
-  let redis: RedisService;
+  let redis: KvService;
   let guard: RequireVerifiedPhoneGuard;
 
   beforeEach(() => {
     const config = fakeConfig({
-      REDIS_URL,
-      REDIS_PREFIX: randomTestRedisPrefix(),
       VERIFIED_PHONE_CACHE_TTL_SECONDS: '30',
     });
-    redis = new RedisService(config);
+    redis = new KvService();
     guard = new RequireVerifiedPhoneGuard(redis, new AuthConfigService(config));
   });
 
-  afterEach(async () => {
-    await redis.client.quit();
-  });
+  afterEach(async () => {});
 
   afterAll(async () => {
     for (const id of createdUserIds.splice(0)) {
@@ -96,7 +86,7 @@ describe('RequireVerifiedPhoneGuard', () => {
     // that the source of truth is the DB row, not the (unrevocable) JWT.
     // Deletes only this test's own cache key, never the whole Redis DB,
     // since other spec files may be exercising real Redis concurrently.
-    await redis.client.del(redis.key('verified-phone', userId));
+    await redis.del(redis.key('verified-phone', userId));
 
     await expect(guard.canActivate(makeContext(userId))).rejects.toThrow(
       AppError,

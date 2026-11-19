@@ -1,11 +1,7 @@
 import { randomBytes } from 'crypto';
 import { prisma } from '@vaqt/db';
-import { RedisService } from '../common/redis/redis.service';
-import { fakeConfig } from '../test-support/fake-config';
-import { randomTestRedisPrefix } from '../test-support/test-db';
+import { KvService } from '../common/kv/kv.service';
 import { CardAnalyticsService } from './card-analytics.service';
-
-const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6380';
 
 function uniquePhone(): string {
   return `+9899${String(Date.now()).slice(-4)}${String(
@@ -15,17 +11,12 @@ function uniquePhone(): string {
 
 describe('CardAnalyticsService (real Postgres + Redis)', () => {
   const userIds: string[] = [];
-  let redis: RedisService;
+  let redis: KvService;
   let service: CardAnalyticsService;
 
   beforeEach(() => {
-    redis = new RedisService(
-      fakeConfig({ REDIS_URL, REDIS_PREFIX: randomTestRedisPrefix() }),
-    );
+    redis = new KvService();
     service = new CardAnalyticsService(redis);
-  });
-  afterEach(async () => {
-    await redis.client.quit();
   });
   afterAll(async () => {
     await prisma.cardEvent.deleteMany({ where: { userId: { in: userIds } } });

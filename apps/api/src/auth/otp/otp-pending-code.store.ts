@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { RedisService } from '../../common/redis/redis.service';
+import { KvService } from '../../common/kv/kv.service';
 
 /**
  * Postgres only ever stores the HMAC hash of an OTP code (see OtpService) —
@@ -12,24 +12,24 @@ import { RedisService } from '../../common/redis/redis.service';
  */
 @Injectable()
 export class OtpPendingCodeStore {
-  constructor(private readonly redis: RedisService) {}
+  constructor(private readonly kv: KvService) {}
 
   private key(phone: string): string {
-    return this.redis.key('otp', 'pending-code', phone);
+    return this.kv.key('otp', 'pending-code', phone);
   }
 
   async set(phone: string, code: string, ttlSeconds: number): Promise<void> {
     if (ttlSeconds <= 0) {
       return;
     }
-    await this.redis.client.set(this.key(phone), code, 'EX', ttlSeconds);
+    await this.kv.set(this.key(phone), code, ttlSeconds);
   }
 
   async get(phone: string): Promise<string | null> {
-    return this.redis.client.get(this.key(phone));
+    return this.kv.get(this.key(phone));
   }
 
   async clear(phone: string): Promise<void> {
-    await this.redis.client.del(this.key(phone));
+    await this.kv.del(this.key(phone));
   }
 }

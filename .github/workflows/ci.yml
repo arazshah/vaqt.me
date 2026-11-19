@@ -9,8 +9,6 @@ on:
 env:
   NODE_ENV: test
   DATABASE_URL: postgresql://vaqt:vaqt@localhost:5432/vaqt
-  REDIS_URL: redis://localhost:6379
-  REDIS_PREFIX: 'vaqt:ci:'
   # 32+ chars, deliberately distinct from the apps/api/.env.example
   # placeholders so a future accidental copy-paste of the example file
   # would not silently pass this exact check.
@@ -33,15 +31,6 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd "pg_isready -U vaqt"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
@@ -106,21 +95,11 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
-      redis:
-        image: redis:7
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
 
     # Deliberately its own job: it needs a real Chromium binary and both apps
     # running, which is slow enough to want its own cache and pass/fail signal.
     env:
       DATABASE_URL: postgresql://vaqt:vaqt@localhost:5432/vaqt
-      REDIS_URL: redis://localhost:6379
 
     steps:
       - name: Checkout

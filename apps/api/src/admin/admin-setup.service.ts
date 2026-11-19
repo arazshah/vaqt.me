@@ -15,7 +15,7 @@ import type {
 } from '../auth/session/session.service';
 import { AppError } from '../common/errors/app-error';
 import { ErrorCode } from '../common/errors/error-codes';
-import { RedisService } from '../common/redis/redis.service';
+import { KvService } from '../common/kv/kv.service';
 import { maskPhone } from '../common/utils/mask-phone';
 
 const ATTEMPTS_PER_HOUR = 10;
@@ -41,7 +41,7 @@ export class AdminSetupService implements OnApplicationBootstrap {
   private tokenHash: Buffer | null = null;
 
   constructor(
-    private readonly redis: RedisService,
+    private readonly kv: KvService,
     private readonly audit: AuditService,
     private readonly config: ConfigService,
   ) {}
@@ -80,12 +80,11 @@ export class AdminSetupService implements OnApplicationBootstrap {
     sessions: SessionService,
   ) {
     const ip = device.ip ?? 'unknown';
-    const key = this.redis.key(
+    const key = this.kv.key(
       'admin-setup-attempts',
       createHash('sha256').update(ip).digest('hex').slice(0, 16),
     );
-    const attempts = await this.redis.client.incr(key);
-    if (attempts === 1) await this.redis.client.expire(key, 3600);
+    const attempts = await this.kv.increment(key, 3600);
     if (attempts > ATTEMPTS_PER_HOUR) {
       throw new AppError(
         ErrorCode.TOO_MANY_ATTEMPTS,

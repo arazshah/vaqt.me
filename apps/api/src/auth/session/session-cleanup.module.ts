@@ -1,35 +1,23 @@
 import { Module, OnModuleInit } from '@nestjs/common';
-import { BullModule, InjectQueue } from '@nestjs/bullmq';
-import type { Queue } from 'bullmq';
-import { SessionCleanupProcessor } from './session-cleanup.processor';
+import { JobsService } from '../../common/jobs/jobs.service';
 import { SessionCleanupService } from './session-cleanup.service';
 
-const DAILY_AT_3AM_CRON = '0 3 * * *';
-const REPEATABLE_JOB_ID = 'daily-session-cleanup';
+const CLEANUP_EVERY_MS = 6 * 60 * 60 * 1000;
 
 @Module({
-  imports: [
-    BullModule.registerQueue({
-      name: 'session-cleanup',
-      defaultJobOptions: {
-        removeOnComplete: { count: 30 },
-        removeOnFail: { count: 100 },
-      },
-    }),
-  ],
-  providers: [SessionCleanupService, SessionCleanupProcessor],
+  providers: [SessionCleanupService],
   exports: [SessionCleanupService],
 })
 export class SessionCleanupModule implements OnModuleInit {
-  constructor(@InjectQueue('session-cleanup') private readonly queue: Queue) {}
+  constructor(
+    private readonly jobs: JobsService,
+    private readonly cleanup: SessionCleanupService,
+  ) {}
 
-  async onModuleInit(): Promise<void> {
-    // upsertJobScheduler is idempotent by schedulerId — safe to call on
-    // every boot without creating duplicate repeatable jobs.
-    await this.queue.upsertJobScheduler(
-      REPEATABLE_JOB_ID,
-      { pattern: DAILY_AT_3AM_CRON },
-      { name: 'cleanup' },
+  onModuleInit(): void {
+    // Deleting old sessions is idempotent, so a plain timer is enough.
+    this.jobs.every('session-cleanup', CLEANUP_EVERY_MS, () =>
+      this.cleanup.cleanupOldSessions().then(() => undefined),
     );
   }
 }

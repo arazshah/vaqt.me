@@ -19,8 +19,6 @@ const API_ENV = {
   WEB_ORIGIN: WEB_BASE_URL,
   DATABASE_URL:
     process.env.DATABASE_URL ?? 'postgresql://vaqt:vaqt@localhost:5432/vaqt',
-  REDIS_URL: process.env.REDIS_URL ?? 'redis://localhost:6380',
-  REDIS_PREFIX: 'vaqt:e2e:',
   OTP_PEPPER: process.env.OTP_PEPPER ?? 'e2e-otp-pepper-0123456789abcdef-local',
   JWT_ACCESS_SECRET:
     process.env.JWT_ACCESS_SECRET ?? 'e2e-jwt-access-secret-0123456789abcdef',

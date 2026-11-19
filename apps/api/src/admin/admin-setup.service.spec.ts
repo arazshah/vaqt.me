@@ -1,14 +1,13 @@
+import { randomUUID } from 'node:crypto';
 import { prisma } from '@vaqt/db';
 import { AuditService } from '../auth/audit/audit.service';
 import type { SessionService } from '../auth/session/session.service';
 import { ErrorCode } from '../common/errors/error-codes';
-import { RedisService } from '../common/redis/redis.service';
+import { KvService } from '../common/kv/kv.service';
 import { fakeConfig } from '../test-support/fake-config';
-import { randomTestRedisPrefix } from '../test-support/test-db';
 import { AdminSetupService } from './admin-setup.service';
 
-const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6380';
-const DEVICE = { userAgent: 'jest', ip: '203.0.113.5' };
+const DEVICE = { userAgent: 'jest', ip: randomUUID() };
 
 function phone(): string {
   return `+9899${String(Date.now()).slice(-4)}${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
@@ -29,7 +28,7 @@ async function waitForNoAdmin(): Promise<void> {
 
 describe('AdminSetupService (real Postgres + Redis)', () => {
   const created: string[] = [];
-  let redis: RedisService;
+  let redis: KvService;
   let service: AdminSetupService;
   const sessions = {
     createSession: jest
@@ -39,9 +38,7 @@ describe('AdminSetupService (real Postgres + Redis)', () => {
 
   beforeEach(async () => {
     await waitForNoAdmin();
-    redis = new RedisService(
-      fakeConfig({ REDIS_URL, REDIS_PREFIX: randomTestRedisPrefix() }),
-    );
+    redis = new KvService();
     service = new AdminSetupService(
       redis,
       new AuditService(),
@@ -55,7 +52,6 @@ describe('AdminSetupService (real Postgres + Redis)', () => {
       where: { id: { in: created } },
       data: { systemRole: 'USER' },
     });
-    await redis.client.quit();
   });
   afterAll(async () => {
     await prisma.auditLog.deleteMany({ where: { actorId: { in: created } } });

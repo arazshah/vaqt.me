@@ -1,33 +1,27 @@
-import { RedisService } from '../../common/redis/redis.service';
+import { randomTestPhone } from '../../test-support/test-db';
+import { randomUUID } from 'node:crypto';
+import { KvService } from '../../common/kv/kv.service';
 import { fakeConfig } from '../../test-support/fake-config';
-import { randomTestRedisPrefix } from '../../test-support/test-db';
 import { AuthConfigService } from '../auth.config';
 import { RateLimitService } from './rate-limit.service';
 
-const REDIS_URL = process.env.REDIS_URL ?? 'redis://localhost:6380';
-
 function makeService(overrides: Record<string, string> = {}): {
   service: RateLimitService;
-  redis: RedisService;
+  redis: KvService;
 } {
   const config = fakeConfig({
-    REDIS_URL,
-    REDIS_PREFIX: randomTestRedisPrefix(),
     ...overrides,
   });
-  const redis = new RedisService(config);
+  const redis = new KvService();
   const authConfig = new AuthConfigService(config);
   return { service: new RateLimitService(redis, authConfig), redis };
 }
 
-describe('RateLimitService', () => {
-  const instances: RedisService[] = [];
+// State persists in Postgres between runs, so every run gets its own scope.
+const SCOPE = `scope-${randomUUID()}`;
 
-  afterEach(async () => {
-    for (const redis of instances.splice(0)) {
-      await redis.client.quit();
-    }
-  });
+describe('RateLimitService', () => {
+  const instances: KvService[] = [];
 
   describe('checkSlidingWindow', () => {
     it('allows requests up to the limit within the window', async () => {
@@ -35,15 +29,9 @@ describe('RateLimitService', () => {
       instances.push(redis);
       const now = Date.now();
 
-      const first = await service.checkSlidingWindow(
-        'scope',
-        'id-1',
-        2,
-        60,
-        now,
-      );
+      const first = await service.checkSlidingWindow(SCOPE, 'id-1', 2, 60, now);
       const second = await service.checkSlidingWindow(
-        'scope',
+        SCOPE,
         'id-1',
         2,
         60,
@@ -59,9 +47,9 @@ describe('RateLimitService', () => {
       instances.push(redis);
       const now = Date.now();
 
-      await service.checkSlidingWindow('scope', 'id-2', 1, 60, now);
+      await service.checkSlidingWindow(SCOPE, 'id-2', 1, 60, now);
       const second = await service.checkSlidingWindow(
-        'scope',
+        SCOPE,
         'id-2',
         1,
         60,
@@ -77,10 +65,10 @@ describe('RateLimitService', () => {
       instances.push(redis);
       const now = Date.now();
 
-      await service.checkSlidingWindow('scope', 'id-3', 1, 60, now);
-      await service.checkSlidingWindow('scope', 'id-3', 1, 60, now + 1);
+      await service.checkSlidingWindow(SCOPE, 'id-3', 1, 60, now);
+      await service.checkSlidingWindow(SCOPE, 'id-3', 1, 60, now + 1);
       const third = await service.checkSlidingWindow(
-        'scope',
+        SCOPE,
         'id-3',
         1,
         60,
@@ -95,9 +83,9 @@ describe('RateLimitService', () => {
       instances.push(redis);
       const now = Date.now();
 
-      await service.checkSlidingWindow('scope', 'id-4', 1, 1, now);
+      await service.checkSlidingWindow(SCOPE, 'id-4', 1, 1, now);
       const later = await service.checkSlidingWindow(
-        'scope',
+        SCOPE,
         'id-4',
         1,
         1,
@@ -112,9 +100,9 @@ describe('RateLimitService', () => {
       instances.push(redis);
       const now = Date.now();
 
-      await service.checkSlidingWindow('scope', 'id-5a', 1, 60, now);
+      await service.checkSlidingWindow(SCOPE, 'id-5a', 1, 60, now);
       const other = await service.checkSlidingWindow(
-        'scope',
+        SCOPE,
         'id-5b',
         1,
         60,
@@ -137,7 +125,7 @@ describe('RateLimitService', () => {
 
       const results = await Promise.all(
         Array.from({ length: 10 }, () =>
-          service.checkSlidingWindow('scope', 'concurrent-phone', 5, 60, now),
+          service.checkSlidingWindow(SCOPE, 'concurrent-phone', 5, 60, now),
         ),
       );
 
@@ -148,17 +136,15 @@ describe('RateLimitService', () => {
 
   describe('checkResendCooldown', () => {
     it('allows the first request then denies an immediate second one', async () => {
+      const phone = randomTestPhone();
       const { service, redis } = makeService({
         RATE_LIMIT_RESEND_COOLDOWN_SECONDS: '60',
       });
       instances.push(redis);
       const now = Date.now();
 
-      const first = await service.checkResendCooldown('+989120000001', now);
-      const second = await service.checkResendCooldown(
-        '+989120000001',
-        now + 1,
-      );
+      const first = await service.checkResendCooldown(phone, now);
+      const second = await service.checkResendCooldown(phone, now + 1);
 
       expect(first.allowed).toBe(true);
       expect(second.allowed).toBe(false);
@@ -168,42 +154,39 @@ describe('RateLimitService', () => {
 
   describe('checkPhoneRequestLimits', () => {
     it('allows requests under both the hourly and daily phone limits', async () => {
+      const phone = randomTestPhone();
       const { service, redis } = makeService({
         RATE_LIMIT_PHONE_HOURLY: '5',
         RATE_LIMIT_PHONE_DAILY: '10',
       });
       instances.push(redis);
-      const result = await service.checkPhoneRequestLimits('+989120000002');
+      const result = await service.checkPhoneRequestLimits(phone);
       expect(result.allowed).toBe(true);
     });
 
     it('denies once the hourly phone limit is exceeded', async () => {
+      const phone = randomTestPhone();
       const { service, redis } = makeService({
         RATE_LIMIT_PHONE_HOURLY: '1',
         RATE_LIMIT_PHONE_DAILY: '10',
       });
       instances.push(redis);
       const now = Date.now();
-      await service.checkPhoneRequestLimits('+989120000003', now);
-      const second = await service.checkPhoneRequestLimits(
-        '+989120000003',
-        now + 1,
-      );
+      await service.checkPhoneRequestLimits(phone, now);
+      const second = await service.checkPhoneRequestLimits(phone, now + 1);
       expect(second.allowed).toBe(false);
     });
 
     it('denies once the daily phone limit is exceeded, even under the hourly cap', async () => {
+      const phone = randomTestPhone();
       const { service, redis } = makeService({
         RATE_LIMIT_PHONE_HOURLY: '100',
         RATE_LIMIT_PHONE_DAILY: '1',
       });
       instances.push(redis);
       const now = Date.now();
-      await service.checkPhoneRequestLimits('+989120000004', now);
-      const second = await service.checkPhoneRequestLimits(
-        '+989120000004',
-        now + 1,
-      );
+      await service.checkPhoneRequestLimits(phone, now);
+      const second = await service.checkPhoneRequestLimits(phone, now + 1);
       expect(second.allowed).toBe(false);
     });
   });
@@ -215,7 +198,7 @@ describe('RateLimitService', () => {
         RATE_LIMIT_IP_DAILY: '10',
       });
       instances.push(redis);
-      const result = await service.checkIpRequestLimits('203.0.113.1');
+      const result = await service.checkIpRequestLimits(`${SCOPE}-ip1`);
       expect(result.allowed).toBe(true);
     });
 
@@ -226,8 +209,11 @@ describe('RateLimitService', () => {
       });
       instances.push(redis);
       const now = Date.now();
-      await service.checkIpRequestLimits('203.0.113.2', now);
-      const second = await service.checkIpRequestLimits('203.0.113.2', now + 1);
+      await service.checkIpRequestLimits(`${SCOPE}-ip2`, now);
+      const second = await service.checkIpRequestLimits(
+        `${SCOPE}-ip2`,
+        now + 1,
+      );
       expect(second.allowed).toBe(false);
     });
 
@@ -238,20 +224,24 @@ describe('RateLimitService', () => {
       });
       instances.push(redis);
       const now = Date.now();
-      await service.checkIpRequestLimits('203.0.113.3', now);
-      const second = await service.checkIpRequestLimits('203.0.113.3', now + 1);
+      await service.checkIpRequestLimits(`${SCOPE}-ip3`, now);
+      const second = await service.checkIpRequestLimits(
+        `${SCOPE}-ip3`,
+        now + 1,
+      );
       expect(second.allowed).toBe(false);
     });
   });
 
   describe('invalidated-code streak blocking', () => {
     it('does not block before reaching the threshold', async () => {
+      const phone = randomTestPhone();
       const { service, redis } = makeService({
         RATE_LIMIT_INVALIDATED_STREAK_THRESHOLD: '3',
       });
       instances.push(redis);
-      const first = await service.recordInvalidatedCode('+989120000005');
-      const second = await service.recordInvalidatedCode('+989120000005');
+      const first = await service.recordInvalidatedCode(phone);
+      const second = await service.recordInvalidatedCode(phone);
       expect(first.blocked).toBe(false);
       expect(second.blocked).toBe(false);
     });
@@ -262,7 +252,7 @@ describe('RateLimitService', () => {
         RATE_LIMIT_BLOCK_SECONDS: '1800',
       });
       instances.push(redis);
-      const phone = '+989120000006';
+      const phone = randomTestPhone();
 
       await service.recordInvalidatedCode(phone);
       await service.recordInvalidatedCode(phone);
@@ -277,10 +267,10 @@ describe('RateLimitService', () => {
     });
 
     it('getPhoneBlockRetryAfterSeconds returns null when not blocked', async () => {
+      const phone = randomTestPhone();
       const { service, redis } = makeService();
       instances.push(redis);
-      const retryAfter =
-        await service.getPhoneBlockRetryAfterSeconds('+989120000007');
+      const retryAfter = await service.getPhoneBlockRetryAfterSeconds(phone);
       expect(retryAfter).toBeNull();
     });
 
@@ -289,7 +279,7 @@ describe('RateLimitService', () => {
         RATE_LIMIT_INVALIDATED_STREAK_THRESHOLD: '3',
       });
       instances.push(redis);
-      const phone = '+989120000008';
+      const phone = randomTestPhone();
 
       await service.recordInvalidatedCode(phone);
       await service.recordInvalidatedCode(phone);
