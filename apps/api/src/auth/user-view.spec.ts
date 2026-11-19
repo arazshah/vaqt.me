@@ -26,6 +26,19 @@ function makeUser(overrides: Partial<User> = {}): User {
   };
 }
 
+describe('toPrivateUser (email-only account)', () => {
+  it('has an empty maskedPhone and exposes the email only to the owner view', () => {
+    const owner = toPrivateUser(
+      makeUser({ phone: null, email: 'me@example.com' }),
+    );
+    expect(owner.maskedPhone).toBe('');
+    expect(owner.email).toBe('me@example.com');
+    expect(
+      JSON.stringify(toPublicUser(makeUser({ email: 'me@example.com' }))),
+    ).not.toContain('me@example.com');
+  });
+});
+
 describe('toPublicUser', () => {
   it('never includes the phone number, under any key', () => {
     const result = toPublicUser(makeUser());
