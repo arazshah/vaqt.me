@@ -117,6 +117,14 @@ describe('UsersService (real Postgres)', () => {
       expect(result.displayName).toBe('علی');
     });
 
+    it('keeps ZWNJ in the display name but still normalizes Arabic letters', async () => {
+      const userId = await makeUser();
+      const result = await service.updateMe(userId, {
+        displayName: 'علي نيك\u200cپور',
+      });
+      expect(result.displayName).toBe('علی نیک\u200cپور');
+    });
+
     it('clears linkedinUrl when given an empty string', async () => {
       const userId = await makeUser();
       await service.updateMe(userId, {

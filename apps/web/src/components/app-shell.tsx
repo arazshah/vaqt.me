@@ -31,6 +31,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
             {loading ? null : user ? (
               <>
+                <Link href="/card/edit" className={navLinkClass}>
+                  {fa.appShell.nav.myCard}
+                </Link>
                 <span className="hidden text-sm text-muted-foreground sm:inline">
                   {user.displayName}
                 </span>

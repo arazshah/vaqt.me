@@ -45,7 +45,14 @@ export class UsersService {
   ): Promise<PublicUser> {
     const data: Record<string, unknown> = {};
     if (input.displayName !== undefined) {
-      data.displayName = normalizeFa(input.displayName);
+      // normalizeFa() turns ZWNJ into a plain space, which is right for search
+      // text but wrong for a name people read on their own business card
+      // (نیک‌پور must not become «نیک پور»). Normalise the letters and digits
+      // around each ZWNJ, then put the ZWNJs back.
+      data.displayName = input.displayName
+        .split('\u200c')
+        .map((part) => normalizeFa(part))
+        .join('\u200c');
     }
     if (input.headline !== undefined) data.headline = input.headline;
     if (input.bio !== undefined) data.bio = input.bio;

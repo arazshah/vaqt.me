@@ -140,6 +140,8 @@ enum SystemRole {
 model User {
   id                 String       @id @default(cuid())
   phone              String       @unique
+  // Public card address vaqt.me/<username>; lowercase, null until claimed.
+  username           String?      @unique
   phoneVerifiedAt    DateTime?
   displayName        String
   avatarUrl          String?
@@ -179,6 +181,8 @@ model User {
   auditLogs               AuditLog[]
   sessions                Session[]
   skills                  UserSkill[]
+  card                    Card?
+  contactLinks            ContactLink[]
 
   @@index([status])
   @@map("users")
@@ -569,4 +573,35 @@ model Report {
   @@index([reporterId])
   @@index([status])
   @@map("reports")
+}
+
+// One online business card per user (vaqt.me/<username>).
+model Card {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // One of CARD_TEMPLATES in @vaqt/shared (validated there, not a DB enum,
+  // so adding a template needs no migration).
+  template  String   @default("tile")
+  // Owner consent to publish the phone number on the public card.
+  showPhone Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("cards")
+}
+
+// Messenger/social links shown on the back of the card. `kind` is one of
+// LINK_KINDS in @vaqt/shared; `value` is the canonical handle/number/URL.
+model ContactLink {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind   String
+  value  String
+  order  Int    @default(0)
+
+  @@unique([userId, kind])
+  @@index([userId, order])
+  @@map("contact_links")
 }

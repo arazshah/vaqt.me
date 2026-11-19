@@ -15,6 +15,7 @@ export default function robots(): MetadataRoute.Robots {
       // page's own metadata comes from the public list endpoint instead of
       // this authenticated route (see lib/seo/request-summary.ts).
       disallow: [
+        '/card/edit',
         '/requests/new',
         '/conversations',
         '/conversations/*',
