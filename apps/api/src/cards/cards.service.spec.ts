@@ -137,6 +137,17 @@ describe('CardsService (real Postgres)', () => {
       expect(mine.links).toHaveLength(1);
     });
 
+    it('stores, changes and clears the professional category', async () => {
+      const user = await makeUser({ username: newUsername() });
+      expect((await service.getMine(user.id)).category).toBeNull();
+      const set = await service.update(user.id, { category: 'health' });
+      expect(set.category).toBe('health');
+      const other = await service.update(user.id, { template: 'night' });
+      expect(other.category).toBe('health');
+      const cleared = await service.update(user.id, { category: null });
+      expect(cleared.category).toBeNull();
+    });
+
     it('defaults a fresh user to the tile template with the phone hidden', async () => {
       const user = await makeUser();
       const mine = await service.getMine(user.id);

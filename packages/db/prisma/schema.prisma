@@ -159,6 +159,8 @@ model Card {
   // One of CARD_TEMPLATES in @vaqt/shared (validated there, not a DB enum,
   // so adding a template needs no migration).
   template       String   @default("tile")
+  // One of CARD_CATEGORIES in @vaqt/shared; null = not chosen yet.
+  category       String?
   // Owner consent to publish the phone number on the public card.
   showPhone      Boolean  @default(false)
   // Booking switch and rules (hours/leave days live in their own tables).

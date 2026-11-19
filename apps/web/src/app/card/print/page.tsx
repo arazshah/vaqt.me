@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import {
   QR_CHANNELS,
   qrSource,
-  type CardTemplate,
   type MyCard,
   type QrChannel,
 } from '@vaqt/shared';
@@ -17,8 +16,10 @@ import { Skeleton } from '@vaqt/ui/components/ui/skeleton';
 import { AppShell } from '@/components/app-shell';
 import { BusinessCard } from '@/components/domain/business-card';
 import { QrCode } from '@/components/domain/qr-code';
+import { ShareHub } from '@/components/domain/share-hub';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
+import { themeFor } from '@/lib/card-themes';
 import { downloadDataUrl, drawQr } from '@/lib/qr';
 import { useOrigin } from '@/lib/use-origin';
 import { fa } from '@/messages/fa';
@@ -26,46 +27,7 @@ import './print.css';
 
 const t = fa.printPage;
 type Format = 'poster' | 'card' | 'story';
-
-const STORY_PALETTE: Record<
-  CardTemplate,
-  { from: string; to: string; text: string; accent: string; ink: string }
-> = {
-  tile: {
-    from: '#0d6b60',
-    to: '#13887a',
-    text: '#f7f5ef',
-    accent: '#f2c14e',
-    ink: '#0d6b60',
-  },
-  night: {
-    from: '#0f1726',
-    to: '#22304a',
-    text: '#e9dcc0',
-    accent: '#c9a45a',
-    ink: '#0f1726',
-  },
-  minimal: {
-    from: '#ffffff',
-    to: '#f1f1f1',
-    text: '#111111',
-    accent: '#e2462f',
-    ink: '#111111',
-  },
-  kahi: {
-    from: '#d9c7a3',
-    to: '#cbb488',
-    text: '#3b2a14',
-    accent: '#3b2a14',
-    ink: '#3b2a14',
-  },
-};
-const QR_INK: Record<CardTemplate, string> = {
-  tile: '#0d6b60',
-  night: '#0f1726',
-  minimal: '#111111',
-  kahi: '#3b2a14',
-};
+type Mode = 'share' | 'print';
 
 /** Shrinks a font until `text` fits `maxWidth`. */
 function fitFont(
@@ -85,6 +47,20 @@ function fitFont(
   return size;
 }
 
+function loadImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      resolve(img);
+    };
+    img.onerror = () => {
+      resolve(null);
+    };
+    img.src = src;
+  });
+}
+
 async function renderStory(
   card: MyCard,
   url: string,
@@ -92,7 +68,7 @@ async function renderStory(
 ): Promise<string> {
   await document.fonts.ready;
   const family = getComputedStyle(document.body).fontFamily;
-  const pal = STORY_PALETTE[card.template];
+  const theme = themeFor(card.category);
   const W = 1080;
   const H = 1920;
   const canvas = document.createElement('canvas');
@@ -102,51 +78,100 @@ async function renderStory(
   if (!ctx) throw new Error('no canvas');
 
   const grad = ctx.createLinearGradient(0, 0, W, H);
-  grad.addColorStop(0, pal.from);
-  grad.addColorStop(1, pal.to);
+  grad.addColorStop(0, theme.from);
+  grad.addColorStop(1, theme.to);
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
+
+  // soft decorative rings, same on every story so it feels branded
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 3;
+  for (let r = 260; r < 1700; r += 150) {
+    ctx.beginPath();
+    ctx.arc(W, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 
   ctx.direction = 'rtl';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
 
-  ctx.fillStyle = pal.text;
-  fitFont(ctx, card.displayName, family, 800, 120, 900);
-  ctx.fillText(card.displayName, W / 2, 380);
+  // avatar (or initial) in a ring
+  const cy = 290;
+  ctx.fillStyle = 'rgba(255,255,255,0.16)';
+  ctx.beginPath();
+  ctx.arc(W / 2, cy, 128, 0, Math.PI * 2);
+  ctx.fill();
+  const img = card.avatarUrl ? await loadImage(card.avatarUrl) : null;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(W / 2, cy, 112, 0, Math.PI * 2);
+  ctx.clip();
+  if (img) {
+    const side = Math.min(img.width, img.height);
+    ctx.drawImage(
+      img,
+      (img.width - side) / 2,
+      (img.height - side) / 2,
+      side,
+      side,
+      W / 2 - 112,
+      cy - 112,
+      224,
+      224,
+    );
+  } else {
+    ctx.fillStyle = theme.accent;
+    ctx.fillRect(W / 2 - 112, cy - 112, 224, 224);
+    ctx.fillStyle = theme.onAccent;
+    ctx.font = `800 120px ${family}`;
+    ctx.fillText(Array.from(card.displayName.trim())[0] ?? '', W / 2, cy + 42);
+  }
+  ctx.restore();
+
+  ctx.fillStyle = '#ffffff';
+  fitFont(ctx, card.displayName, family, 800, 110, 900);
+  ctx.fillText(card.displayName, W / 2, 530);
   if (card.headline) {
-    fitFont(ctx, card.headline, family, 500, 54, 900);
-    ctx.globalAlpha = 0.85;
-    ctx.fillText(card.headline, W / 2, 470);
+    fitFont(ctx, card.headline, family, 500, 52, 900);
+    ctx.globalAlpha = 0.88;
+    ctx.fillText(card.headline, W / 2, 615);
     ctx.globalAlpha = 1;
   }
 
   // QR on a white rounded card
   const qrCanvas = document.createElement('canvas');
-  drawQr(qrCanvas, url, QR_INK[card.template], 14, 3);
-  const box = 700;
+  drawQr(qrCanvas, url, theme.from, 14, 3);
+  const box = 660;
   const bx = (W - box) / 2;
-  const by = 620;
+  const by = 730;
   ctx.fillStyle = '#ffffff';
   ctx.beginPath();
-  ctx.roundRect(bx - 30, by - 30, box + 60, box + 60, 48);
+  ctx.roundRect(bx - 36, by - 36, box + 72, box + 72, 56);
   ctx.fill();
   ctx.drawImage(qrCanvas, bx, by, box, box);
 
-  ctx.fillStyle = pal.text;
-  fitFont(ctx, t.storyCta, family, 700, 60, 900);
-  ctx.fillText(t.storyCta, W / 2, by + box + 150);
+  ctx.fillStyle = '#ffffff';
+  fitFont(ctx, t.storyCta, family, 700, 58, 900);
+  ctx.fillText(t.storyCta, W / 2, by + box + 160);
 
-  ctx.fillStyle = pal.accent;
+  // URL on an accent pill
   ctx.direction = 'ltr';
-  ctx.font = `800 64px ${family}`;
-  ctx.fillText(displayUrl, W / 2, by + box + 260);
+  const urlSize = fitFont(ctx, displayUrl, family, 800, 62, 820);
+  ctx.font = `800 ${String(urlSize)}px ${family}`;
+  const w = ctx.measureText(displayUrl).width + 80;
+  ctx.fillStyle = theme.accent;
+  ctx.beginPath();
+  ctx.roundRect((W - w) / 2, by + box + 215, w, 110, 55);
+  ctx.fill();
+  ctx.fillStyle = theme.onAccent;
+  ctx.fillText(displayUrl, W / 2, by + box + 290);
 
-  ctx.fillStyle = pal.text;
+  ctx.fillStyle = '#ffffff';
   ctx.globalAlpha = 0.6;
   ctx.direction = 'rtl';
   ctx.font = `500 40px ${family}`;
-  ctx.fillText(fa.appShell.brand, W / 2, H - 120);
+  ctx.fillText(fa.appShell.brand, W / 2, H - 110);
   ctx.globalAlpha = 1;
 
   return canvas.toDataURL('image/png');
@@ -158,6 +183,7 @@ export default function CardPrintPage() {
   const router = useRouter();
   const [card, setCard] = useState<MyCard | null>(null);
   const [format, setFormat] = useState<Format>('poster');
+  const [mode, setMode] = useState<Mode>('share');
   const [channel, setChannel] = useState<QrChannel>('office');
   const [error, setError] = useState<string | null>(null);
 
@@ -197,7 +223,7 @@ export default function CardPrintPage() {
   const base = `${origin}/${card.username}`;
   const url = `${base}?src=${qrSource(channel)}`;
   const displayUrl = base.replace(/^https?:\/\//, '');
-  const ink = QR_INK[card.template];
+  const ink = themeFor(card.category).from;
 
   async function downloadStory() {
     if (!card) return;
@@ -220,120 +246,162 @@ export default function CardPrintPage() {
           ? '@page { size: 85mm 55mm; margin: 0 }'
           : '@page { size: A4; margin: 12mm }'}
       </style>
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-5">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
         <div className="no-print">
           <h1 className="text-2xl font-semibold">{t.title}</h1>
           <p className="text-sm text-muted-foreground">{t.subtitle}</p>
         </div>
 
-        <div className="no-print flex flex-wrap items-center gap-2">
-          {(['poster', 'card', 'story'] as const).map((f) => (
-            <Button
-              key={f}
+        <div
+          role="tablist"
+          className="no-print flex gap-1 rounded-xl bg-muted p-1"
+        >
+          {(
+            [
+              ['share', t.modeShare],
+              ['print', t.modePrint],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
               type="button"
-              size="sm"
-              variant={format === f ? 'default' : 'outline'}
-              aria-pressed={format === f}
+              role="tab"
+              aria-selected={mode === id}
               onClick={() => {
-                setFormat(f);
+                setMode(id);
               }}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium ${
+                mode === id ? 'bg-card shadow-sm' : 'text-muted-foreground'
+              }`}
             >
-              {f === 'poster'
-                ? t.formatPoster
-                : f === 'card'
-                  ? t.formatCard
-                  : t.formatStory}
-            </Button>
-          ))}
-        </div>
-        <div className="no-print flex flex-wrap items-center gap-2">
-          <span className="text-sm text-muted-foreground">{t.channel}:</span>
-          {QR_CHANNELS.map((c) => (
-            <Button
-              key={c}
-              type="button"
-              size="sm"
-              variant={channel === c ? 'default' : 'outline'}
-              aria-pressed={channel === c}
-              onClick={() => {
-                setChannel(c);
-              }}
-            >
-              {fa.cardEditPage.qrChannels[c]}
-            </Button>
+              {label}
+            </button>
           ))}
         </div>
 
-        {format === 'poster' ? (
-          <section className="print-poster flex flex-col items-center gap-6 rounded-2xl border bg-white p-10 text-center text-black">
-            <h2 className="m-0 text-4xl font-extrabold">{card.displayName}</h2>
-            {card.headline ? (
-              <p className="m-0 text-xl">{card.headline}</p>
-            ) : null}
-            <div className="print-poster-qr rounded-xl border p-3 leading-none [&_canvas]:size-72">
-              <QrCode value={url} ink={ink} label={displayUrl} />
-            </div>
-            <p className="m-0 text-2xl font-bold">{t.posterTitle}</p>
-            <p className="m-0 text-base">{t.posterNote}</p>
-            <p dir="ltr" className="m-0 text-2xl font-extrabold">
-              {displayUrl}
-            </p>
-          </section>
-        ) : null}
-
-        {format === 'card' ? (
+        {mode === 'share' ? (
+          <ShareHub
+            card={card}
+            baseUrl={base}
+            channel={channel}
+            onChannel={setChannel}
+          />
+        ) : (
           <>
-            <p className="no-print text-sm text-muted-foreground">
-              {t.cardHelp}
-            </p>
-            <div className="print-cards flex flex-col gap-4">
-              {[false, true].map((flipped) => (
-                <div key={String(flipped)} className="print-card">
-                  <BusinessCard
-                    template={card.template}
-                    displayName={card.displayName}
-                    headline={card.headline}
-                    displayUrl={displayUrl}
-                    qrValue={url}
-                    phone={null}
-                    city={card.city}
-                    initialFlipped={flipped}
-                    interactive={false}
-                  />
-                </div>
+            <div className="no-print flex flex-wrap items-center gap-2">
+              {(['poster', 'card', 'story'] as const).map((f) => (
+                <Button
+                  key={f}
+                  type="button"
+                  size="sm"
+                  variant={format === f ? 'default' : 'outline'}
+                  aria-pressed={format === f}
+                  onClick={() => {
+                    setFormat(f);
+                  }}
+                >
+                  {f === 'poster'
+                    ? t.formatPoster
+                    : f === 'card'
+                      ? t.formatCard
+                      : t.formatStory}
+                </Button>
               ))}
             </div>
+            <div className="no-print flex flex-wrap items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {t.channel}:
+              </span>
+              {QR_CHANNELS.map((c) => (
+                <Button
+                  key={c}
+                  type="button"
+                  size="sm"
+                  variant={channel === c ? 'default' : 'outline'}
+                  aria-pressed={channel === c}
+                  onClick={() => {
+                    setChannel(c);
+                  }}
+                >
+                  {fa.cardEditPage.qrChannels[c]}
+                </Button>
+              ))}
+            </div>
+
+            {format === 'poster' ? (
+              <section className="print-poster flex flex-col items-center gap-6 rounded-2xl border bg-white p-10 text-center text-black">
+                <h2 className="m-0 text-4xl font-extrabold">
+                  {card.displayName}
+                </h2>
+                {card.headline ? (
+                  <p className="m-0 text-xl">{card.headline}</p>
+                ) : null}
+                <div className="print-poster-qr rounded-xl border p-3 leading-none [&_canvas]:size-72">
+                  <QrCode value={url} ink={ink} label={displayUrl} />
+                </div>
+                <p className="m-0 text-2xl font-bold">{t.posterTitle}</p>
+                <p className="m-0 text-base">{t.posterNote}</p>
+                <p dir="ltr" className="m-0 text-2xl font-extrabold">
+                  {displayUrl}
+                </p>
+              </section>
+            ) : null}
+
+            {format === 'card' ? (
+              <>
+                <p className="no-print text-sm text-muted-foreground">
+                  {t.cardHelp}
+                </p>
+                <div className="print-cards flex flex-col gap-4">
+                  {[false, true].map((flipped) => (
+                    <div key={String(flipped)} className="print-card">
+                      <BusinessCard
+                        template={card.template}
+                        displayName={card.displayName}
+                        headline={card.headline}
+                        displayUrl={displayUrl}
+                        qrValue={url}
+                        phone={null}
+                        city={card.city}
+                        initialFlipped={flipped}
+                        interactive={false}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {format === 'story' ? (
+              <p className="no-print text-sm text-muted-foreground">
+                {t.storyHelp}
+              </p>
+            ) : null}
+
+            {error ? (
+              <p role="alert" className="no-print text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+
+            <div className="no-print">
+              {format === 'story' ? (
+                <Button type="button" onClick={() => void downloadStory()}>
+                  {t.downloadStory}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={() => {
+                    window.print();
+                  }}
+                >
+                  {t.print}
+                </Button>
+              )}
+            </div>
           </>
-        ) : null}
-
-        {format === 'story' ? (
-          <p className="no-print text-sm text-muted-foreground">
-            {t.storyHelp}
-          </p>
-        ) : null}
-
-        {error ? (
-          <p role="alert" className="no-print text-sm text-destructive">
-            {error}
-          </p>
-        ) : null}
-
-        <div className="no-print">
-          {format === 'story' ? (
-            <Button type="button" onClick={() => void downloadStory()}>
-              {t.downloadStory}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              onClick={() => {
-                window.print();
-              }}
-            >
-              {t.print}
-            </Button>
-          )}
-        </div>
+        )}
       </div>
     </AppShell>
   );

@@ -82,6 +82,26 @@ export const CardTemplateSchema = z.enum(CARD_TEMPLATES);
 export type CardTemplate = z.infer<typeof CardTemplateSchema>;
 
 // ---------------------------------------------------------------------------
+// Professional category — drives the palette, cover motif and booking button
+// wording of the public card (the visual registry lives in apps/web).
+// ---------------------------------------------------------------------------
+
+export const CARD_CATEGORIES = [
+  'health',
+  'legal',
+  'counseling',
+  'education',
+  'tech',
+  'creative',
+  'beauty',
+  'realestate',
+  'business',
+  'fitness',
+] as const;
+export const CardCategorySchema = z.enum(CARD_CATEGORIES);
+export type CardCategory = z.infer<typeof CardCategorySchema>;
+
+// ---------------------------------------------------------------------------
 // Contact links
 // ---------------------------------------------------------------------------
 
@@ -198,6 +218,7 @@ export type ContactLinkInput = z.infer<typeof contactLinkInputSchema>;
 
 export const updateCardSchema = z.object({
   template: CardTemplateSchema.optional(),
+  category: CardCategorySchema.nullable().optional(),
   showPhone: z.boolean().optional(),
   links: z
     .array(contactLinkInputSchema)
@@ -228,6 +249,7 @@ export interface PublicCard {
   city: string | null;
   avatarUrl: string | null;
   template: CardTemplate;
+  category: CardCategory | null;
   // Local 09xxxxxxxxx form, present ONLY when the owner turned showPhone on.
   phone: string | null;
   links: CardLinkView[];
@@ -241,6 +263,8 @@ export interface MyCard {
   bio: string | null;
   city: string | null;
   template: CardTemplate;
+  category: CardCategory | null;
+  avatarUrl: string | null;
   showPhone: boolean;
   links: CardLinkView[];
 }

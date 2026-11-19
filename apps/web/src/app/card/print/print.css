@@ -1,6 +1,8 @@
 /* Print layout: only the chosen artifact stays on the page. */
 @media print {
   header,
+  aside,
+  nav,
   .no-print {
     display: none !important;
   }

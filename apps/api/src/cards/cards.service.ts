@@ -3,6 +3,7 @@ import { Prisma, prisma } from '@vaqt/db';
 import {
   buildLinkHref,
   CardTemplateSchema,
+  CardCategorySchema,
   LinkKindSchema,
   type CardLinkView,
   type MyCard,
@@ -35,6 +36,11 @@ function toLinkViews(
           ]
         : [];
     });
+}
+
+function toCategory(raw: string | null | undefined) {
+  const parsed = CardCategorySchema.safeParse(raw);
+  return parsed.success ? parsed.data : null;
 }
 
 function toTemplate(raw: string | undefined) {
@@ -76,6 +82,7 @@ export class CardsService {
       city: user.city,
       avatarUrl: user.avatarUrl,
       template: toTemplate(user.card?.template),
+      category: toCategory(user.card?.category),
       phone: user.card?.showPhone ? toLocalPhone(user.phone) : null,
       links: toLinkViews(user.contactLinks),
       booking: await getPublicBookingInfo(user.id),
@@ -115,6 +122,8 @@ export class CardsService {
       bio: user.bio,
       city: user.city,
       template: toTemplate(user.card?.template),
+      category: toCategory(user.card?.category),
+      avatarUrl: user.avatarUrl,
       showPhone: user.card?.showPhone ?? false,
       links: toLinkViews(user.contactLinks),
     };
@@ -127,10 +136,12 @@ export class CardsService {
         create: {
           userId,
           ...(input.template !== undefined && { template: input.template }),
+          ...(input.category !== undefined && { category: input.category }),
           ...(input.showPhone !== undefined && { showPhone: input.showPhone }),
         },
         update: {
           ...(input.template !== undefined && { template: input.template }),
+          ...(input.category !== undefined && { category: input.category }),
           ...(input.showPhone !== undefined && { showPhone: input.showPhone }),
         },
       });
