@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { BookingModule } from './booking/booking.module';
 import { CardsModule } from './cards/cards.module';
 import { CategoriesModule } from './categories/categories.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -35,6 +36,7 @@ import { UsersModule } from './users/users.module';
     ConversationsModule,
     ReviewsModule,
     CardsModule,
+    BookingModule,
   ],
   controllers: [AppController],
   providers: [

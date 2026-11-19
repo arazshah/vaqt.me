@@ -29,5 +29,12 @@ export const errorMessagesFa: Record<ErrorCode, string> = {
   CONVERSATION_ARCHIVED: 'این گفتگو بایگانی شده و دیگر پیام‌پذیر نیست.',
   REVIEW_ALREADY_EXISTS: 'شما قبلاً برای این گفتگو نظر ثبت کرده‌اید.',
   USERNAME_TAKEN: 'این نام کاربری قبلاً گرفته شده است. نام دیگری انتخاب کنید.',
+  BOOKING_DISABLED: 'این متخصص فعلاً رزرو وقت را فعال نکرده است.',
+  SLOT_UNAVAILABLE: 'این زمان دیگر در دسترس نیست. زمان دیگری انتخاب کنید.',
+  BOOKING_LIMIT_REACHED:
+    'چند رزرو در انتظار تأیید دارید. بعد از تعیین‌تکلیف آن‌ها دوباره رزرو کنید.',
+  BOOKING_NOT_PENDING: 'این رزرو دیگر در انتظار تصمیم نیست.',
+  BOOKING_NOT_CANCELLABLE: 'این رزرو دیگر قابل لغو نیست.',
+  OWN_CARD_BOOKING_FORBIDDEN: 'نمی‌توانید برای کارت خودتان رزرو کنید.',
   INTERNAL_ERROR: 'خطایی پیش‌آمد. لطفاً بعداً دوباره تلاش کنید.',
 };

@@ -11,6 +11,7 @@ import {
 } from '@vaqt/shared';
 import { AppError } from '../common/errors/app-error';
 import { ErrorCode } from '../common/errors/error-codes';
+import { getPublicBookingInfo } from '../booking/public-info';
 
 // +989123456747 -> 09123456747 (the form people dial and recognise).
 function toLocalPhone(canonical: string): string {
@@ -79,6 +80,7 @@ export class CardsService {
       phone: user.card?.showPhone ? toLocalPhone(user.phone) : null,
       links: toLinkViews(user.contactLinks),
       skills: user.skills.map((s) => s.skill.name),
+      booking: await getPublicBookingInfo(user.id),
       ratingAvg: user.ratingAvg,
       ratingCount: user.ratingCount,
     };

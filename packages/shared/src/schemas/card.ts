@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { normalizePhone } from '../utils/normalize-phone';
+import type { PublicBookingInfo } from './booking';
 
 // ---------------------------------------------------------------------------
 // Username — the public address vaqt.me/<username>
@@ -231,6 +232,7 @@ export interface PublicCard {
   phone: string | null;
   links: CardLinkView[];
   skills: string[];
+  booking: PublicBookingInfo;
   ratingAvg: number;
   ratingCount: number;
 }
