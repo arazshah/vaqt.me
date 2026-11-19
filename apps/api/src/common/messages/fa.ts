@@ -37,6 +37,12 @@ export const errorMessagesFa: Record<ErrorCode, string> = {
   BOOKING_NOT_CANCELLABLE: 'این رزرو دیگر قابل لغو نیست.',
   OWN_CARD_BOOKING_FORBIDDEN: 'نمی‌توانید برای کارت خودتان رزرو کنید.',
   WALLET_OWN_CARD: 'کارت خودتان را نمی‌توانید در کیف کارت ذخیره کنید.',
+  SETUP_TOKEN_INVALID:
+    'توکن راه‌اندازی درست نیست. آن را از لاگ سرور (خطی که با «ADMIN SETUP TOKEN» شروع می‌شود) کپی کنید.',
+  TOO_MANY_ATTEMPTS: 'تلاش‌های زیادی انجام شده. کمی بعد دوباره امتحان کنید.',
+  SETTING_INVALID: 'مقدار یکی از تنظیمات معتبر نیست.',
+  INTEGRATION_FAILED:
+    'اتصال به سرویس بیرونی برقرار نشد. مقادیر واردشده را بررسی کنید و دوباره تلاش کنید.',
   CARD_REQUIRED_FOR_EXCHANGE:
     'برای تبادل کارت، ابتدا کارت خودتان را بسازید و آدرس آن را ثبت کنید.',
   EXCHANGE_LIMIT_REACHED:

@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
-import { MockSmsAdapter } from './mock-sms.adapter';
-import { SmsIrAdapter } from './sms-ir.adapter';
-import { SMS_PORT, type SmsPort } from './sms.port';
+import { DynamicSmsAdapter } from './dynamic-sms.adapter';
+import { SMS_PORT } from './sms.port';
 import { SmsQueueService } from './sms-queue.service';
 import { SmsProcessor } from './sms.processor';
 
@@ -21,31 +20,11 @@ import { SmsProcessor } from './sms.processor';
     }),
   ],
   providers: [
-    {
-      provide: SMS_PORT,
-      useFactory: (config: ConfigService): SmsPort => {
-        const provider = config.get<string>('SMS_PROVIDER') ?? 'mock';
-
-        if (provider === 'mock') {
-          if (process.env.NODE_ENV === 'production') {
-            throw new Error(
-              'SMS_PROVIDER=mock is not allowed when NODE_ENV=production',
-            );
-          }
-          return new MockSmsAdapter();
-        }
-
-        if (provider === 'smsir') {
-          return new SmsIrAdapter(config);
-        }
-
-        throw new Error(`Unknown SMS_PROVIDER: ${provider}`);
-      },
-      inject: [ConfigService],
-    },
+    // Provider and credentials come from the admin panel at call time.
+    { provide: SMS_PORT, useClass: DynamicSmsAdapter },
     SmsQueueService,
     SmsProcessor,
   ],
-  exports: [SmsQueueService],
+  exports: [SmsQueueService, SMS_PORT],
 })
 export class SmsModule {}

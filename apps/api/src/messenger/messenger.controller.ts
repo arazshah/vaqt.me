@@ -1,11 +1,11 @@
 import { createHash, timingSafeEqual } from 'crypto';
 import { Body, Controller, HttpCode, Param, Post } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { HttpStatus } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AccessTokenPayload } from '../auth/session/token.service';
 import { Public } from '../common/decorators/public.decorator';
 import { AppError } from '../common/errors/app-error';
+import { SettingsService } from '../settings/settings.service';
 import { ErrorCode } from '../common/errors/error-codes';
 import { BaleLinkService } from './bale-link.service';
 import { BaleUpdateHandler, type BaleUpdate } from './bale-update.handler';
@@ -17,7 +17,7 @@ export class MessengerController {
   constructor(
     private readonly links: BaleLinkService,
     private readonly handler: BaleUpdateHandler,
-    private readonly config: ConfigService,
+    private readonly settings: SettingsService,
   ) {}
 
   // ---- Owner (logged in) ----
@@ -25,7 +25,7 @@ export class MessengerController {
   async status(@CurrentUser() user: AccessTokenPayload) {
     return {
       bound: await this.links.isBound(user.sub),
-      botUsername: this.config.get<string>('BALE_BOT_USERNAME') ?? null,
+      botUsername: (await this.settings.get('bale.botUsername')) ?? null,
     };
   }
 
@@ -48,7 +48,7 @@ export class MessengerController {
   @Post('webhook/:secret')
   @HttpCode(200)
   async webhook(@Param('secret') secret: string, @Body() update: BaleUpdate) {
-    const expected = this.config.get<string>('BALE_WEBHOOK_SECRET');
+    const expected = await this.settings.get('bale.webhookSecret');
     if (!expected || !timingSafeEqual(sha256(secret), sha256(expected))) {
       throw new AppError(ErrorCode.NOT_FOUND, HttpStatus.NOT_FOUND);
     }

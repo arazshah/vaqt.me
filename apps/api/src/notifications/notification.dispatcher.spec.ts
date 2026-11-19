@@ -2,6 +2,8 @@ import { randomBytes } from 'crypto';
 import { prisma } from '@vaqt/db';
 import { SmsQueueService } from '../auth/sms/sms-queue.service';
 import { RedisService } from '../common/redis/redis.service';
+import { SettingsService } from '../settings/settings.service';
+import { MemorySettingsStore } from '../settings/settings.store';
 import { BaleLinkService } from '../messenger/bale-link.service';
 import { MockMessengerAdapter } from '../messenger/mock-messenger.adapter';
 import { fakeConfig } from '../test-support/fake-config';
@@ -44,13 +46,15 @@ describe('NotificationDispatcher (real Postgres + Redis)', () => {
         return Promise.resolve();
       },
     } as unknown as SmsQueueService;
-    links = new BaleLinkService(redis, config);
+    const settings = new SettingsService(config, new MemorySettingsStore());
+    links = new BaleLinkService(redis, settings);
     dispatcher = new NotificationDispatcher(
       messenger,
       links,
       sms,
       redis,
       config,
+      settings,
     );
   });
 

@@ -7,6 +7,7 @@ const REQUEST_TIMEOUT_MS = 10_000;
 interface BaleResponse {
   ok: boolean;
   description?: string;
+  result?: unknown;
 }
 
 /**
@@ -22,7 +23,7 @@ export class BaleAdapter implements MessengerPort {
   private async call(
     method: string,
     body: Record<string, unknown>,
-  ): Promise<void> {
+  ): Promise<unknown> {
     const res = await fetch(`${BALE_API}/bot${this.token}/${method}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -38,6 +39,7 @@ export class BaleAdapter implements MessengerPort {
         `Bale ${method} failed: ${String(res.status)} ${data.description ?? ''}`.trim(),
       );
     }
+    return data.result;
   }
 
   async sendMessage(
@@ -75,5 +77,17 @@ export class BaleAdapter implements MessengerPort {
       callback_query_id: callbackId,
       ...(text && { text }),
     });
+  }
+
+  /** Checks the token works and returns the bot's @username. */
+  async getMe(): Promise<{ username: string | null }> {
+    const result = (await this.call('getMe', {})) as
+      { username?: string } | undefined;
+    return { username: result?.username ?? null };
+  }
+
+  /** Tells Bale where to POST updates (our webhook URL, secret included). */
+  async setWebhook(url: string): Promise<void> {
+    await this.call('setWebhook', { url });
   }
 }
