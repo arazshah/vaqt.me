@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  CARD_FIELDS,
   LINK_KINDS,
   normalizeLinkValue,
   type CardCategory,
+  type CardField,
   type CardTemplate,
   type GeoPoint,
   normalizeContactPhone,
@@ -61,6 +63,7 @@ export interface CardDraft {
   address: string;
   location: GeoPoint | null;
   links: LinkDrafts;
+  cardFields: CardField[];
   avatarUrl: string | null;
 }
 
@@ -77,6 +80,7 @@ const EMPTY: CardDraft = {
   address: '',
   location: null,
   links: {},
+  cardFields: [...CARD_FIELDS],
   avatarUrl: null,
 };
 
@@ -96,6 +100,7 @@ function fromCard(card: MyCard): CardDraft {
     links: Object.fromEntries(
       card.links.map((l) => [l.kind, fromStoredLink(l.kind, l.value)]),
     ),
+    cardFields: card.cardFields,
     avatarUrl: card.avatarUrl,
   };
 }
@@ -170,6 +175,7 @@ export function useCardDraft(enabled: boolean, autosave: boolean) {
         contactPhone: draft.contactPhone.trim() || null,
         address: draft.address.trim() || null,
         location: draft.location,
+        cardFields: draft.cardFields,
         links,
       });
       lastSaved.current = serialise(draft);
@@ -247,4 +253,16 @@ export function useCardDraft(enabled: boolean, autosave: boolean) {
 function serialise(d: CardDraft): string {
   const { username: _u, avatarUrl: _a, ...rest } = d;
   return JSON.stringify(rest);
+}
+
+/** The links a draft would publish, valid ones only, in display order. */
+export function draftLinks(d: CardDraft): { kind: LinkKind; value: string }[] {
+  const out: { kind: LinkKind; value: string }[] = [];
+  for (const kind of LINK_KINDS) {
+    const typed = d.links[kind];
+    if (!typed?.trim()) continue;
+    const value = normalizeLinkValue(kind, toRawLink(kind, typed));
+    if (value !== null) out.push({ kind, value });
+  }
+  return out;
 }

@@ -1,6 +1,9 @@
 /* Physical-card look. Each template is a fixed palette on purpose: it is a
-   printed object, so it does not follow the light/dark app theme. Only
-   logical properties are used (RTL rule). */
+   printed object, so it does not follow the light/dark app theme. Sizes are
+   in cqw (1cqw = 1% of the card width) so a template scales from a picker
+   thumbnail to a printed 85×55 mm card unchanged. Only logical properties
+   are used (RTL rule). Never letter-space Persian text: it breaks joining. */
+
 .bc-stage {
   perspective: 1400px;
 }
@@ -15,213 +18,904 @@
   text-align: start;
   cursor: pointer;
   container-type: inline-size;
+  font-family: inherit;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.bc:disabled {
+  cursor: default;
 }
 .bc-inner {
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
-  transition: transform 0.75s cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition: transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 .bc[data-flipped='true'] .bc-inner {
   transform: rotateY(180deg);
 }
+.bc:not(:disabled):hover .bc-inner {
+  transform: rotateY(-4deg) rotateX(2deg);
+}
+.bc[data-flipped='true']:not(:disabled):hover .bc-inner {
+  transform: rotateY(176deg) rotateX(2deg);
+}
 .bc-face {
   position: absolute;
   inset: 0;
+  isolation: isolate;
   overflow: hidden;
-  border-radius: 4cqw;
+  border-radius: 3.6cqw;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   box-shadow:
-    0 1px 2px rgb(0 0 0 / 0.12),
-    0 14px 34px -12px rgb(10 30 40 / 0.38);
+    0 0.2cqw 0.5cqw rgb(0 0 0 / 0.12),
+    0 4cqw 9cqw -3cqw rgb(10 20 40 / 0.42);
 }
 .bc-back {
   transform: rotateY(180deg);
 }
+.bc-art,
+.bc-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.bc-frame {
+  z-index: 1;
+}
+.bc-face > :not(.bc-art, .bc-frame) {
+  position: relative;
+  z-index: 2;
+  min-inline-size: 0;
+}
+
+/* ---------- front: shared pieces ---------- */
 .bc-front {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    'names id'
+    'foot foot';
+  grid-template-columns: 1fr auto;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  column-gap: 5cqw;
+  padding: 7cqw;
 }
-.bc-band {
-  block-size: 100%;
-  inline-size: 26%;
-}
-.bc-body {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-inline-size: 0;
-  padding: 7cqw 7cqw 6cqw;
-}
-.bc-mono {
+.bc-id {
+  grid-area: id;
   display: grid;
   place-items: center;
-  inline-size: 11cqw;
-  block-size: 11cqw;
+  inline-size: 17cqw;
+  block-size: 17cqw;
   border-radius: 50%;
+  overflow: hidden;
+}
+.bc-id img {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+.bc-mono {
   font-weight: 800;
-  font-size: 6.4cqw;
+  font-size: 8cqw;
   line-height: 1;
 }
+.bc-names {
+  grid-area: names;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
 .bc-name {
-  margin: 0;
+  display: block;
   font-weight: 800;
-  font-size: 8.6cqw;
-  line-height: 1.15;
+  font-size: 7.6cqw;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.bc-rule {
+  display: block;
+  inline-size: 10cqw;
+  block-size: 0.6cqw;
+  margin-block: 2.2cqw 1.8cqw;
+  border-radius: 1cqw;
 }
 .bc-title {
-  margin-block-start: 1cqw;
-  font-size: 3.7cqw;
-  opacity: 0.82;
+  display: block;
+  font-size: 3.6cqw;
+  line-height: 1.45;
+  opacity: 0.85;
 }
-.bc-row {
+.bc-foot {
+  grid-area: foot;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   gap: 2cqw;
-  font-size: 3.1cqw;
 }
 .bc-url {
   direction: ltr;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  font-size: 3cqw;
+  letter-spacing: 0.03em;
 }
 .bc-hint {
-  opacity: 0.65;
-  font-size: 2.8cqw;
+  font-size: 2.5cqw;
+  opacity: 0.6;
 }
-.bc-bback {
+
+/* ---------- back: shared pieces ---------- */
+.bc-back {
   display: grid;
+  grid-template-areas:
+    'head qr'
+    'rows qr';
   grid-template-columns: 1fr auto;
-  gap: 6cqw;
-  align-items: center;
-  block-size: 100%;
-  padding: 7cqw;
+  grid-template-rows: auto 1fr;
+  column-gap: 5cqw;
+  padding: 6.5cqw;
 }
-.bc-info {
+.bc-bhead {
+  grid-area: head;
   display: flex;
   flex-direction: column;
-  gap: 2cqw;
-  min-inline-size: 0;
-  font-size: 3.4cqw;
+  padding-block-end: 2.4cqw;
+  margin-block-end: 2.6cqw;
+  border-block-end: 0.25cqw solid currentColor;
+  border-color: color-mix(in srgb, currentColor 22%, transparent);
 }
-.bc-k {
-  opacity: 0.65;
+.bc-bname {
+  font-weight: 800;
+  font-size: 4.6cqw;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bc-btitle {
+  font-size: 2.7cqw;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bc-rows {
+  grid-area: rows;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1.9cqw;
+  font-size: 3.1cqw;
+}
+.bc[data-dense] .bc-rows {
+  gap: 1.2cqw;
   font-size: 2.8cqw;
 }
-.bc-v {
-  direction: ltr;
+.bc-r {
+  display: flex;
+  align-items: center;
+  gap: 2cqw;
+  min-inline-size: 0;
+}
+.bc-ic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  inline-size: 4.4cqw;
+  block-size: 4.4cqw;
+  border-radius: 50%;
+}
+.bc-ic svg {
+  inline-size: 2.7cqw;
+  block-size: 2.7cqw;
+  stroke-width: 2.2;
+}
+.bc-glyph {
+  display: grid;
+  place-items: center;
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 2.2cqw;
+  font-weight: 800;
+  line-height: 1;
+}
+.bc-rt {
+  min-inline-size: 0;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bc-rt[dir='ltr'] {
   text-align: end;
-  font-weight: 700;
-  overflow-wrap: anywhere;
+  letter-spacing: 0.01em;
+}
+.bc-r[data-wide] .bc-rt {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.45;
+}
+.bc-qrbox {
+  grid-area: qr;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4cqw;
 }
 .bc-qr {
   line-height: 0;
-  padding: 2cqw;
+  padding: 1.6cqw;
   border-radius: 2.4cqw;
   background: #fff;
 }
 .bc-qr canvas {
-  inline-size: 27cqw;
+  inline-size: 23cqw;
   block-size: auto;
   image-rendering: pixelated;
 }
-
-/* tile — Persian tilework */
-.bc-tile .bc-face {
-  background: #f7f5ef;
-  color: #123b37;
+.bc-qrcap {
+  direction: ltr;
+  max-inline-size: 27cqw;
+  font-size: 2.2cqw;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.85;
 }
-.bc-tile .bc-band {
+
+/* =====================================================================
+   1. tile — کاشی: Persian girih tilework, turquoise and saffron gold
+   ===================================================================== */
+.bc-tile {
+  --tile-girih: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%23e8c468' stroke-width='1.1'%3E%3Crect x='10' y='10' width='20' height='20'/%3E%3Crect x='10' y='10' width='20' height='20' transform='rotate(45 20 20)'/%3E%3Ccircle cx='20' cy='20' r='4.2'/%3E%3Cpath d='M0 0l5.9 5.9M40 0l-5.9 5.9M0 40l5.9-5.9M40 40l-5.9-5.9M20 0v5.9M20 40v-5.9M0 20h5.9M40 20h-5.9'/%3E%3C/g%3E%3Ccircle cx='20' cy='20' r='1.6' fill='%23e8c468'/%3E%3C/svg%3E");
+}
+.bc-tile .bc-front {
+  padding-inline-end: 0;
   background:
-    radial-gradient(circle at 50% 50%, #f2c14e 0 9%, transparent 10%) 0 0 / 9cqw
-      9cqw,
-    repeating-conic-gradient(from 45deg, #0d6b60 0 25%, #13887a 0 50%) 0 0 /
-      9cqw 9cqw;
+    radial-gradient(rgb(11 92 85 / 0.05) 0.25cqw, transparent 0.3cqw) 0 0 /
+      2.4cqw 2.4cqw,
+    linear-gradient(160deg, #fbf7ec, #f1e8d3);
+  color: #0d3f3a;
+}
+.bc-tile .bc-front .bc-art {
+  inset-inline-start: auto;
+  inline-size: 31cqw;
+  background:
+    var(--tile-girih) 0 0 / 10.4cqw 10.4cqw,
+    linear-gradient(180deg, #0f6e64, #0a4f49);
+  border-inline-start: 0.9cqw solid #d9ae4c;
+  box-shadow: inset 0.5cqw 0 0 rgb(255 255 255 / 0.12);
+}
+.bc-tile .bc-front .bc-frame {
+  inset: 3cqw;
+  inset-inline-end: 34cqw;
+  border-block: 0.2cqw solid rgb(217 174 76 / 0.55);
+}
+.bc-tile .bc-id {
+  inline-size: 20cqw;
+  block-size: 20cqw;
+  margin-inline-end: 21cqw;
+  background: #0b5c55;
+  border: 0.9cqw solid #f6efdc;
+  box-shadow:
+    0 0 0 0.7cqw #d9ae4c,
+    0 2cqw 4cqw rgb(0 0 0 / 0.3);
 }
 .bc-tile .bc-mono {
-  background: #0d6b60;
-  color: #f2c14e;
+  color: #f2c862;
+  font-size: 9cqw;
+}
+.bc-tile .bc-name {
+  font-size: 6.8cqw;
+}
+.bc-tile .bc-rule {
+  background: linear-gradient(90deg, #d9ae4c, #f2d488);
+}
+.bc-tile .bc-title {
+  color: #0b5c55;
+}
+.bc-tile .bc-url {
+  color: #a77a1e;
+}
+.bc-tile .bc-hint {
+  margin-inline-end: 6cqw;
 }
 .bc-tile .bc-back {
-  background: #0d6b60;
-  color: #f7f5ef;
+  background: linear-gradient(200deg, #0f6e64, #093f3a);
+  color: #f7efdb;
+}
+.bc-tile .bc-back .bc-art {
+  background: var(--tile-girih) 0 0 / 10.4cqw 10.4cqw;
+  opacity: 0.14;
+}
+.bc-tile .bc-back .bc-frame {
+  inset: 2.6cqw;
+  border: 0.25cqw solid rgb(232 196 104 / 0.75);
+  border-radius: 2cqw;
+  box-shadow:
+    inset 0 0 0 0.6cqw transparent,
+    inset 0 0 0 0.8cqw rgb(232 196 104 / 0.35);
+}
+.bc-tile .bc-bname {
+  color: #f2c862;
+}
+.bc-tile .bc-ic {
+  background: #e8c468;
+  color: #0b5c55;
+}
+.bc-tile .bc-qr {
+  background: #fbf7ec;
+  box-shadow: 0 0 0 0.6cqw #d9ae4c;
 }
 
-/* night — dark with gold */
-.bc-night .bc-face {
-  background: radial-gradient(120% 140% at 100% 0%, #22304a, #0f1726 60%);
-  color: #e9dcc0;
+/* =====================================================================
+   2. night — شب: midnight navy, art-deco sunburst and gold foil
+   ===================================================================== */
+.bc-night {
+  --gold: linear-gradient(100deg, #a9813a, #f6dc9a 45%, #c79a48 70%, #f1d38a);
 }
-.bc-night .bc-band {
-  inline-size: 1.2cqw;
-  margin-inline-start: 7cqw;
-  background: linear-gradient(180deg, #c9a45a, #8a6a2c);
+.bc-night .bc-face {
+  background: radial-gradient(130% 120% at 50% 0%, #1d2a46, #0c1424 62%);
+  color: #ecdfc2;
+}
+.bc-night .bc-art {
+  background: repeating-conic-gradient(
+    from -90deg at 50% 118%,
+    rgb(214 176 98 / 0.12) 0 0.6deg,
+    transparent 0.6deg 7.5deg
+  );
+  mask: linear-gradient(0deg, #000 10%, transparent 75%);
+}
+.bc-night .bc-frame {
+  inset: 3.2cqw;
+  border: 0.22cqw solid rgb(214 176 98 / 0.65);
+  border-radius: 0.6cqw;
+}
+.bc-night .bc-frame::before {
+  content: '';
+  position: absolute;
+  inset: -1.3cqw;
+  --c: linear-gradient(#d6b062, #d6b062);
+  background:
+    var(--c) 0 0 / 7cqw 0.5cqw,
+    var(--c) 0 0 / 0.5cqw 7cqw,
+    var(--c) 100% 0 / 7cqw 0.5cqw,
+    var(--c) 100% 0 / 0.5cqw 7cqw,
+    var(--c) 0 100% / 7cqw 0.5cqw,
+    var(--c) 0 100% / 0.5cqw 7cqw,
+    var(--c) 100% 100% / 7cqw 0.5cqw,
+    var(--c) 100% 100% / 0.5cqw 7cqw;
+  background-repeat: no-repeat;
+}
+.bc-night .bc-frame::after {
+  content: '';
+  position: absolute;
+  inset: 1cqw;
+  border: 0.15cqw solid rgb(214 176 98 / 0.3);
+  border-radius: 0.4cqw;
+}
+.bc-night .bc-front {
+  grid-template-areas: 'id' 'names' 'foot';
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
+  text-align: center;
+  padding: 7.5cqw 9cqw 6.5cqw;
+}
+.bc-night .bc-id {
+  inline-size: 13cqw;
+  block-size: 13cqw;
+  border: 0.5cqw solid #0c1424;
+  box-shadow: 0 0 0 0.45cqw #d6b062;
+  background: #111c31;
 }
 .bc-night .bc-mono {
-  border: 0.4cqw solid #c9a45a;
-  color: #c9a45a;
-}
-.bc-night .bc-name {
-  background: linear-gradient(90deg, #f3dfab, #c9a45a);
+  font-size: 6.4cqw;
+  background: var(--gold);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
-
-/* minimal — white, ink and one red accent */
-.bc-minimal .bc-face {
-  background: #fff;
-  color: #111;
+.bc-night .bc-names {
+  align-items: center;
+  align-self: center;
 }
-.bc-minimal .bc-band {
-  inline-size: 0;
+.bc-night .bc-name {
+  font-size: 7cqw;
+  background: var(--gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
-.bc-minimal .bc-body {
+.bc-night .bc-rule {
+  inline-size: 26cqw;
+  block-size: 1.2cqw;
+  margin-block: 1.4cqw 1.2cqw;
+  background:
+    linear-gradient(45deg, transparent 30%, #d6b062 30% 70%, transparent 70%)
+      center / 1.2cqw 1.2cqw no-repeat,
+    linear-gradient(
+        90deg,
+        transparent,
+        #d6b062 20% 44%,
+        transparent 44% 56%,
+        #d6b062 56% 80%,
+        transparent
+      )
+      center / 100% 0.2cqw no-repeat;
+}
+.bc-night .bc-title {
+  color: #c9bea6;
+  font-size: 3.3cqw;
+}
+.bc-night .bc-foot {
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6cqw;
+}
+.bc-night .bc-url {
+  color: #d6b062;
+  letter-spacing: 0.14em;
+  font-size: 2.6cqw;
+}
+.bc-night .bc-back .bc-art {
+  background:
+    radial-gradient(
+      circle at 100% 100%,
+      rgb(214 176 98 / 0.16),
+      transparent 40%
+    ),
+    repeating-conic-gradient(
+      from 180deg at 100% 100%,
+      rgb(214 176 98 / 0.1) 0 0.6deg,
+      transparent 0.6deg 6deg
+    );
+  mask: none;
+}
+.bc-night .bc-back {
   padding: 8cqw;
 }
-.bc-minimal .bc-mono {
-  background: #111;
-  color: #fff;
-  border-radius: 2cqw;
+.bc-night .bc-bname {
+  background: var(--gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
-.bc-minimal .bc-url {
-  color: #e2462f;
+.bc-night .bc-bhead {
+  border-color: rgb(214 176 98 / 0.4);
 }
-.bc-minimal .bc-back {
-  background: #111;
-  color: #fff;
+.bc-night .bc-ic {
+  border: 0.22cqw solid #d6b062;
+  color: #d6b062;
+}
+.bc-night .bc-qr {
+  box-shadow: 0 0 0 0.45cqw #d6b062;
+}
+.bc-night .bc-qrcap {
+  color: #d6b062;
 }
 
-/* kahi — kraft paper */
+/* =====================================================================
+   3. minimal — مینیمال: Swiss grid, black ink and one vermilion accent
+   ===================================================================== */
+.bc-minimal .bc-face {
+  background: #fdfdfb;
+  color: #121212;
+}
+.bc-minimal .bc-front .bc-art {
+  background: radial-gradient(
+    circle at 0 100%,
+    #e5432a 0 15cqw,
+    transparent calc(15cqw + 0.2px)
+  );
+}
+.bc-minimal .bc-front .bc-frame {
+  inset: auto;
+  inset-inline-start: 8cqw;
+  inset-inline-end: 22cqw;
+  inset-block-end: 15cqw;
+  block-size: 0;
+  border-block-start: 0.2cqw solid #121212;
+}
+.bc-minimal .bc-front {
+  align-items: start;
+  padding: 8cqw;
+}
+.bc-minimal .bc-id {
+  inline-size: 14cqw;
+  block-size: 14cqw;
+  border-radius: 1.4cqw;
+  background: #121212;
+}
+.bc-minimal .bc-id img {
+  filter: grayscale(1) contrast(1.1);
+}
+.bc-minimal .bc-mono {
+  color: #fdfdfb;
+  font-size: 7cqw;
+}
+.bc-minimal .bc-name {
+  font-size: 8.4cqw;
+  font-weight: 900;
+  line-height: 1.12;
+}
+.bc-minimal .bc-rule {
+  inline-size: 4.5cqw;
+  block-size: 1.2cqw;
+  border-radius: 0;
+  background: #e5432a;
+  margin-block: 2.6cqw 2cqw;
+}
+.bc-minimal .bc-title {
+  color: #5b5b5b;
+  opacity: 1;
+}
+.bc-minimal .bc-foot {
+  justify-content: flex-start;
+  gap: 4cqw;
+}
+.bc-minimal .bc-url {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 2.9cqw;
+}
+.bc-minimal .bc-hint {
+  color: #5b5b5b;
+}
+.bc-minimal .bc-back {
+  background: #121212;
+  color: #f6f6f3;
+  padding: 7.5cqw;
+}
+.bc-minimal .bc-back .bc-art {
+  background: linear-gradient(#e5432a, #e5432a) 0 0 / 100% 1.4cqw no-repeat;
+}
+.bc-minimal .bc-bhead {
+  border-color: rgb(255 255 255 / 0.2);
+}
+.bc-minimal .bc-ic {
+  background: #e5432a;
+  color: #fff;
+  border-radius: 0.8cqw;
+}
+.bc-minimal .bc-glyph {
+  border-radius: 0.8cqw;
+}
+.bc-minimal .bc-rt[dir='ltr'] {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-weight: 500;
+}
+.bc-minimal .bc-qr {
+  border-radius: 0.6cqw;
+}
+
+/* =====================================================================
+   4. kahi — کاهی: kraft paper, letterpress ink and a wax-red seal
+   ===================================================================== */
+.bc-kahi {
+  --kraft: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9 .35' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 .32 0 0 0 0 .22 0 0 0 0 .1 0 0 0 .5 -.12'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+}
 .bc-kahi .bc-face {
   background:
-    radial-gradient(rgb(120 90 40 / 0.1) 1px, transparent 1.4px) 0 0 / 6px 6px,
-    linear-gradient(135deg, #d9c7a3, #cbb488);
-  color: #3b2a14;
+    var(--kraft),
+    radial-gradient(120% 100% at 30% 20%, #dcc79e, #c9ad7c 70%, #bd9f6c);
+  color: #3a2814;
 }
-.bc-kahi .bc-band {
-  inline-size: 0;
+.bc-kahi .bc-frame {
+  inset: 3.4cqw;
+  border: 0.9cqw double rgb(58 40 20 / 0.55);
+  border-radius: 1cqw;
 }
-.bc-kahi .bc-body {
-  align-items: center;
+.bc-kahi .bc-front {
+  grid-template-areas: 'id' 'names' 'foot';
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr auto;
+  justify-items: center;
   text-align: center;
-  margin: 4.5cqw;
-  padding: 4cqw;
-  border: 0.35cqw solid rgb(59 42 20 / 0.45);
-  border-radius: 2cqw;
+  padding: 7.5cqw 9cqw 6.8cqw;
 }
-.bc-kahi .bc-row {
-  inline-size: 100%;
+.bc-kahi .bc-id {
+  inline-size: 14cqw;
+  block-size: 14cqw;
+  background: radial-gradient(circle at 35% 30%, #b24a30, #7e2614 70%);
+  box-shadow:
+    inset 0 0 0 0.9cqw #7e2614,
+    inset 0 0 0 1.15cqw rgb(244 220 190 / 0.6),
+    0 0.4cqw 0.8cqw rgb(60 20 10 / 0.35);
+  transform: rotate(-8deg);
+}
+.bc-kahi .bc-id img {
+  filter: sepia(0.55) contrast(1.05);
+  transform: rotate(8deg) scale(1.1);
 }
 .bc-kahi .bc-mono {
-  background: #3b2a14;
-  color: #e7d6b3;
+  color: #f4dcbe;
+  font-size: 7cqw;
+}
+.bc-kahi .bc-names {
+  align-items: center;
+  align-self: center;
+}
+.bc-kahi .bc-name {
+  font-size: 7cqw;
+  text-shadow: 0 0.12cqw 0 rgb(255 240 210 / 0.45);
+}
+.bc-kahi .bc-rule {
+  inline-size: 30cqw;
+  block-size: 0.5cqw;
+  margin-block: 1.6cqw 1.3cqw;
+  border-radius: 0;
+  background: radial-gradient(circle, #3a2814 0.18cqw, transparent 0.22cqw) 0
+    50% / 1.4cqw 0.5cqw repeat-x;
+  opacity: 0.7;
+}
+.bc-kahi .bc-title {
+  font-size: 3.4cqw;
+}
+.bc-kahi .bc-foot {
+  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4cqw;
+}
+.bc-kahi .bc-url {
+  color: #7e2614;
+  font-size: 2.8cqw;
+}
+.bc-kahi .bc-back {
+  padding: 8cqw;
+}
+.bc-kahi .bc-bhead {
+  border-block-end-style: dashed;
+}
+.bc-kahi .bc-ic {
+  background: #3a2814;
+  color: #e3cfa6;
+}
+.bc-kahi .bc-qr {
+  background: #f6ead0;
+  box-shadow: 0 0 0 0.3cqw rgb(58 40 20 / 0.5);
+}
+
+/* =====================================================================
+   5. marble — مرمر: white Carrara marble, emerald and gold leaf
+   ===================================================================== */
+.bc-marble {
+  --veins: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='390'%3E%3Cfilter id='m' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='turbulence' baseFrequency='.0045 .013' numOctaves='5' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .44 0 0 0 0 .47 1 0 0 0 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 .6 .28 .06 0 0 0 0 0 0 0 0 0 0 0 0'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
+  --veins-gold: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='390'%3E%3Cfilter id='m' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='turbulence' baseFrequency='.0045 .013' numOctaves='5' seed='4'/%3E%3CfeColorMatrix values='0 0 0 0 .85 0 0 0 0 .68 0 0 0 0 .33 1 0 0 0 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 .5 .2 .04 0 0 0 0 0 0 0 0 0 0 0 0'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23m)'/%3E%3C/svg%3E");
+  --leaf: linear-gradient(110deg, #9c7331, #e9c97e 40%, #b48a3e 62%, #f3dc9c);
+}
+.bc-marble .bc-front {
+  background:
+    var(--veins) center / cover,
+    radial-gradient(90% 120% at 20% 10%, #ffffff, #f1efea 60%, #e4e1da);
+  color: #1d2b27;
+}
+.bc-marble .bc-front .bc-art {
+  background: var(--leaf);
+  inset-block-start: auto;
+  block-size: 1.6cqw;
+}
+.bc-marble .bc-frame {
+  inset: 3.2cqw;
+  border: 0.2cqw solid rgb(199 162 84 / 0.7);
+  border-radius: 1.8cqw;
+}
+.bc-marble .bc-id {
+  inline-size: 18cqw;
+  block-size: 18cqw;
+  background: #0f3d33;
+  border: 0.7cqw solid #fff;
+  box-shadow:
+    0 0 0 0.45cqw #c7a254,
+    0 1.6cqw 3.4cqw rgb(15 61 51 / 0.28);
+}
+.bc-marble .bc-mono {
+  font-size: 8.4cqw;
+  background: var(--leaf);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.bc-marble .bc-name {
+  color: #0f3d33;
+  font-size: 7.4cqw;
+}
+.bc-marble .bc-rule {
+  inline-size: 14cqw;
+  block-size: 0.45cqw;
+  background: var(--leaf);
+}
+.bc-marble .bc-title {
+  color: #4b5a55;
+  opacity: 1;
+}
+.bc-marble .bc-url {
+  background: var(--leaf);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  font-size: 3.1cqw;
+}
+.bc-marble .bc-hint {
+  color: #4b5a55;
+}
+.bc-marble .bc-back {
+  background:
+    var(--veins-gold) center / cover,
+    radial-gradient(120% 140% at 80% 0%, #17574a, #0d352c 55%, #082520);
+  color: #eef1ea;
+}
+.bc-marble .bc-back .bc-art {
+  background: var(--leaf);
+  inset-inline-start: auto;
+  inline-size: 1.4cqw;
+}
+.bc-marble .bc-bname {
+  background: var(--leaf);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.bc-marble .bc-bhead {
+  border-color: rgb(199 162 84 / 0.45);
+}
+.bc-marble .bc-ic {
+  background: var(--leaf);
+  color: #0d352c;
+}
+.bc-marble .bc-qr {
+  box-shadow: 0 0 0 0.45cqw #c7a254;
+}
+.bc-marble .bc-qrcap {
+  color: #e9c97e;
+}
+
+/* =====================================================================
+   6. aurora — شفق: northern-lights mesh gradient and frosted glass
+   ===================================================================== */
+.bc-aurora .bc-face {
+  background:
+    radial-gradient(
+      60% 80% at 12% 10%,
+      rgb(124 58 237 / 0.95),
+      transparent 70%
+    ),
+    radial-gradient(55% 70% at 95% 20%, rgb(6 182 212 / 0.85), transparent 70%),
+    radial-gradient(
+      70% 70% at 70% 110%,
+      rgb(236 72 153 / 0.85),
+      transparent 70%
+    ),
+    radial-gradient(
+      50% 60% at 20% 100%,
+      rgb(59 130 246 / 0.7),
+      transparent 70%
+    ),
+    #120b2e;
+  color: #fff;
+}
+.bc-aurora .bc-art {
+  background:
+    radial-gradient(rgb(255 255 255 / 0.07) 0.15cqw, transparent 0.2cqw) 0 0 /
+      1.6cqw 1.6cqw,
+    linear-gradient(
+      115deg,
+      transparent 40%,
+      rgb(255 255 255 / 0.12) 50%,
+      transparent 60%
+    );
+}
+.bc-aurora .bc-front .bc-frame {
+  inset: 4cqw;
+  border-radius: 2.6cqw;
+  background: rgb(255 255 255 / 0.1);
+  border: 0.22cqw solid rgb(255 255 255 / 0.28);
+  box-shadow: inset 0 0.2cqw 0 rgb(255 255 255 / 0.25);
+}
+.bc-aurora .bc-front {
+  grid-template-areas:
+    'id names'
+    'foot foot';
+  grid-template-columns: auto 1fr;
+  padding: 8.5cqw;
+  column-gap: 4.5cqw;
+}
+.bc-aurora .bc-id {
+  inline-size: 17cqw;
+  block-size: 17cqw;
+  padding: 0.7cqw;
+  background: conic-gradient(
+    from 210deg,
+    #22d3ee,
+    #a78bfa,
+    #f472b6,
+    #fbbf24,
+    #22d3ee
+  );
+}
+.bc-aurora .bc-id img,
+.bc-aurora .bc-mono {
+  border-radius: 50%;
+}
+.bc-aurora .bc-mono {
+  display: grid;
+  place-items: center;
+  inline-size: 100%;
+  block-size: 100%;
+  background: #1b1240;
+  font-size: 7.4cqw;
+}
+.bc-aurora .bc-name {
+  font-size: 7.2cqw;
+  text-shadow: 0 0.4cqw 2cqw rgb(20 0 60 / 0.4);
+}
+.bc-aurora .bc-rule {
+  inline-size: 12cqw;
+  background: linear-gradient(90deg, #22d3ee, #f472b6);
+}
+.bc-aurora .bc-foot {
+  justify-content: space-between;
+  align-items: center;
+}
+.bc-aurora .bc-url {
+  padding: 0.9cqw 2.4cqw;
+  border-radius: 10cqw;
+  background: rgb(255 255 255 / 0.18);
+  font-size: 2.7cqw;
+}
+.bc-aurora .bc-hint {
+  opacity: 0.75;
+}
+.bc-aurora .bc-back {
+  background:
+    radial-gradient(
+      60% 80% at 90% 10%,
+      rgb(124 58 237 / 0.95),
+      transparent 70%
+    ),
+    radial-gradient(55% 70% at 5% 30%, rgb(6 182 212 / 0.8), transparent 70%),
+    radial-gradient(
+      70% 70% at 30% 110%,
+      rgb(236 72 153 / 0.85),
+      transparent 70%
+    ),
+    #120b2e;
+}
+.bc-aurora .bc-bhead {
+  border-color: rgb(255 255 255 / 0.25);
+}
+.bc-aurora .bc-rows {
+  padding: 2.4cqw 3cqw;
+  border-radius: 2.4cqw;
+  background: rgb(255 255 255 / 0.12);
+  border: 0.22cqw solid rgb(255 255 255 / 0.25);
+}
+.bc-aurora .bc-ic {
+  background: rgb(255 255 255 / 0.92);
+  color: #5b21b6;
+}
+.bc-aurora .bc-qr {
+  border-radius: 2.6cqw;
+  box-shadow: 0 1cqw 3cqw rgb(20 0 60 / 0.45);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .bc-inner {
     transition: none;
+  }
+  .bc:not(:disabled):hover .bc-inner {
+    transform: none;
+  }
+  .bc[data-flipped='true']:not(:disabled):hover .bc-inner {
+    transform: rotateY(180deg);
   }
 }

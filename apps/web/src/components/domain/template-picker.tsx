@@ -1,64 +1,149 @@
 'use client';
 
-import { CARD_TEMPLATES, type CardTemplate } from '@vaqt/shared';
+import { Check } from 'lucide-react';
+import {
+  CARD_FIELDS,
+  CARD_TEMPLATES,
+  type CardField,
+  type CardTemplate,
+} from '@vaqt/shared';
 
-import { BusinessCard } from '@/components/domain/business-card';
+import { Checkbox } from '@vaqt/ui/components/ui/checkbox';
+
+import {
+  BusinessCard,
+  type BusinessCardProps,
+} from '@/components/domain/business-card';
 import { fa } from '@/messages/fa';
 
+type Sample = Omit<
+  BusinessCardProps,
+  'template' | 'initialFlipped' | 'interactive' | 'fields'
+>;
+
+/**
+ * The card designer: a live, flippable preview of the chosen design with the
+ * owner's real details, the six designs to pick from, and the switches for
+ * what is printed on the card.
+ */
 export function TemplatePicker({
   value,
   onChange,
-  displayName,
-  headline,
+  sample,
+  fields,
+  onFieldsChange,
 }: {
   value: CardTemplate;
   onChange: (t: CardTemplate) => void;
-  displayName: string;
-  headline: string;
+  sample: Sample;
+  fields?: CardField[];
+  onFieldsChange?: (f: CardField[]) => void;
 }) {
+  const t = fa.editor;
+  const names = fa.cardEditPage.templates;
+  const notes = fa.cardEditPage.templateNotes;
+  const displayName = sample.displayName || t.displayName;
+
   return (
-    <div role="radiogroup" className="grid grid-cols-2 gap-3">
-      {CARD_TEMPLATES.map((tpl) => {
-        const active = value === tpl;
-        return (
-          <div
-            key={tpl}
-            role="radio"
-            aria-checked={active}
-            tabIndex={0}
-            onClick={() => {
-              onChange(tpl);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-2">
+        <div className="mx-auto w-full max-w-sm">
+          <BusinessCard
+            key={value}
+            template={value}
+            {...sample}
+            displayName={displayName}
+            fields={fields}
+          />
+        </div>
+        <p className="text-center text-xs text-muted-foreground">
+          {t.cardPreviewHelp}
+        </p>
+      </div>
+
+      <div
+        role="radiogroup"
+        aria-label={t.cardStyle}
+        className="grid grid-cols-2 gap-3 sm:grid-cols-3"
+      >
+        {CARD_TEMPLATES.map((tpl) => {
+          const active = value === tpl;
+          return (
+            <div
+              key={tpl}
+              role="radio"
+              aria-checked={active}
+              aria-label={names[tpl]}
+              tabIndex={0}
+              onClick={() => {
                 onChange(tpl);
-              }
-            }}
-            className={`cursor-pointer rounded-2xl border-2 p-2 transition-colors ${
-              active
-                ? 'border-primary bg-primary/5'
-                : 'border-transparent hover:border-border'
-            }`}
-          >
-            <div className="pointer-events-none">
-              <BusinessCard
-                template={tpl}
-                displayName={displayName || fa.editor.displayName}
-                headline={headline || null}
-                displayUrl={null}
-                qrValue={null}
-                phone={null}
-                city={null}
-                interactive={false}
-              />
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onChange(tpl);
+                }
+              }}
+              className={`relative cursor-pointer rounded-2xl border-2 p-2 transition-colors ${
+                active
+                  ? 'border-primary bg-primary/5'
+                  : 'border-transparent hover:border-border'
+              }`}
+            >
+              <div className="pointer-events-none">
+                <BusinessCard
+                  template={tpl}
+                  {...sample}
+                  displayName={displayName}
+                  qrValue={null}
+                  fields={fields}
+                  interactive={false}
+                />
+              </div>
+              <p className="mt-2 text-center text-sm font-semibold">
+                {names[tpl]}
+              </p>
+              <p className="text-center text-[11px] leading-4 text-muted-foreground">
+                {notes[tpl]}
+              </p>
+              {active ? (
+                <span className="absolute -top-2 -end-2 flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow">
+                  <Check className="size-4" aria-hidden="true" />
+                </span>
+              ) : null}
             </div>
-            <p className="mt-1.5 text-center text-xs">
-              {fa.cardEditPage.templates[tpl]}
-            </p>
+          );
+        })}
+      </div>
+
+      {fields && onFieldsChange ? (
+        <section className="flex flex-col gap-2">
+          <h3 className="font-semibold">{t.cardFields}</h3>
+          <p className="text-xs text-muted-foreground">{t.cardFieldsHelp}</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {CARD_FIELDS.map((f) => (
+              <label
+                key={f}
+                className="flex items-center gap-3 rounded-xl bg-muted/60 p-3 text-sm"
+              >
+                <Checkbox
+                  checked={fields.includes(f)}
+                  onCheckedChange={(v) => {
+                    onFieldsChange(
+                      v === true
+                        ? CARD_FIELDS.filter(
+                            (x) => x === f || fields.includes(x),
+                          )
+                        : fields.filter((x) => x !== f),
+                    );
+                  }}
+                />
+                {t.cardFieldLabels[f]}
+              </label>
+            ))}
           </div>
-        );
-      })}
+        </section>
+      ) : null}
     </div>
   );
 }

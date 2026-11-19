@@ -16,6 +16,7 @@ import { TemplatePicker } from '@/components/domain/template-picker';
 import { CardPreview } from '@/components/domain/card-preview';
 import { useOrigin } from '@/lib/use-origin';
 import type { useCardDraft } from '@/lib/use-card-draft';
+import { cardSample } from '@/lib/card-sample';
 import { fa } from '@/messages/fa';
 
 const t = fa.wizard;
@@ -257,8 +258,11 @@ export function CardWizard({
           {step === 'look' ? (
             <TemplatePicker
               value={draft.template}
-              displayName={draft.displayName}
-              headline={draft.headline}
+              sample={cardSample(draft, origin)}
+              fields={draft.cardFields}
+              onFieldsChange={(cardFields) => {
+                patch({ cardFields });
+              }}
               onChange={(template) => {
                 patch({ template });
               }}

@@ -147,6 +147,41 @@ describe('CardsService (real Postgres)', () => {
       expect(cleared.category).toBeNull();
     });
 
+    it('accepts the new marble and aurora templates', async () => {
+      const user = await makeUser({ username: newUsername() });
+      expect(
+        (await service.update(user.id, { template: 'marble' })).template,
+      ).toBe('marble');
+      expect(
+        (await service.update(user.id, { template: 'aurora' })).template,
+      ).toBe('aurora');
+    });
+
+    it('shows every card field by default and stores the owner choice', async () => {
+      const username = newUsername();
+      const user = await makeUser({ username });
+      expect((await service.getMine(user.id)).cardFields).toEqual([
+        'avatar',
+        'phone',
+        'address',
+        'website',
+        'messengers',
+      ]);
+      const mine = await service.update(user.id, {
+        cardFields: ['phone', 'messengers'],
+      });
+      expect(mine.cardFields).toEqual(['phone', 'messengers']);
+      expect((await service.getPublic(username)).cardFields).toEqual([
+        'phone',
+        'messengers',
+      ]);
+      // Other updates leave the choice alone.
+      const after = await service.update(user.id, { template: 'night' });
+      expect(after.cardFields).toEqual(['phone', 'messengers']);
+      const none = await service.update(user.id, { cardFields: [] });
+      expect(none.cardFields).toEqual([]);
+    });
+
     it('defaults a fresh user to the tile template with the phone hidden', async () => {
       const user = await makeUser();
       const mine = await service.getMine(user.id);

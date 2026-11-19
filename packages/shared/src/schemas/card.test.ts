@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CARD_FIELDS,
+  visibleCardFields,
   buildLinkHref,
   normalizeLinkValue,
   setUsernameSchema,
@@ -69,6 +71,25 @@ describe('buildLinkHref', () => {
     );
     expect(buildLinkHref('website', 'https://alinikpour.ir/')).toBe(
       'https://alinikpour.ir/',
+    );
+  });
+});
+
+describe('card fields', () => {
+  it('turns the stored hidden list into the visible fields', () => {
+    expect(visibleCardFields([])).toEqual([...CARD_FIELDS]);
+    expect(visibleCardFields(['avatar', 'phone', 'bogus'])).toEqual([
+      'address',
+      'website',
+      'messengers',
+    ]);
+  });
+  it('dedupes and validates cardFields on update', () => {
+    expect(
+      updateCardSchema.parse({ cardFields: ['phone', 'phone'] }).cardFields,
+    ).toEqual(['phone']);
+    expect(updateCardSchema.safeParse({ cardFields: ['email'] }).success).toBe(
+      false,
     );
   });
 });

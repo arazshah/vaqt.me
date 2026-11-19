@@ -77,9 +77,37 @@ export type SetUsernameInput = z.infer<typeof setUsernameSchema>;
 // Templates
 // ---------------------------------------------------------------------------
 
-export const CARD_TEMPLATES = ['tile', 'night', 'minimal', 'kahi'] as const;
+export const CARD_TEMPLATES = [
+  'tile',
+  'night',
+  'minimal',
+  'kahi',
+  'marble',
+  'aurora',
+] as const;
 export const CardTemplateSchema = z.enum(CARD_TEMPLATES);
 export type CardTemplate = z.infer<typeof CardTemplateSchema>;
+
+// ---------------------------------------------------------------------------
+// What the owner chooses to print on the business card itself. Stored as the
+// list of HIDDEN fields, so a field added later shows up by default.
+// ---------------------------------------------------------------------------
+
+export const CARD_FIELDS = [
+  'avatar',
+  'phone',
+  'address',
+  'website',
+  'messengers',
+] as const;
+export const CardFieldSchema = z.enum(CARD_FIELDS);
+export type CardField = z.infer<typeof CardFieldSchema>;
+
+/** Stored hidden list (unknown entries dropped) → the visible fields. */
+export function visibleCardFields(hidden: readonly string[]): CardField[] {
+  const h = new Set(hidden);
+  return CARD_FIELDS.filter((f) => !h.has(f));
+}
 
 // ---------------------------------------------------------------------------
 // Professional category — drives the palette, cover motif and booking button
@@ -263,6 +291,12 @@ export const updateCardSchema = z.object({
   template: CardTemplateSchema.optional(),
   category: CardCategorySchema.nullable().optional(),
   showPhone: z.boolean().optional(),
+  // The fields to SHOW on the business card (the rest are hidden).
+  cardFields: z
+    .array(CardFieldSchema)
+    .max(CARD_FIELDS.length)
+    .transform((f) => [...new Set(f)])
+    .optional(),
   links: z
     .array(contactLinkInputSchema)
     .max(LINK_KINDS.length)
@@ -298,6 +332,7 @@ export interface PublicCard {
   address: string | null;
   location: GeoPoint | null;
   links: CardLinkView[];
+  cardFields: CardField[];
   booking: PublicBookingInfo;
 }
 
@@ -315,4 +350,5 @@ export interface MyCard {
   address: string | null;
   location: GeoPoint | null;
   links: CardLinkView[];
+  cardFields: CardField[];
 }

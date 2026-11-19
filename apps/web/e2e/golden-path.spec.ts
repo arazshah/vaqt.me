@@ -92,6 +92,14 @@ test('new user: guided card setup → public card', async ({ browser }) => {
   await page.getByRole('textbox', { name: 'لینکدین' }).fill('e2e-user');
   await page.getByRole('button', { name: 'ادامه' }).click();
 
+  // Pick one of the six designs and keep the website off the printed card.
+  await page.getByRole('radio', { name: 'مرمر' }).click();
+  await expect(page.getByRole('radio', { name: 'مرمر' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await page.getByRole('checkbox', { name: 'وب‌سایت' }).click();
+
   await page.getByRole('button', { name: 'ساخت کارت' }).click();
   await expect(page.getByText('کارتتان آماده است')).toBeVisible();
 
@@ -107,4 +115,8 @@ test('new user: guided card setup → public card', async ({ browser }) => {
   // QR/URL on the page must be the real origin, never a localhost default
   // baked in for the browser bundle.
   await expect(visitor.getByText(`/${username}`).first()).toBeVisible();
+  // The chosen design is the one the visitor sees, with the linkedin handle
+  // printed on its back.
+  await expect(visitor.locator('.bc.bc-marble')).toBeVisible();
+  await expect(visitor.locator('.bc-back')).toContainText('@e2e-user');
 });

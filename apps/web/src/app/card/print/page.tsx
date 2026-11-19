@@ -356,8 +356,12 @@ export default function CardPrintPage() {
                         headline={card.headline}
                         displayUrl={displayUrl}
                         qrValue={url}
-                        phone={null}
+                        phone={card.contactPhone}
                         city={card.city}
+                        address={card.address}
+                        avatarUrl={card.avatarUrl}
+                        links={card.links}
+                        fields={card.cardFields}
                         initialFlipped={flipped}
                         interactive={false}
                       />
