@@ -1,7 +1,6 @@
 import type {
   ConversationStatus,
   OfferStatus,
-  OrderStatus,
   RequestMode,
   RequestStatus,
 } from '@vaqt/shared';
@@ -18,7 +17,6 @@ export const fa = {
       requests: 'درخواست‌ها',
       newRequest: 'درخواست جدید',
       conversations: 'گفتگوها',
-      pricing: 'امکانات ویژه',
       login: 'ورود',
       logout: 'خروج',
     },
@@ -155,24 +153,7 @@ export const fa = {
       editButton: 'ویرایش',
       publishError: 'مشکلی در انتشار درخواست پیش آمد. دوباره تلاش کنید.',
     },
-    aiWizardLink: 'امتحان با کمک هوش مصنوعی',
     manualLink: 'پر کردن دستی فرم',
-  },
-  aiWizardPage: {
-    title: 'ساخت درخواست با کمک هوش مصنوعی',
-    subtitle: 'کارتان را توضیح دهید، جزئیات را با هم جمع می‌کنیم.',
-    intro:
-      'کارتان را به فارسی و با کلمات خودتان توضیح دهید — کمک می‌کنم جزئیات لازم را جمع کنیم.',
-    inputPlaceholder: 'مثلاً: یک برنامه‌نویس برای ساخت یک وب‌سایت می‌خواهم…',
-    sendButton: 'ارسال',
-    sending: 'در حال ارسال…',
-    sendError: 'مشکلی در ارتباط با دستیار پیش آمد. دوباره تلاش کنید.',
-    draftPreviewTitle: 'پیش‌نمایش زنده',
-    draftEmptyField: '—',
-    readyNotice: 'همه‌چیز آماده است! می‌توانید پیش‌نویس را بررسی کنید.',
-    reviewButton: 'بررسی و انتشار',
-    fallbackNotice: 'برای ادامه، فرم زیر را دستی تکمیل کنید.',
-    manualFormButton: 'پرکردن دستی فرم',
   },
   requestDetailPage: {
     backLink: 'بازگشت به فهرست',
@@ -214,14 +195,6 @@ export const fa = {
         description:
           'برای ارسال پیشنهاد به بیوگرافی و حداقل یک مهارت در پروفایل خود نیاز دارید.',
       },
-    },
-    upgrades: {
-      sectionTitle: 'ارتقای این درخواست',
-      loading: 'در حال بارگذاری…',
-      alreadyUrgent: 'این درخواست نشان فوری دارد.',
-      alreadyFeatured: 'این درخواست برجسته شده است.',
-      bumpLastAt: (date: string) => `آخرین نردبان: ${date}`,
-      bumpNeverYet: 'هنوز نردبان نشده است.',
     },
   },
   conversationsPage: {
@@ -270,49 +243,6 @@ export const fa = {
     submitting: 'در حال ثبت…',
     ratingRequiredError: 'لطفاً یک امتیاز بین ۱ تا ۵ ستاره انتخاب کنید.',
     genericError: 'مشکلی در ثبت نظر پیش آمد. دوباره تلاش کنید.',
-  },
-  payment: {
-    buyButton: 'خرید',
-    buying: 'در حال انتقال به درگاه…',
-    buyError: 'مشکلی در شروع پرداخت پیش آمد. دوباره تلاش کنید.',
-  },
-  pricingPage: {
-    title: 'امکانات ویژه',
-    description: 'اشتراک و امکانات تکمیلی برای ارائه‌دهندگان.',
-    loading: 'در حال بارگذاری…',
-    errorTitle: 'مشکلی در دریافت فهرست پیش آمد',
-    errorDescription: 'اتصال به سرور برقرار نشد. کمی بعد دوباره تلاش کنید.',
-    durationHours: (hours: string) => `مدت اعتبار: ${hours} ساعت`,
-  },
-  paymentResultPage: {
-    backToRequests: 'بازگشت به فهرست درخواست‌ها',
-    loading: 'در حال بررسی نتیجه‌ی پرداخت…',
-    success: {
-      title: 'پرداخت با موفقیت انجام شد',
-      description: 'خرید شما ثبت شد و اعمال شد.',
-    },
-    failed: {
-      title: 'پرداخت ناموفق بود',
-      description: 'پرداخت شما تکمیل نشد. می‌توانید دوباره تلاش کنید.',
-    },
-    notFound: {
-      title: 'سفارش پیدا نشد',
-      description: 'اطلاعات این پرداخت در دسترس نیست.',
-    },
-    orderLabels: {
-      product: 'محصول',
-      amount: 'مبلغ',
-      status: 'وضعیت',
-      refId: 'کد پیگیری',
-      paidAt: 'زمان پرداخت',
-    },
-    orderStatus: {
-      PENDING: 'در انتظار پرداخت',
-      PAID: 'پرداخت‌شده',
-      FAILED: 'ناموفق',
-      CANCELED: 'لغوشده',
-      REFUNDED: 'بازگشت‌داده‌شده',
-    } satisfies Record<OrderStatus, string>,
   },
   devUi: {
     title: 'گالری سیستم طراحی',

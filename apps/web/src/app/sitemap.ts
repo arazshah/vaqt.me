@@ -56,7 +56,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: WEB_ORIGIN, changeFrequency: 'daily', priority: 1 },
     { url: `${WEB_ORIGIN}/requests`, changeFrequency: 'hourly', priority: 0.9 },
-    { url: `${WEB_ORIGIN}/pricing`, changeFrequency: 'weekly', priority: 0.5 },
     ...requestIds.map((id): MetadataRoute.Sitemap[number] => ({
       url: `${WEB_ORIGIN}/requests/${id}`,
       changeFrequency: 'daily',

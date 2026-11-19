@@ -22,7 +22,6 @@ import { PriceTag } from '@vaqt/ui/components/price-tag';
 
 import { AppShell } from '@/components/app-shell';
 import { OffersPanel } from '@/components/domain/offers-panel';
-import { RequestUpgrades } from '@/components/domain/request-upgrades';
 import { RequestStatusBadge } from '@/components/domain/request-status-badge';
 import { useAuth } from '@/lib/auth-context';
 import { apiFetch, ApiError } from '@/lib/api-client';
@@ -212,7 +211,6 @@ export default function RequestDetailClient() {
           </div>
 
           <div className="flex flex-col gap-6">
-            <RequestUpgrades detail={detail} />
             <OffersPanel detail={detail} onChanged={() => void load()} />
           </div>
         </div>

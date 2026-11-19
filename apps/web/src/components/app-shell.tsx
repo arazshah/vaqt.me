@@ -29,20 +29,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Link href="/" className={navLinkClass}>
               {fa.appShell.nav.home}
             </Link>
-            <Link href="/requests" className={navLinkClass}>
-              {fa.appShell.nav.requests}
-            </Link>
             {loading ? null : user ? (
               <>
-                <Link href="/requests/new" className={navLinkClass}>
-                  {fa.appShell.nav.newRequest}
-                </Link>
-                <Link href="/conversations" className={navLinkClass}>
-                  {fa.appShell.nav.conversations}
-                </Link>
-                <Link href="/pricing" className={navLinkClass}>
-                  {fa.appShell.nav.pricing}
-                </Link>
                 <span className="hidden text-sm text-muted-foreground sm:inline">
                   {user.displayName}
                 </span>
