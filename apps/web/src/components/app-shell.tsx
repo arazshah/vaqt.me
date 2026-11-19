@@ -6,6 +6,7 @@ import { Button } from '@vaqt/ui/components/ui/button';
 import { Container } from '@vaqt/ui/components/container';
 
 import { useAuth } from '@/lib/auth-context';
+import { Logo } from '@/components/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { fa } from '@/messages/fa';
 
@@ -21,9 +22,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <Container className="flex h-16 items-center justify-between">
           <Link
             href="/"
-            className="text-lg font-bold text-foreground no-underline"
+            className="flex items-center text-foreground no-underline"
+            aria-label={fa.appShell.brand}
           >
-            {fa.appShell.brand}
+            <Logo className="h-8 w-auto" />
           </Link>
           <nav className="flex items-center gap-6">
             <Link href="/" className={navLinkClass}>
