@@ -5,6 +5,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   CARD_TEMPLATES,
+  QR_CHANNELS,
+  qrSource,
+  type QrChannel,
   LINK_KINDS,
   normalizeLinkValue,
   type CardTemplate,
@@ -24,6 +27,7 @@ import { BusinessCard } from '@/components/domain/business-card';
 import { QrCode } from '@/components/domain/qr-code';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
+import { downloadDataUrl, qrPngDataUrl } from '@/lib/qr';
 import { WEB_ORIGIN } from '@/lib/site';
 import { fa } from '@/messages/fa';
 
@@ -51,6 +55,7 @@ export default function CardEditPage() {
   const [template, setTemplate] = useState<CardTemplate>('tile');
   const [showPhone, setShowPhone] = useState(false);
   const [links, setLinks] = useState<LinkDrafts>({});
+  const [channel, setChannel] = useState<QrChannel>('card');
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<Status>(null);
   const [usernameStatus, setUsernameStatus] = useState<Status>(null);
@@ -359,9 +364,37 @@ export default function CardEditPage() {
             <h2 className="font-semibold">{t.shareTitle}</h2>
             {cardUrl ? (
               <>
+                <div className="flex flex-col gap-1">
+                  <b className="text-sm">{t.qrChannelTitle}</b>
+                  <p className="text-xs text-muted-foreground">
+                    {t.qrChannelHelp}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {QR_CHANNELS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        aria-pressed={channel === c}
+                        onClick={() => {
+                          setChannel(c);
+                        }}
+                        className={`rounded-full border px-3 py-0.5 text-xs transition-colors ${
+                          channel === c
+                            ? 'border-primary bg-primary text-primary-foreground'
+                            : 'hover:border-primary'
+                        }`}
+                      >
+                        {t.qrChannels[c]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div className="flex items-center gap-4">
                   <div className="rounded-lg border bg-white p-2 leading-none [&_canvas]:size-28">
-                    <QrCode value={cardUrl} label={displayUrl ?? ''} />
+                    <QrCode
+                      value={`${cardUrl}?src=${qrSource(channel)}`}
+                      label={displayUrl ?? ''}
+                    />
                   </div>
                   <p dir="ltr" className="break-all text-start font-medium">
                     {displayUrl}
@@ -380,6 +413,26 @@ export default function CardEditPage() {
                   </Button>
                   <Button asChild variant="outline">
                     <Link href="/card/booking">{t.bookingSettingsLink}</Link>
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      downloadDataUrl(
+                        qrPngDataUrl(`${cardUrl}?src=${qrSource(channel)}`),
+                        `qr-${username ?? 'card'}-${channel}.png`,
+                      );
+                    }}
+                  >
+                    {t.downloadQr}
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link href="/card/print">{t.printLink}</Link>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link href="/card/stats">{t.statsLink}</Link>
                   </Button>
                 </div>
               </>

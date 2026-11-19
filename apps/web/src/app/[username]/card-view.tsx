@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
 import { CalendarClock, Contact, Phone } from 'lucide-react';
 import { VPN_LINK_KINDS, type LinkKind, type PublicCard } from '@vaqt/shared';
 import { formatNumber } from '@vaqt/shared';
@@ -9,7 +10,8 @@ import { Button } from '@vaqt/ui/components/ui/button';
 import { Container } from '@vaqt/ui/components/container';
 
 import { BusinessCard } from '@/components/domain/business-card';
-import { vcardUrl } from '@/lib/card';
+import { WalletActions } from '@/components/domain/wallet-actions';
+import { trackCardEvent, vcardUrl } from '@/lib/card';
 import { fa } from '@/messages/fa';
 
 const KIND_STYLE: Record<LinkKind, { bg: string; mark: string }> = {
@@ -34,11 +36,23 @@ function shortDisplay(kind: LinkKind, value: string): string {
 export function CardView({
   card,
   cardUrl,
+  source,
 }: {
   card: PublicCard;
   cardUrl: string;
+  /** Normalised ?src= the visitor arrived with (e.g. qr-office). */
+  source: string;
 }) {
   const t = fa.cardPage;
+  const viewed = useRef(false);
+
+  useEffect(() => {
+    // Strict Mode runs effects twice in dev; count the visit once.
+    if (viewed.current) return;
+    viewed.current = true;
+    trackCardEvent(card.username, { type: 'view', source });
+  }, [card.username, source]);
+
   const displayUrl = cardUrl.replace(/^https?:\/\//, '');
 
   return (
@@ -57,7 +71,12 @@ export function CardView({
         <div className="flex gap-2 [&>*]:flex-1">
           {card.booking.enabled ? (
             <Button asChild variant="default">
-              <Link href={`/${card.username}/book`}>
+              <Link
+                href={`/${card.username}/book`}
+                onClick={() => {
+                  trackCardEvent(card.username, { type: 'book_click', source });
+                }}
+              >
                 <CalendarClock aria-hidden="true" />
                 {t.bookNow}
               </Link>
@@ -67,7 +86,13 @@ export function CardView({
             asChild
             variant={card.booking.enabled ? 'outline' : 'default'}
           >
-            <a href={vcardUrl(card.username)} download>
+            <a
+              href={vcardUrl(card.username)}
+              download
+              onClick={() => {
+                trackCardEvent(card.username, { type: 'save_contact', source });
+              }}
+            >
               <Contact aria-hidden="true" />
               {t.saveContact}
             </a>
@@ -82,6 +107,8 @@ export function CardView({
           ) : null}
         </div>
 
+        <WalletActions username={card.username} />
+
         {card.links.length > 0 ? (
           <section className="rounded-xl border bg-card p-4 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold">{t.linksTitle}</h2>
@@ -92,6 +119,13 @@ export function CardView({
                   <li key={link.kind}>
                     <a
                       href={link.href}
+                      onClick={() => {
+                        trackCardEvent(card.username, {
+                          type: 'link_click',
+                          linkKind: link.kind,
+                          source,
+                        });
+                      }}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 rounded-lg border bg-background p-2.5 text-foreground no-underline transition-colors hover:border-primary"
