@@ -8,18 +8,12 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { BookingModule } from './booking/booking.module';
 import { CardsModule } from './cards/cards.module';
-import { CategoriesModule } from './categories/categories.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
-import { ConversationsModule } from './conversations/conversations.module';
 import { BullRedisModule } from './common/redis/bull-redis.module';
 import { RedisModule } from './common/redis/redis.module';
 import { MessengerModule } from './messenger/messenger.module';
 import { NotificationsModule } from './notifications/notifications.module';
-import { OffersModule } from './offers/offers.module';
-import { RequestsModule } from './requests/requests.module';
-import { ReviewsModule } from './reviews/reviews.module';
 import { SettingsModule } from './settings/settings.module';
-import { SkillsModule } from './skills/skills.module';
 import { WalletModule } from './wallet/wallet.module';
 import { UsersModule } from './users/users.module';
 
@@ -33,13 +27,7 @@ import { UsersModule } from './users/users.module';
     SettingsModule,
     AuthModule,
     UsersModule,
-    CategoriesModule,
-    SkillsModule,
     AdminModule,
-    RequestsModule,
-    OffersModule,
-    ConversationsModule,
-    ReviewsModule,
     CardsModule,
     BookingModule,
     MessengerModule,

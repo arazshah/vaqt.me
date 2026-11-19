@@ -1,7 +1,6 @@
 import { join } from 'node:path';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
-import { IoAdapter } from '@nestjs/platform-socket.io';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -33,15 +32,9 @@ async function bootstrap() {
     app.set('trust proxy', 1);
   }
 
-  // Explicit, not relying on Nest's default — ConversationsGateway
-  // (conversations.gateway.ts) needs Socket.IO attached to this same HTTP
-  // server so the WS upgrade shares the port the REST API already listens
-  // on, rather than assuming an implicit default that could change.
-  app.useWebSocketAdapter(new IoAdapter(app));
-
   app.use(cookieParser());
 
-  // CSP is off — this is a JSON/WebSocket API with no server-rendered HTML
+  // CSP is off — this is a JSON API with no server-rendered HTML
   // of its own (Swagger UI, the one exception, is dev-only below and ships
   // its own CSP-safe inline assets that a strict default policy would
   // block). crossOriginResourcePolicy is relaxed to cross-origin because

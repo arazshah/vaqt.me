@@ -63,7 +63,6 @@ export class CardsService {
       include: {
         card: true,
         contactLinks: true,
-        skills: { include: { skill: { select: { name: true } } } },
       },
     });
     if (!user || user.status !== 'ACTIVE' || !user.username) {
@@ -79,10 +78,7 @@ export class CardsService {
       template: toTemplate(user.card?.template),
       phone: user.card?.showPhone ? toLocalPhone(user.phone) : null,
       links: toLinkViews(user.contactLinks),
-      skills: user.skills.map((s) => s.skill.name),
       booking: await getPublicBookingInfo(user.id),
-      ratingAvg: user.ratingAvg,
-      ratingCount: user.ratingCount,
     };
   }
 
