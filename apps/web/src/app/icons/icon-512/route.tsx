@@ -1,25 +1,12 @@
 import { ImageResponse } from 'next/og';
+import { BrandIcon } from '@/lib/brand-icon';
 
-// See icons/icon-192/route.tsx for why this is a hand-written route rather
-// than the icon.tsx/apple-icon.tsx conventions.
+// Referenced explicitly from manifest.ts: PWA install prompts expect at least
+// a 192 and a 512 entry, and the special icon.tsx convention only produces
+// one favicon-sized image. Full-bleed so it also works as a maskable icon.
 export function GET() {
-  return new ImageResponse(
-    <div
-      style={{
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#2E2547',
-        color: '#EDE9F7',
-        fontFamily: 'sans-serif',
-        fontSize: 280,
-        fontWeight: 700,
-      }}
-    >
-      V
-    </div>,
-    { width: 512, height: 512 },
-  );
+  return new ImageResponse(<BrandIcon size={512} rounded={false} />, {
+    width: 512,
+    height: 512,
+  });
 }
