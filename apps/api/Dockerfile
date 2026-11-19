@@ -42,6 +42,12 @@ RUN addgroup --system --gid 1001 nodejs \
 
 COPY --from=builder --chown=nestjs:nodejs /app ./
 
+# Uploaded avatars live here; mount a volume on it to keep them across deploys.
+RUN mkdir -p /data/uploads && chown nestjs:nodejs /data/uploads
+ENV LOCAL_STORAGE_DIR=/data/uploads
+
 USER nestjs
 EXPOSE 3001
-CMD ["node", "apps/api/dist/main.js"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3001/api/v1/health >/dev/null || exit 1
+CMD ["sh", "apps/api/docker-entrypoint.sh"]

@@ -3,7 +3,7 @@ import {
   type PublicCard,
   type RecordCardEventInput,
 } from '@vaqt/shared';
-import { BASE_URL } from '@/lib/api-client';
+import { BASE_URL, SERVER_BASE_URL } from '@/lib/api-client';
 
 // GET /cards/:username is @Public() and read-only, so unlike the POST calls
 // elsewhere on the server side it needs no Origin header (origin-check only
@@ -17,7 +17,7 @@ export async function fetchPublicCard(
   if (!USERNAME_REGEX.test(name)) return null;
   try {
     const res = await fetch(
-      `${BASE_URL}/api/v1/cards/${encodeURIComponent(name)}`,
+      `${SERVER_BASE_URL}/api/v1/cards/${encodeURIComponent(name)}`,
       { next: { revalidate: 60 } },
     );
     if (!res.ok) return null;

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { BASE_URL } from '@/lib/api-client';
+import { SERVER_BASE_URL } from '@/lib/api-client';
 import { WEB_ORIGIN } from '@/lib/site';
 
 const PAGE_SIZE = 50;
@@ -27,7 +27,7 @@ async function fetchAllPublishedRequestIds(): Promise<string[]> {
   for (let page = 0; page < MAX_PAGES; page += 1) {
     let res: Response;
     try {
-      res = await fetch(`${BASE_URL}/api/v1/requests/list`, {
+      res = await fetch(`${SERVER_BASE_URL}/api/v1/requests/list`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Origin: WEB_ORIGIN },
         body: JSON.stringify({ limit: PAGE_SIZE, cursor }),

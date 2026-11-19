@@ -1,5 +1,17 @@
+/**
+ * API address as the BROWSER sees it (inlined at build time). An empty string
+ * means "same origin": in production the web container proxies /api and
+ * /uploads to the API (see next.config.ts), so the site needs only one domain.
+ */
 export const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+
+/**
+ * API address for requests made by the Next.js server itself (SSR, metadata,
+ * sitemap). Inside Docker that is the internal service name, which a browser
+ * could never reach, so it must never be put into HTML sent to the client.
+ */
+export const SERVER_BASE_URL = process.env.API_INTERNAL_URL ?? BASE_URL;
 
 export class ApiError extends Error {
   code: string;
