@@ -14,8 +14,14 @@ const t = fa.authForm;
  * Email + password (login / sign-up) by default. The SMS code flow is still
  * here but only offered when the server has it switched on.
  */
-export function AuthForm({ onSuccess }: { onSuccess?: () => void } = {}) {
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+export function AuthForm({
+  onSuccess,
+  initialMode = 'login',
+}: {
+  onSuccess?: () => void;
+  initialMode?: 'login' | 'register';
+} = {}) {
+  const [mode, setMode] = useState<'login' | 'register'>(initialMode);
   const [methods, setMethods] = useState<AuthMethods | null>(null);
   const [useSms, setUseSms] = useState(false);
 
