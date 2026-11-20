@@ -8,7 +8,9 @@ import { fakeConfig } from '../test-support/fake-config';
 import { SettingsService } from '../settings/settings.service';
 import { MemorySettingsStore } from '../settings/settings.store';
 import { BaleLinkService } from './bale-link.service';
+import { BaleBookingFlow } from './bale-booking.flow';
 import { BaleUpdateHandler } from './bale-update.handler';
+import { BookingDraftService } from '../booking/booking-draft.service';
 import { MessengerController } from './messenger.controller';
 import { baleMessagesFa } from './messenger.messages.fa';
 import { MockMessengerAdapter } from './mock-messenger.adapter';
@@ -36,11 +38,18 @@ describe('Bale linking and webhook (real Postgres + Redis)', () => {
     const cfg = config();
     redis = new KvService();
     messenger = new MockMessengerAdapter();
-    links = new BaleLinkService(
+    const settings = new SettingsService(cfg, new MemorySettingsStore());
+    links = new BaleLinkService(redis, settings);
+    const booking = new BookingService();
+    const flow = new BaleBookingFlow(
+      links,
+      booking,
+      new BookingDraftService(redis, settings, booking),
       redis,
-      new SettingsService(cfg, new MemorySettingsStore()),
+      cfg,
+      messenger,
     );
-    handler = new BaleUpdateHandler(links, new BookingService(), messenger);
+    handler = new BaleUpdateHandler(links, booking, flow, messenger);
   });
 
   afterEach(async () => {});

@@ -48,6 +48,14 @@ export class DynamicMessengerAdapter implements MessengerPort {
     await (await this.resolve())?.sendMessage(chatId, text, keyboard);
   }
 
+  async sendContactRequest(
+    chatId: string,
+    text: string,
+    buttonText: string,
+  ): Promise<void> {
+    await (await this.resolve())?.sendContactRequest(chatId, text, buttonText);
+  }
+
   async editMessage(
     chatId: string,
     messageId: number,

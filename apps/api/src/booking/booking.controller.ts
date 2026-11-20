@@ -1,6 +1,8 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req } from '@nestjs/common';
+import type { Request } from 'express';
 import { ZodValidationPipe } from 'nestjs-zod';
 import type {
+  CreateBookingDraftInput,
   BookingIdInput,
   BookingTokenInput,
   CreateBookingInput,
@@ -11,16 +13,21 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { RequireVerifiedPhone } from '../auth/decorators/require-verified-phone.decorator';
 import type { AccessTokenPayload } from '../auth/session/token.service';
 import { Public } from '../common/decorators/public.decorator';
+import { BookingDraftService } from './booking-draft.service';
 import { BookingService } from './booking.service';
 import { BookingIdDto } from './dto/booking-id.dto';
 import { BookingTokenDto } from './dto/booking-token.dto';
+import { CreateBookingDraftDto } from './dto/create-booking-draft.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { DecideBookingDto } from './dto/decide-booking.dto';
 import { UpdateBookingSettingsDto } from './dto/update-booking-settings.dto';
 
 @Controller('booking')
 export class BookingController {
-  constructor(private readonly booking: BookingService) {}
+  constructor(
+    private readonly booking: BookingService,
+    private readonly drafts: BookingDraftService,
+  ) {}
 
   // ---- Provider (logged in) ----
   @Post('me/settings')
@@ -78,6 +85,24 @@ export class BookingController {
   // ---- Public ----
   // Free slots for one service. Static segment first so it can't be read as
   // a :username.
+  // Booking without an account: confirmed by sharing a phone number with the
+  // Bale bot. Static segments first so they can't be read as a :username.
+  @Public()
+  @Post('draft')
+  createDraft(
+    @Body(new ZodValidationPipe(CreateBookingDraftDto))
+    body: CreateBookingDraftInput,
+    @Req() req: Request,
+  ) {
+    return this.drafts.create(body, req.ip ?? 'unknown');
+  }
+
+  @Public()
+  @Get('draft/:token')
+  draftStatus(@Param('token') token: string) {
+    return this.drafts.status(token);
+  }
+
   @Public()
   @Get('by-token/:token')
   getByToken(@Param('token') token: string) {

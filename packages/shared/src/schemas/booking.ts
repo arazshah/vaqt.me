@@ -90,6 +90,12 @@ export const createBookingSchema = z.object({
 });
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 
+// A booking confirmed through the Bale bot instead of a logged-in session:
+// same fields as a normal booking, kept as a short-lived draft until the
+// booker shares their phone number with the bot.
+export const createBookingDraftSchema = createBookingSchema;
+export type CreateBookingDraftInput = z.infer<typeof createBookingDraftSchema>;
+
 export const decideBookingSchema = z.object({
   id: z.string().min(1),
   action: z.enum(['confirm', 'reject']),
@@ -172,4 +178,18 @@ export interface BookingTokenView {
   providerName: string;
   providerUsername: string | null;
   canCancel: boolean;
+}
+
+export interface BookingDraftOfferView {
+  /** Opaque id the page polls with. */
+  token: string;
+  /** Deep link into the Bale bot (https://ble.ir/<bot>?start=bk_<token>). */
+  url: string;
+  expiresInSeconds: number;
+}
+
+export interface BookingDraftStatusView {
+  status: 'waiting' | 'done' | 'expired';
+  /** Present once the booking exists: the no-login tracking token. */
+  cancelToken?: string;
 }

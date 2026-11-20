@@ -5,6 +5,7 @@ export interface MockSentMessage {
   chatId: string;
   text: string;
   keyboard?: InlineKeyboard;
+  contactButton?: string;
 }
 
 /** Records messages in memory so tests and local dev can inspect them. */
@@ -22,6 +23,15 @@ export class MockMessengerAdapter implements MessengerPort {
   ): Promise<void> {
     this.sent.push({ chatId, text, keyboard });
     this.logger.log(`[mock-bale] -> chat ${chatId}: ${text.split('\n')[0]}`);
+    return Promise.resolve();
+  }
+
+  sendContactRequest(
+    chatId: string,
+    text: string,
+    buttonText: string,
+  ): Promise<void> {
+    this.sent.push({ chatId, text, contactButton: buttonText });
     return Promise.resolve();
   }
 

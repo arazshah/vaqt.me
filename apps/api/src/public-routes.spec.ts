@@ -112,6 +112,8 @@ const PUBLIC_ROUTE_ALLOWLIST: { method: string; path: string }[] = [
   { method: 'GET', path: '/cards/:username' },
   { method: 'GET', path: '/cards/:username/vcard' },
   { method: 'POST', path: '/cards/:username/event' },
+  { method: 'POST', path: '/booking/draft' },
+  { method: 'GET', path: '/booking/draft/:token' },
   { method: 'GET', path: '/booking/by-token/:token' },
   { method: 'POST', path: '/booking/cancel-by-token' },
   { method: 'GET', path: '/booking/:username/availability' },

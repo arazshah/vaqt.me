@@ -25,6 +25,22 @@ export const notificationMessagesFa = {
   }) => `🚫 ${p.booker} رزرو «${p.service}» را لغو کرد.\n${p.when}`,
   baleReminder: (p: { booker: string; service: string; when: string }) =>
     `⏰ یادآوری: جلسه‌ی «${p.service}» با ${p.booker} تا یک ساعت دیگر است.\n${p.when}`,
+  bookerConfirmed: (p: {
+    provider: string;
+    service: string;
+    when: string;
+    link: string;
+  }) =>
+    `✅ ${p.provider} رزرو «${p.service}» شما را تأیید کرد.\n${p.when}\nپیگیری: ${p.link}`,
+  bookerRejected: (p: { provider: string; service: string; when: string }) =>
+    `❌ ${p.provider} رزرو «${p.service}» شما را نپذیرفت.\n${p.when}`,
+  bookerCanceledByProvider: (p: {
+    provider: string;
+    service: string;
+    when: string;
+  }) => `🚫 ${p.provider} رزرو «${p.service}» را لغو کرد.\n${p.when}`,
+  bookerReminder: (p: { provider: string; service: string; when: string }) =>
+    `⏰ یادآوری: جلسه‌ی «${p.service}» با ${p.provider}\n${p.when}`,
 };
 
 /** SMS template keys; ids come from env `SMS_TEMPLATE_<KEY>` (sms.ir pattern ids). */

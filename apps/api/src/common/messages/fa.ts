@@ -25,6 +25,8 @@ export const errorMessagesFa: Record<ErrorCode, string> = {
     'چند رزرو در انتظار تأیید دارید. بعد از تعیین‌تکلیف آن‌ها دوباره رزرو کنید.',
   BOOKING_NOT_PENDING: 'این رزرو دیگر در انتظار تصمیم نیست.',
   BOOKING_NOT_CANCELLABLE: 'این رزرو دیگر قابل لغو نیست.',
+  BALE_NOT_CONFIGURED:
+    'تأیید رزرو با بله فعلاً راه‌اندازی نشده است. کمی بعد دوباره تلاش کنید.',
   OWN_CARD_BOOKING_FORBIDDEN: 'نمی‌توانید برای کارت خودتان رزرو کنید.',
   WALLET_OWN_CARD: 'کارت خودتان را نمی‌توانید در کیف کارت ذخیره کنید.',
   SMS_NOT_CONFIGURED:

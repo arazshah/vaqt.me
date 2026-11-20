@@ -65,6 +65,17 @@ export class BaleLinkService {
     return userId;
   }
 
+  /**
+   * Binds a chat only when neither the chat nor the user already has a
+   * binding, so booking by phone can never steal or replace an existing one.
+   */
+  async bindIfFree(userId: string, chatId: string): Promise<void> {
+    await prisma.messengerBinding.createMany({
+      data: [{ userId, platform: BALE_PLATFORM, chatId }],
+      skipDuplicates: true,
+    });
+  }
+
   async isBound(userId: string): Promise<boolean> {
     const binding = await prisma.messengerBinding.findUnique({
       where: { userId_platform: { userId, platform: BALE_PLATFORM } },

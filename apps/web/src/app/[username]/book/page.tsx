@@ -5,6 +5,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import type {
   AvailabilityDay,
+  BookingDraftOfferView,
+  BookingDraftStatusView,
+  BookingTokenView,
   MyBookingView,
   PublicCard,
   ServiceView,
@@ -31,7 +34,7 @@ import {
 } from '@/lib/date-format';
 import { fa } from '@/messages/fa';
 
-type Step = 'service' | 'time' | 'info' | 'login' | 'done';
+type Step = 'service' | 'time' | 'info' | 'login' | 'bale' | 'done';
 
 const t = fa.bookPage;
 
@@ -52,6 +55,91 @@ export default function BookPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<MyBookingView | null>(null);
+  const [baleOffer, setBaleOffer] = useState<BookingDraftOfferView | null>(
+    null,
+  );
+
+  // While waiting for the Bale confirmation, poll until the bot has created
+  // the booking (or the draft expires).
+  useEffect(() => {
+    if (step !== 'bale' || !baleOffer) return;
+    const ctrl = new AbortController();
+    const isStopped = () => ctrl.signal.aborted;
+    const timer = setInterval(() => {
+      void (async () => {
+        try {
+          const st = await apiFetch<BookingDraftStatusView>(
+            `/booking/draft/${baleOffer.token}`,
+            undefined,
+            { redirectOnAuthFailure: false },
+          );
+          if (isStopped()) return;
+          if (st.status === 'expired') {
+            setError(t.baleExpired);
+            setBaleOffer(null);
+            setStep('login');
+          } else if (st.status === 'done' && st.cancelToken) {
+            const view = await apiFetch<BookingTokenView>(
+              `/booking/by-token/${st.cancelToken}`,
+              undefined,
+              { redirectOnAuthFailure: false },
+            );
+            if (isStopped()) return;
+            setResult({
+              id: '',
+              status: view.status,
+              startAt: view.startAt,
+              endAt: view.endAt,
+              serviceName: view.serviceName,
+              durationMinutes: service?.durationMinutes ?? 0,
+              providerName: view.providerName,
+              providerUsername: view.providerUsername,
+              cancelToken: st.cancelToken,
+            });
+            setStep('done');
+          }
+        } catch {
+          // transient: keep polling
+        }
+      })();
+    }, 2500);
+    return () => {
+      ctrl.abort();
+      clearInterval(timer);
+    };
+  }, [step, baleOffer, service]);
+
+  async function startBale() {
+    if (!service || !slot) return;
+    setError(null);
+    setSubmitting(true);
+    try {
+      const offer = await apiFetch<BookingDraftOfferView>(
+        '/booking/draft',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            username,
+            serviceId: service.id,
+            startAt: slot,
+            name: name.trim(),
+            note: note.trim() || null,
+          }),
+        },
+        { redirectOnAuthFailure: false },
+      );
+      setBaleOffer(offer);
+      setStep('bale');
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : t.submitError);
+      if (err instanceof ApiError && err.code === 'SLOT_UNAVAILABLE') {
+        setDays(null);
+        setStep('time');
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   useEffect(() => {
     apiFetch<PublicCard>(`/cards/${username}`, undefined, {
@@ -430,12 +518,46 @@ export default function BookPage() {
           <section className="flex flex-col gap-3">
             <h2 className="font-semibold">{t.stepLogin}</h2>
             <p className="text-sm text-muted-foreground">{t.loginHint}</p>
+            <Button
+              type="button"
+              disabled={submitting}
+              onClick={() => void startBale()}
+            >
+              {submitting ? t.submitting : t.baleButton}
+            </Button>
+            <p className="text-xs text-muted-foreground">{t.baleHint}</p>
+            <p className="text-center text-xs text-muted-foreground">
+              {t.orLogin}
+            </p>
             <AuthForm onSuccess={() => void submit()} />
             <Button
               type="button"
               variant="ghost"
               onClick={() => {
                 setStep('info');
+              }}
+            >
+              {t.back}
+            </Button>
+          </section>
+        ) : null}
+
+        {step === 'bale' && baleOffer ? (
+          <section className="flex flex-col gap-3 text-center">
+            <h2 className="font-semibold">{t.baleTitle}</h2>
+            <p className="text-sm text-muted-foreground">{t.baleSteps}</p>
+            <Button asChild>
+              <a href={baleOffer.url} target="_blank" rel="noopener noreferrer">
+                {t.baleOpen}
+              </a>
+            </Button>
+            <p className="text-xs text-muted-foreground">{t.baleWaiting}</p>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setBaleOffer(null);
+                setStep('login');
               }}
             >
               {t.back}

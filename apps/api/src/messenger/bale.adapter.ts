@@ -60,6 +60,22 @@ export class BaleAdapter implements MessengerPort {
     });
   }
 
+  async sendContactRequest(
+    chatId: string,
+    text: string,
+    buttonText: string,
+  ): Promise<void> {
+    await this.call('sendMessage', {
+      chat_id: chatId,
+      text,
+      reply_markup: {
+        keyboard: [[{ text: buttonText, request_contact: true }]],
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      },
+    });
+  }
+
   async editMessage(
     chatId: string,
     messageId: number,

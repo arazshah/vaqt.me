@@ -3,13 +3,19 @@ import { prisma } from '@vaqt/db';
 import { BookingService } from '../booking/booking.service';
 import { AppError } from '../common/errors/app-error';
 import { ErrorCode } from '../common/errors/error-codes';
+import { BaleBookingFlow, type BaleContact } from './bale-booking.flow';
 import { BaleLinkService } from './bale-link.service';
 import { MESSENGER_PORT, type MessengerPort } from './messenger.port';
 import { baleMessagesFa as msg } from './messenger.messages.fa';
 
 // Subset of Bale's Update object (same shape as Telegram's) that we use.
 export interface BaleUpdate {
-  message?: { chat?: { id?: number | string }; text?: string };
+  message?: {
+    chat?: { id?: number | string };
+    from?: { id?: number | string };
+    text?: string;
+    contact?: BaleContact;
+  };
   callback_query?: {
     id?: string;
     data?: string;
@@ -21,7 +27,9 @@ export interface BaleUpdate {
   };
 }
 
-const CALLBACK_RE = /^bk:([cr]):([A-Za-z0-9_-]{10,40})$/;
+const CALLBACK_RE = /^bk:([crx]):([A-Za-z0-9_-]{10,40})$/;
+const DRAFT_CALLBACK_RE = /^bd:([A-Za-z0-9_-]{16,40})$/;
+const DRAFT_START_PREFIX = 'bk_';
 
 @Injectable()
 export class BaleUpdateHandler {
@@ -30,6 +38,7 @@ export class BaleUpdateHandler {
   constructor(
     private readonly links: BaleLinkService,
     private readonly booking: BookingService,
+    private readonly flow: BaleBookingFlow,
     @Inject(MESSENGER_PORT) private readonly messenger: MessengerPort,
   ) {}
 
@@ -48,12 +57,29 @@ export class BaleUpdateHandler {
 
   private async handleMessage(message: NonNullable<BaleUpdate['message']>) {
     const chatId = message.chat?.id;
-    const text = message.text?.trim();
-    if (chatId === undefined || !text) return;
+    if (chatId === undefined) return;
     const chat = String(chatId);
+    if (message.contact) {
+      await this.flow.onContact(
+        chat,
+        String(message.from?.id ?? chatId),
+        message.contact,
+      );
+      return;
+    }
+    const text = message.text?.trim();
+    if (!text) return;
 
     const start = /^\/start(?:\s+(\S+))?$/i.exec(text);
     const payload = start ? start[1] : text; // bare code is accepted too
+    const startPayload: string | undefined = start?.[1];
+    if (startPayload?.startsWith(DRAFT_START_PREFIX)) {
+      await this.flow.onStart(
+        chat,
+        startPayload.slice(DRAFT_START_PREFIX.length),
+      );
+      return;
+    }
     if (!payload || /^\/start$/i.test(payload)) {
       await this.messenger.sendMessage(chat, msg.help);
       return;
@@ -75,6 +101,12 @@ export class BaleUpdateHandler {
     const callbackId = cb.id;
     const chatId = cb.message?.chat?.id;
     const messageId = cb.message?.message_id;
+    const draftMatch = DRAFT_CALLBACK_RE.exec(cb.data ?? '');
+    if (callbackId && chatId !== undefined && draftMatch) {
+      const problem = await this.flow.onConfirm(String(chatId), draftMatch[1]);
+      await this.messenger.answerCallback(callbackId, problem ?? undefined);
+      return;
+    }
     const match = CALLBACK_RE.exec(cb.data ?? '');
     if (!callbackId || chatId === undefined || !match) return;
     const chat = String(chatId);
@@ -86,8 +118,24 @@ export class BaleUpdateHandler {
       await this.messenger.answerCallback(callbackId, msg.notLinked);
       return;
     }
-    const action = match[1] === 'c' ? 'confirm' : 'reject';
     const original = cb.message?.text ?? '';
+    if (match[1] === 'x') {
+      try {
+        await this.booking.cancel(userId, match[2]);
+        if (messageId !== undefined) {
+          await this.messenger.editMessage(
+            chat,
+            messageId,
+            original + msg.canceled,
+          );
+        }
+        await this.messenger.answerCallback(callbackId);
+      } catch {
+        await this.messenger.answerCallback(callbackId, msg.notCancellable);
+      }
+      return;
+    }
+    const action = match[1] === 'c' ? 'confirm' : 'reject';
     try {
       await this.booking.decide(userId, match[2], action);
       if (messageId !== undefined) {
