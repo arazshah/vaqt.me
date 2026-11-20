@@ -111,7 +111,21 @@ export class NotificationDispatcher {
           ? 'BOOKING_REJECTED'
           : null;
     if (!key) return;
-    await this.smsBooker(b, key);
+    const args = {
+      provider: b.provider.displayName,
+      service: b.serviceName,
+      when: formatWhen(b.startAt),
+    };
+    if (key === 'BOOKING_CONFIRMED') {
+      await this.notifyBooker(
+        b,
+        texts.bookerConfirmed({ ...args, link: this.trackLink(b) }),
+        [[{ text: baleMessagesFa.cancelButton, callbackData: `bk:x:${b.id}` }]],
+        key,
+      );
+    } else {
+      await this.notifyBooker(b, texts.bookerRejected(args), undefined, key);
+    }
   }
 
   private async onCanceled(
@@ -119,7 +133,16 @@ export class NotificationDispatcher {
     by: 'booker' | 'provider',
   ): Promise<void> {
     if (by === 'provider') {
-      await this.smsBooker(b, 'BOOKING_CANCELED_BY_PROVIDER');
+      await this.notifyBooker(
+        b,
+        texts.bookerCanceledByProvider({
+          provider: b.provider.displayName,
+          service: b.serviceName,
+          when: formatWhen(b.startAt),
+        }),
+        undefined,
+        'BOOKING_CANCELED_BY_PROVIDER',
+      );
       return;
     }
     await this.notifyProvider(
@@ -172,7 +195,18 @@ export class NotificationDispatcher {
       });
       if (claimed.count === 1) {
         const b = await loadBooking(c.id);
-        if (b) await this.smsBooker(b, 'BOOKING_REMINDER');
+        if (b) {
+          await this.notifyBooker(
+            b,
+            texts.bookerReminder({
+              provider: b.provider.displayName,
+              service: b.serviceName,
+              when: formatWhen(b.startAt),
+            }),
+            undefined,
+            'BOOKING_REMINDER',
+          );
+        }
         r24++;
       }
     }
@@ -195,7 +229,16 @@ export class NotificationDispatcher {
       if (claimed.count === 1 && !tooLate) {
         const b = await loadBooking(c.id);
         if (b) {
-          await this.smsBooker(b, 'BOOKING_REMINDER');
+          await this.notifyBooker(
+            b,
+            texts.bookerReminder({
+              provider: b.provider.displayName,
+              service: b.serviceName,
+              when: formatWhen(b.startAt),
+            }),
+            undefined,
+            'BOOKING_REMINDER',
+          );
           await this.notifyProvider(
             b,
             texts.baleReminder({
@@ -246,6 +289,25 @@ export class NotificationDispatcher {
     });
   }
 
+  private trackLink(b: BookingWithPeople): string {
+    return `${this.config.get<string>('WEB_ORIGIN') ?? 'http://localhost:3000'}/b/${b.cancelToken}`;
+  }
+
+  /** Bale if the booker's chat is linked (errors propagate for retry), else SMS. */
+  private async notifyBooker(
+    b: BookingWithPeople,
+    text: string,
+    keyboard: Parameters<MessengerPort['sendMessage']>[2],
+    smsKey: SmsTemplateKey,
+  ): Promise<void> {
+    const chatId = await this.links.getChatId(b.bookerId);
+    if (chatId) {
+      await this.messenger.sendMessage(chatId, text, keyboard);
+      return;
+    }
+    await this.smsBooker(b, smsKey);
+  }
+
   private async smsBooker(
     b: BookingWithPeople,
     key: SmsTemplateKey,
@@ -255,7 +317,7 @@ export class NotificationDispatcher {
       NAME: b.provider.displayName,
       SERVICE: b.serviceName,
       TIME: formatWhen(b.startAt),
-      LINK: `${this.config.get<string>('WEB_ORIGIN') ?? 'http://localhost:3000'}/b/${b.cancelToken}`,
+      LINK: this.trackLink(b),
     });
   }
 

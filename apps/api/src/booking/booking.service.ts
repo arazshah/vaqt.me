@@ -235,6 +235,25 @@ export class BookingService {
   // Creating a booking
   // ------------------------------------------------------------------
 
+  /** Lock-free early check (used for drafts); create() re-checks under lock. */
+  async assertSlotFree(input: CreateBookingInput): Promise<void> {
+    const provider = await prisma.user.findUnique({
+      where: { username: input.username.toLowerCase() },
+      select: { id: true, status: true },
+    });
+    if (!provider || provider.status !== 'ACTIVE') throw notFound();
+    const startAt = new Date(input.startAt);
+    const days = await this.computeDays(prisma, provider.id, input.serviceId);
+    const free = days.some(
+      (d) =>
+        d.date === tehranDateKey(startAt) &&
+        d.slots.includes(startAt.toISOString()),
+    );
+    if (!free) {
+      throw new AppError(ErrorCode.SLOT_UNAVAILABLE, HttpStatus.CONFLICT);
+    }
+  }
+
   async create(
     bookerId: string,
     input: CreateBookingInput,

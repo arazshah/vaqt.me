@@ -18,6 +18,12 @@ export interface MessengerPort {
     text: string,
     keyboard?: InlineKeyboard,
   ): Promise<void>;
+  /** Shows a one-tap button that sends the user's own phone number. */
+  sendContactRequest(
+    chatId: string,
+    text: string,
+    buttonText: string,
+  ): Promise<void>;
   /** Replaces a message's text and removes its buttons. */
   editMessage(chatId: string, messageId: number, text: string): Promise<void>;
   answerCallback(callbackId: string, text?: string): Promise<void>;

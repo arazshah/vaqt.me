@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from '../auth/auth.module';
 import { BookingModule } from '../booking/booking.module';
+import { BaleBookingFlow } from './bale-booking.flow';
 import { BaleLinkService } from './bale-link.service';
 import { BaleUpdateHandler } from './bale-update.handler';
 import { DynamicMessengerAdapter } from './dynamic-messenger.adapter';
@@ -16,6 +17,7 @@ import { MessengerController } from './messenger.controller';
     { provide: MESSENGER_PORT, useClass: DynamicMessengerAdapter },
     BaleLinkService,
     BaleUpdateHandler,
+    BaleBookingFlow,
   ],
   exports: [MESSENGER_PORT, BaleLinkService],
 })
