@@ -46,6 +46,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3001
+      - SMS_LOGIN_ENABLED=${SMS_LOGIN_ENABLED:-true}
       # One generated secret; the OTP pepper and JWT secrets are derived from
       # it, and it also encrypts the secrets saved in the admin panel. Do not
       # change it after first start (saved secrets would become unreadable).

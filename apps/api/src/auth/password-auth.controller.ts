@@ -8,7 +8,9 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { SettingsService } from '../settings/settings.service';
+import { AppError } from '../common/errors/app-error';
+import { ErrorCode } from '../common/errors/error-codes';
 import type { Request, Response } from 'express';
 import { ZodValidationPipe } from 'nestjs-zod';
 import {
@@ -34,20 +36,20 @@ function deviceContext(req: Request): DeviceContext {
   return { userAgent: req.headers['user-agent'], ip: req.ip };
 }
 
-/** Email + password sign-up / sign-in (the default while SMS is off). */
+/** Legacy password sign-in; new accounts must use SMS. */
 @Controller('auth')
 export class PasswordAuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly antiSpam: AntiSpamService,
     private readonly authConfig: AuthConfigService,
-    private readonly config: ConfigService,
+    private readonly settings: SettingsService,
   ) {}
 
   @Public()
   @Get('methods')
-  methods(): AuthMethods {
-    return { password: true, sms: isSmsLoginEnabled(this.config) };
+  async methods(): Promise<AuthMethods> {
+    return { password: true, sms: await isSmsLoginEnabled(this.settings) };
   }
 
   @Public()
@@ -59,17 +61,11 @@ export class PasswordAuthController {
   @Public()
   @Post('register')
   @HttpCode(HttpStatus.OK)
-  async register(
-    @Body(new ZodValidationPipe(registerSchema)) body: RegisterInput,
-    @Req() req: Request,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    const { user, tokens } = await this.auth.registerWithPassword(
-      body,
-      deviceContext(req),
+  register(@Body(new ZodValidationPipe(registerSchema)) _body: RegisterInput) {
+    throw new AppError(
+      ErrorCode.SMS_REGISTRATION_REQUIRED,
+      HttpStatus.FORBIDDEN,
     );
-    setAuthCookies(res, tokens, this.authConfig);
-    return { user };
   }
 
   @Public()

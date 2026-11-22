@@ -40,6 +40,15 @@ const templateId = (key: string, env: string): SettingDefinition => ({
 
 export const SETTING_DEFINITIONS: readonly SettingDefinition[] = [
   {
+    key: 'sms.loginEnabled',
+    group: 'sms',
+    kind: 'select',
+    options: ['true', 'false'],
+    env: 'SMS_LOGIN_ENABLED',
+    defaultValue: 'true',
+    maxLength: 5,
+  },
+  {
     key: 'sms.provider',
     group: 'sms',
     options: ['mock', 'smsir', 'disabled'],

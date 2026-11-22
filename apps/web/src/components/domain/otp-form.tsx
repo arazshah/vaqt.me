@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { formatNumber, toLatinDigits } from '@vaqt/shared';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -31,16 +32,35 @@ const phoneSchema = z.object({
 
 // Mirrors apps/api/src/auth/dto/verify-otp.dto.ts (@Matches(/^\d{4,8}$/)).
 const codeSchema = z.object({
-  code: z.string().regex(/^\d{4,8}$/, fa.loginPage.codeInvalid),
+  code: z
+    .string()
+    .transform(toLatinDigits)
+    .pipe(z.string().regex(/^\d{4,8}$/, fa.loginPage.codeInvalid)),
 });
 
-export function OtpForm({ onSuccess }: { onSuccess?: () => void } = {}) {
+export function OtpForm({
+  onSuccess,
+  linkPhone = false,
+}: { onSuccess?: () => void; linkPhone?: boolean } = {}) {
   const router = useRouter();
   const { refetch } = useAuth();
   const [step, setStep] = useState<'phone' | 'code'>('phone');
   const [phone, setPhone] = useState('');
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [resendAt, setResendAt] = useState(0);
+  const [now, setNow] = useState(0);
+  const remaining = Math.max(0, Math.ceil((resendAt - now) / 1000));
+
+  useEffect(() => {
+    if (!resendAt) return;
+    const timer = setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+    return () => {
+      clearInterval(timer);
+    };
+  }, [resendAt]);
 
   const phoneForm = useForm<z.infer<typeof phoneSchema>>({
     resolver: zodResolver(phoneSchema),
@@ -56,12 +76,14 @@ export function OtpForm({ onSuccess }: { onSuccess?: () => void } = {}) {
     setServerError(null);
     setPending(true);
     try {
-      await apiFetch(
-        '/auth/otp/request',
+      const result = await apiFetch<{ resendAfter: number }>(
+        linkPhone ? '/auth/phone/link/request' : '/auth/otp/request',
         { method: 'POST', body: JSON.stringify({ phone: values.phone }) },
         { redirectOnAuthFailure: false },
       );
       setPhone(values.phone);
+      setNow(Date.now());
+      setResendAt(Date.now() + result.resendAfter * 1000);
       setStep('code');
     } catch (error) {
       setServerError(
@@ -77,7 +99,7 @@ export function OtpForm({ onSuccess }: { onSuccess?: () => void } = {}) {
     setPending(true);
     try {
       await apiFetch(
-        '/auth/otp/verify',
+        linkPhone ? '/auth/phone/link/verify' : '/auth/otp/verify',
         {
           method: 'POST',
           body: JSON.stringify({ phone, code: values.code }),
@@ -86,7 +108,7 @@ export function OtpForm({ onSuccess }: { onSuccess?: () => void } = {}) {
       );
       await refetch();
       if (onSuccess) onSuccess();
-      else router.push('/card');
+      else if (!linkPhone) router.push('/card');
     } catch (error) {
       setServerError(
         error instanceof ApiError ? error.message : fa.loginPage.genericError,
@@ -165,7 +187,21 @@ export function OtpForm({ onSuccess }: { onSuccess?: () => void } = {}) {
           <p className="text-sm text-destructive">{serverError}</p>
         ) : null}
         <Button type="submit" disabled={pending}>
-          {pending ? fa.loginPage.verifying : fa.loginPage.verifyButton}
+          {pending
+            ? fa.loginPage.verifying
+            : linkPhone
+              ? fa.loginPage.linkPhoneButton
+              : fa.loginPage.verifyButton}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={pending || remaining > 0}
+          onClick={() => void handleRequestCode({ phone })}
+        >
+          {remaining > 0
+            ? fa.loginPage.resendWait(formatNumber(remaining))
+            : fa.loginPage.resendCode}
         </Button>
         <Button
           type="button"

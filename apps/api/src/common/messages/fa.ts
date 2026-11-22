@@ -33,6 +33,9 @@ export const errorMessagesFa: Record<ErrorCode, string> = {
     'ارسال پیامک هنوز راه‌اندازی نشده است. کمی بعد دوباره تلاش کنید.',
   SMS_LOGIN_DISABLED:
     'ورود با پیامک فعلاً غیرفعال است. با ایمیل و رمز عبور وارد شوید.',
+  SMS_REGISTRATION_REQUIRED:
+    'برای ثبت‌نام جدید، شماره موبایل خود را با کد پیامکی تأیید کنید.',
+  PHONE_LINK_UNAVAILABLE: 'این شماره قابل اتصال به حساب شما نیست.',
   INVALID_CREDENTIALS: 'ایمیل یا رمز عبور درست نیست.',
   PASSWORD_CHANGE_REQUIRED: 'اول رمز عبور موقت را عوض کنید.',
   WRONG_PASSWORD: 'رمز عبور فعلی درست نیست.',

@@ -77,6 +77,29 @@ export class AuthController {
     return { user };
   }
 
+  @UseGuards(SmsLoginEnabledGuard, SmsConfiguredGuard)
+  @Post('phone/link/request')
+  @HttpCode(HttpStatus.OK)
+  requestPhoneLink(
+    @Body() dto: RequestOtpDto,
+    @Ip() ip: string,
+    @CurrentUser() user: AccessTokenPayload,
+  ) {
+    return this.auth.requestOtp(dto.phone, ip, user.sub);
+  }
+
+  @UseGuards(SmsLoginEnabledGuard)
+  @Post('phone/link/verify')
+  @HttpCode(HttpStatus.OK)
+  async verifyPhoneLink(
+    @Body() dto: VerifyOtpDto,
+    @CurrentUser() user: AccessTokenPayload,
+  ) {
+    return {
+      user: await this.auth.verifyPhoneLink(user.sub, dto.phone, dto.code),
+    };
+  }
+
   @Public()
   @Post('refresh')
   @HttpCode(HttpStatus.OK)

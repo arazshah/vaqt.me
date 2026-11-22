@@ -17,6 +17,7 @@ function makeAuth(): jest.Mocked<AuthService> {
   return {
     requestOtp: jest.fn(),
     verifyOtp: jest.fn(),
+    verifyPhoneLink: jest.fn(),
     refresh: jest.fn(),
     logout: jest.fn(),
     logoutAll: jest.fn(),
@@ -72,6 +73,17 @@ describe('AuthController', () => {
       'b',
       expect.any(Object),
     );
+  });
+
+  it('uses the signed-in account for phone-link requests and verification', async () => {
+    const auth = makeAuth();
+    const controller = new AuthController(auth, config);
+    const current = { sub: 'u1', sid: 's1' };
+    const phone = '09123456789';
+    await controller.requestPhoneLink({ phone }, '198.51.100.1', current);
+    expect(auth.requestOtp).toHaveBeenCalledWith(phone, '198.51.100.1', 'u1');
+    await controller.verifyPhoneLink({ phone, code: '12345' }, current);
+    expect(auth.verifyPhoneLink).toHaveBeenCalledWith('u1', phone, '12345');
   });
 
   it('refresh reads the refresh_token cookie, rotates it, and sets new cookies', async () => {

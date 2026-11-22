@@ -7,6 +7,7 @@ const MASTER = 'm'.repeat(40);
 // These specs only touch keys no other suite reads, so they can run in
 // parallel with the rest.
 const KEYS = [
+  'sms.loginEnabled',
   'sms.provider',
   'sms.smsir.apiKey',
   'sms.smsir.otpTemplateId',
@@ -28,6 +29,16 @@ describe('SettingsService (real Postgres)', () => {
   afterAll(async () => {
     await clean();
     await prisma.$disconnect();
+  });
+
+  it('allows admin settings to override the SMS sign-in flag', async () => {
+    const s = make({ SMS_LOGIN_ENABLED: 'false' });
+    expect(await s.get('sms.loginEnabled')).toBe('false');
+    await s.update(
+      { set: { 'sms.loginEnabled': 'true' }, clear: [] },
+      'admin1',
+    );
+    expect(await s.get('sms.loginEnabled')).toBe('true');
   });
 
   it('resolves panel > env > default, and reports where a value came from', async () => {

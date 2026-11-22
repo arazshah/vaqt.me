@@ -24,6 +24,7 @@ import { Button } from '@vaqt/ui/components/ui/button';
 import { Skeleton } from '@vaqt/ui/components/ui/skeleton';
 
 import { AppShell } from '@/components/app-shell';
+import { OtpForm } from '@/components/domain/otp-form';
 import { apiFetch } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
 import { cardCompletion } from '@/lib/completion';
@@ -122,6 +123,17 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <div className="flex flex-col gap-6">
+        {!user.phoneVerified && user.systemRole === 'USER' ? (
+          <details className="rounded-2xl border bg-card p-4">
+            <summary className="cursor-pointer font-medium">
+              {fa.loginPage.linkPhoneTitle}
+            </summary>
+            <p className="my-3 text-sm text-muted-foreground">
+              {fa.loginPage.linkPhoneHelp}
+            </p>
+            <OtpForm linkPhone />
+          </details>
+        ) : null}
         <div>
           <h1 className="text-2xl font-bold">
             {t.greeting(card.displayName || user.displayName)}
