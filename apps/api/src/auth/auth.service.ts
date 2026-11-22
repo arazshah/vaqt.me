@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { prisma, OtpPurpose } from '@vaqt/db';
+import { prisma, OtpPurpose, Prisma } from '@vaqt/db';
 import {
   normalizePhone,
   toPersianDigits,
@@ -79,8 +79,14 @@ export class AuthService {
     return toPrivateUser(user);
   }
 
-  async requestOtp(rawPhone: string, ip: string): Promise<OtpRequestResult> {
+  async requestOtp(
+    rawPhone: string,
+    ip: string,
+    linkUserId?: string,
+  ): Promise<OtpRequestResult> {
     const phone = this.requirePhone(rawPhone);
+    if (linkUserId) await this.assertCanLinkPhone(linkUserId, phone);
+    const pendingKey = linkUserId ? `${phone}:${linkUserId}` : phone;
     await this.assertNotBlocked(phone);
 
     const resend = await this.rateLimit.checkResendCooldown(phone);
@@ -95,6 +101,7 @@ export class AuthService {
       where: {
         phone,
         purpose: OtpPurpose.AUTH,
+        linkUserId: linkUserId ?? null,
         consumedAt: null,
         expiresAt: { gt: now },
       },
@@ -116,7 +123,7 @@ export class AuthService {
       }
 
       expiresAt = existing.expiresAt;
-      const cached = await this.pendingCode.get(phone);
+      const cached = await this.pendingCode.get(pendingKey);
       if (cached) {
         code = cached;
       } else {
@@ -126,7 +133,7 @@ export class AuthService {
         code = this.otp.generateCode();
         await prisma.verificationCode.update({
           where: { id: existing.id },
-          data: { codeHash: this.otp.hash(phone, code) },
+          data: { codeHash: this.otp.hash(pendingKey, code) },
         });
       }
 
@@ -141,7 +148,8 @@ export class AuthService {
         data: {
           phone,
           purpose: OtpPurpose.AUTH,
-          codeHash: this.otp.hash(phone, code),
+          linkUserId: linkUserId ?? null,
+          codeHash: this.otp.hash(pendingKey, code),
           expiresAt,
           ip,
           sendCount: 1,
@@ -153,7 +161,7 @@ export class AuthService {
       1,
       Math.ceil((expiresAt.getTime() - now.getTime()) / 1000),
     );
-    await this.pendingCode.set(phone, code, expiresIn);
+    await this.pendingCode.set(pendingKey, code, expiresIn);
     await this.smsQueue.enqueueOtp({ phone, code });
 
     return {
@@ -168,39 +176,11 @@ export class AuthService {
     submittedCode: string,
     device: DeviceContext,
   ): Promise<VerifyOtpResult> {
-    const phone = this.requirePhone(rawPhone);
-    await this.assertNotBlocked(phone);
-
+    const phone = await this.consumeOtp(rawPhone, submittedCode);
     const now = new Date();
-    const row = await prisma.verificationCode.findFirst({
-      where: { phone, purpose: OtpPurpose.AUTH, consumedAt: null },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (!row) {
-      this.otp.verify(phone, submittedCode, null);
-      throw new AppError(ErrorCode.OTP_INVALID, HttpStatus.BAD_REQUEST);
-    }
-
-    if (row.expiresAt.getTime() <= now.getTime()) {
-      this.otp.verify(phone, submittedCode, row.codeHash);
-      throw new AppError(ErrorCode.OTP_EXPIRED, HttpStatus.BAD_REQUEST);
-    }
-
-    const isValid = this.otp.verify(phone, submittedCode, row.codeHash);
-
-    if (!isValid) {
-      await this.handleFailedAttempt(phone, row.id, row.attempts);
-    }
-
-    await prisma.verificationCode.update({
-      where: { id: row.id },
-      data: { consumedAt: now },
-    });
-    await this.pendingCode.clear(phone);
-    await this.rateLimit.clearInvalidatedStreak(phone);
-
     const user = await this.findOrCreateVerifiedUser(phone, now);
+    if (user.status !== 'ACTIVE')
+      throw new AppError(ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
     const tokens = await this.sessions.createSession(user.id, device);
 
     await this.audit.log({
@@ -212,6 +192,122 @@ export class AuthService {
     });
 
     return { user: toPrivateUser(user), tokens };
+  }
+
+  async verifyPhoneLink(
+    userId: string,
+    rawPhone: string,
+    code: string,
+  ): Promise<PrivateUser> {
+    const phone = this.requirePhone(rawPhone);
+    await this.assertCanLinkPhone(userId, phone);
+    await this.consumeOtp(phone, code, userId);
+    try {
+      const changed = await prisma.user.updateMany({
+        where: {
+          id: userId,
+          status: 'ACTIVE',
+          systemRole: 'USER',
+          phone: null,
+        },
+        data: { phone, phoneVerifiedAt: new Date() },
+      });
+      if (changed.count !== 1)
+        throw new AppError(
+          ErrorCode.PHONE_LINK_UNAVAILABLE,
+          HttpStatus.CONFLICT,
+        );
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new AppError(
+          ErrorCode.PHONE_LINK_UNAVAILABLE,
+          HttpStatus.CONFLICT,
+        );
+      }
+      throw error;
+    }
+    await this.audit.log({
+      actorId: userId,
+      action: 'auth.phone.linked',
+      entityType: 'User',
+      entityId: userId,
+    });
+    return this.getMe(userId);
+  }
+
+  private async assertCanLinkPhone(
+    userId: string,
+    phone: string,
+  ): Promise<void> {
+    const [user, owner] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId } }),
+      prisma.user.findUnique({ where: { phone } }),
+    ]);
+    if (
+      !user ||
+      user.status !== 'ACTIVE' ||
+      user.systemRole !== 'USER' ||
+      user.phone ||
+      owner
+    ) {
+      throw new AppError(ErrorCode.PHONE_LINK_UNAVAILABLE, HttpStatus.CONFLICT);
+    }
+  }
+
+  private async consumeOtp(
+    rawPhone: string,
+    submittedCode: string,
+    linkUserId?: string,
+  ): Promise<string> {
+    const phone = this.requirePhone(rawPhone);
+    const pendingKey = linkUserId ? `${phone}:${linkUserId}` : phone;
+    await this.assertNotBlocked(phone);
+
+    const now = new Date();
+    const row = await prisma.verificationCode.findFirst({
+      where: {
+        phone,
+        purpose: OtpPurpose.AUTH,
+        linkUserId: linkUserId ?? null,
+        consumedAt: null,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (!row) {
+      this.otp.verify(pendingKey, submittedCode, null);
+      throw new AppError(ErrorCode.OTP_INVALID, HttpStatus.BAD_REQUEST);
+    }
+
+    if (row.expiresAt.getTime() <= now.getTime()) {
+      this.otp.verify(pendingKey, submittedCode, row.codeHash);
+      throw new AppError(ErrorCode.OTP_EXPIRED, HttpStatus.BAD_REQUEST);
+    }
+
+    const isValid = this.otp.verify(pendingKey, submittedCode, row.codeHash);
+
+    if (!isValid) {
+      await this.handleFailedAttempt(phone, row.id, row.attempts, pendingKey);
+    }
+
+    const consumed = await prisma.verificationCode.updateMany({
+      where: {
+        id: row.id,
+        consumedAt: null,
+        expiresAt: { gt: new Date() },
+        codeHash: row.codeHash,
+      },
+      data: { consumedAt: now },
+    });
+    if (consumed.count !== 1)
+      throw new AppError(ErrorCode.OTP_INVALID, HttpStatus.BAD_REQUEST);
+    await this.pendingCode.clear(pendingKey);
+    await this.rateLimit.clearInvalidatedStreak(phone);
+
+    return phone;
   }
 
   async refresh(
@@ -300,6 +396,7 @@ export class AuthService {
     phone: string,
     verificationCodeId: string,
     previousAttempts: number,
+    pendingKey: string,
   ): Promise<never> {
     const attempts = previousAttempts + 1;
 
@@ -308,7 +405,7 @@ export class AuthService {
         where: { id: verificationCodeId },
         data: { attempts, consumedAt: new Date() },
       });
-      await this.pendingCode.clear(phone);
+      await this.pendingCode.clear(pendingKey);
       await this.audit.log({
         actorId: null,
         action: 'auth.otp.verify_failed_max_attempts',

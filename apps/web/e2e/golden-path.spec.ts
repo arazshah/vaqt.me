@@ -1,19 +1,21 @@
 import { type Page, expect, test } from '@playwright/test';
 import { setUpBookableCard } from './fixtures/api-helpers';
-import { randomTestEmail, randomUsername } from './fixtures/test-data';
+import {
+  E2E_OTP_CODE,
+  randomTestPhone,
+  randomUsername,
+} from './fixtures/test-data';
 
-// SMS login is switched off by default, so accounts are created with email +
-// password (anti-spam: the form keeps its button disabled for a few seconds).
-async function registerWithEmail(page: Page): Promise<void> {
+async function registerWithSms(page: Page): Promise<void> {
   await page.goto('/login');
-  await page.getByRole('tab', { name: 'ثبت‌نام' }).click();
   await fillRegister(page);
 }
 
 async function fillRegister(page: Page): Promise<void> {
-  await page.getByLabel('ایمیل').fill(randomTestEmail());
-  await page.getByLabel('رمز عبور', { exact: true }).fill('E2ePassw0rd');
-  await page.getByRole('button', { name: 'ساخت حساب' }).click();
+  await page.getByLabel('شماره موبایل').fill(randomTestPhone());
+  await page.getByRole('button', { name: 'دریافت کد' }).click();
+  await page.getByLabel('کد تأیید').fill(E2E_OTP_CODE);
+  await page.getByRole('button', { name: 'ورود', exact: true }).click();
 }
 
 // Golden path: a specialist publishes a bookable card, a visitor books a
@@ -26,7 +28,7 @@ test('card → booking → manual approval', async ({ browser }) => {
   // --- Specialist: sign in and set up the card (via API; UI-tested elsewhere)
   const specialistCtx = await browser.newContext();
   const specialist = await specialistCtx.newPage();
-  await registerWithEmail(specialist);
+  await registerWithSms(specialist);
   await expect(specialist).toHaveURL(/\/card$/);
   await setUpBookableCard(specialist, username, serviceName);
 
@@ -45,7 +47,6 @@ test('card → booking → manual approval', async ({ browser }) => {
   await visitor.getByRole('button', { name: 'ادامه' }).click();
   await visitor.getByLabel('نام شما').fill('بازدیدکننده‌ی آزمایشی');
   await visitor.getByRole('button', { name: 'ادامه' }).click();
-  await visitor.getByRole('tab', { name: 'ثبت‌نام' }).click();
   await fillRegister(visitor);
 
   await expect(visitor.getByText('درخواست رزرو ثبت شد')).toBeVisible();
@@ -73,7 +74,7 @@ test('new user: guided card setup → public card', async ({ browser }) => {
   const username = randomUsername();
   const ctx = await browser.newContext();
   const page = await ctx.newPage();
-  await registerWithEmail(page);
+  await registerWithSms(page);
   await expect(page).toHaveURL(/\/card$/);
 
   await page.getByRole('link', { name: 'شروع ساخت کارت' }).click();

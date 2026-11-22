@@ -10,6 +10,11 @@ test('admin signs in with the temporary password and must replace it', async ({
   page,
 }) => {
   await page.goto('/login');
+  await page
+    .getByRole('button', {
+      name: 'ورود کاربران قبلی یا مدیر با ایمیل و رمز عبور',
+    })
+    .click();
   await page.getByLabel('ایمیل').fill('admin');
   await page.getByLabel('رمز عبور', { exact: true }).fill(TEMP);
   await page.getByRole('button', { name: 'ورود', exact: true }).click();

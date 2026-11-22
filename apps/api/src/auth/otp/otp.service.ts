@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
@@ -26,8 +26,7 @@ export class OtpService {
     if (this.devFixedOtp && process.env.NODE_ENV !== 'production') {
       return this.devFixedOtp;
     }
-    const value =
-      CODE_MIN + Math.floor(Math.random() * (CODE_MAX - CODE_MIN + 1));
+    const value = randomInt(CODE_MIN, CODE_MAX + 1);
     return String(value);
   }
 

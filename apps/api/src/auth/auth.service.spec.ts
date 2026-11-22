@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { JwtService } from '@nestjs/jwt';
-import { prisma } from '@vaqt/db';
+import { prisma, Prisma } from '@vaqt/db';
 import { AppError } from '../common/errors/app-error';
 import { ErrorCode } from '../common/errors/error-codes';
 import { KvService } from '../common/kv/kv.service';
@@ -480,6 +480,150 @@ describe('AuthService', () => {
         where: { actorId: result.user.id, action: 'auth.login.success' },
       });
       expect(auditEntry).not.toBeNull();
+    });
+
+    it('links a verified phone to the existing account without creating a new user', async () => {
+      const { service, redis } = makeAuthService();
+      track(redis);
+      const legacy = await prisma.user.create({
+        data: { email: `${randomUUID()}@qa.vaqt.test`, displayName: 'Legacy' },
+      });
+      createdUserIds.push(legacy.id);
+      const phone = randomTestPhone();
+      createdPhones.push(phone);
+      await service.requestOtp(phone, runIp('link'), legacy.id);
+      const code = requireNonNull(
+        await redis.get(
+          redis.key('otp', 'pending-code', `${phone}:${legacy.id}`),
+        ),
+        'expected pending link code',
+      );
+      const linked = await service.verifyPhoneLink(legacy.id, phone, code);
+      expect(linked.id).toBe(legacy.id);
+      expect(linked.phoneVerified).toBe(true);
+      expect(await prisma.user.findUnique({ where: { phone } })).toMatchObject({
+        id: legacy.id,
+        email: legacy.email,
+      });
+    });
+
+    it('does not replace a phone already associated with an account', async () => {
+      const { service, redis } = makeAuthService();
+      track(redis);
+      const legacy = await prisma.user.create({
+        data: { email: `${randomUUID()}@qa.vaqt.test`, displayName: 'Legacy' },
+      });
+      createdUserIds.push(legacy.id);
+      const owner = await createTestUser({});
+      createdUserIds.push(owner.id);
+      await expectAppError(
+        service.requestOtp(owner.phone, runIp('link-existing'), legacy.id),
+        ErrorCode.PHONE_LINK_UNAVAILABLE,
+      );
+    });
+
+    it('rejects linking when the account state changed before the update', async () => {
+      const { service, redis } = makeAuthService();
+      track(redis);
+      const legacy = await prisma.user.create({
+        data: { displayName: 'Legacy' },
+      });
+      createdUserIds.push(legacy.id);
+      const phone = randomTestPhone();
+      createdPhones.push(phone);
+      await service.requestOtp(phone, runIp('link-changed'), legacy.id);
+      const code = requireNonNull(
+        await redis.get(
+          redis.key('otp', 'pending-code', `${phone}:${legacy.id}`),
+        ),
+        'expected pending link code',
+      );
+      const mock = jest
+        .spyOn(prisma.user, 'updateMany')
+        .mockResolvedValueOnce({ count: 0 });
+      try {
+        await expectAppError(
+          service.verifyPhoneLink(legacy.id, phone, code),
+          ErrorCode.PHONE_LINK_UNAVAILABLE,
+        );
+      } finally {
+        mock.mockRestore();
+      }
+    });
+
+    it('reports a uniqueness conflict when an approved link cannot be saved', async () => {
+      const { service, redis } = makeAuthService();
+      track(redis);
+      const legacy = await prisma.user.create({
+        data: { displayName: 'Legacy' },
+      });
+      createdUserIds.push(legacy.id);
+      const phone = randomTestPhone();
+      createdPhones.push(phone);
+      await service.requestOtp(phone, runIp('link-conflict'), legacy.id);
+      const code = requireNonNull(
+        await redis.get(
+          redis.key('otp', 'pending-code', `${phone}:${legacy.id}`),
+        ),
+        'expected pending link code',
+      );
+      const mock = jest.spyOn(prisma.user, 'updateMany').mockRejectedValueOnce(
+        new Prisma.PrismaClientKnownRequestError('conflict', {
+          code: 'P2002',
+          clientVersion: 'test',
+        }),
+      );
+      try {
+        await expectAppError(
+          service.verifyPhoneLink(legacy.id, phone, code),
+          ErrorCode.PHONE_LINK_UNAVAILABLE,
+        );
+      } finally {
+        mock.mockRestore();
+      }
+    });
+
+    it('does not issue a session for a suspended account', async () => {
+      const { service, redis } = makeAuthService();
+      track(redis);
+      const user = await createTestUser({});
+      createdUserIds.push(user.id);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { status: 'SUSPENDED' },
+      });
+      await service.requestOtp(user.phone, runIp('suspended'));
+      const code = requireNonNull(
+        await redis.get(redis.key('otp', 'pending-code', user.phone)),
+        'expected pending code',
+      );
+      await expectAppError(
+        service.verifyOtp(user.phone, code, DEVICE),
+        ErrorCode.FORBIDDEN,
+      );
+    });
+
+    it('does not sign in when the OTP consumption update is no longer valid', async () => {
+      const { service, redis } = makeAuthService();
+      track(redis);
+      const phone = randomTestPhone();
+      createdPhones.push(phone);
+      await service.requestOtp(phone, runIp('otp-consumed'));
+      const code = requireNonNull(
+        await redis.get(redis.key('otp', 'pending-code', phone)),
+        'expected pending code',
+      );
+      const mock = jest
+        .spyOn(prisma.verificationCode, 'updateMany')
+        .mockResolvedValueOnce({ count: 0 });
+      try {
+        await expectAppError(
+          service.verifyOtp(phone, code, DEVICE),
+          ErrorCode.OTP_INVALID,
+        );
+      } finally {
+        mock.mockRestore();
+      }
     });
 
     it('verifying again for an already-verified user preserves the original phoneVerifiedAt', async () => {

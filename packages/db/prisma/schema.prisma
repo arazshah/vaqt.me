@@ -129,6 +129,7 @@ model VerificationCode {
   phone      String
   codeHash   String
   purpose    OtpPurpose @default(AUTH)
+  linkUserId String?
   attempts   Int        @default(0)
   // Number of times this exact code has been sent (original send = 1).
   // Capped at 3 by the service layer; resend never changes expiresAt.

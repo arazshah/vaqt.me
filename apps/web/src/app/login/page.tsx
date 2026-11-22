@@ -12,12 +12,7 @@ import { AppShell } from '@/components/app-shell';
 import { AuthForm } from '@/components/domain/auth-form';
 import { fa } from '@/messages/fa';
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string }>;
-}) {
-  const { tab } = await searchParams;
+export default function LoginPage() {
   return (
     <AppShell>
       <div className="flex min-h-[60vh] items-center justify-center py-8">
@@ -31,9 +26,7 @@ export default async function LoginPage({
               <CardDescription>{fa.loginPage.subtitle}</CardDescription>
             </CardHeader>
             <CardContent>
-              <AuthForm
-                initialMode={tab === 'register' ? 'register' : 'login'}
-              />
+              <AuthForm />
             </CardContent>
           </Card>
         </div>
